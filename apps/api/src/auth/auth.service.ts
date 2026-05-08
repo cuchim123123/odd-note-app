@@ -1,7 +1,8 @@
-import { Injectable, ConflictException } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { Injectable, ConflictException, Inject } from '@nestjs/common';
+import { UserRole, Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import type { EnvConfig } from '../config/config.module';
 
 export type RegisterInput = {
   email: string;
@@ -21,12 +22,19 @@ export type RegisterResult = {
 
 @Injectable()
 export class AuthService {
-  private readonly passwordSaltRounds = 12;
+  private readonly passwordSaltRounds: number;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject('ENV_CONFIG') private readonly env: EnvConfig,
+  ) {
+    this.passwordSaltRounds = Number(env.PASSWORD_SALT_ROUNDS ?? 12);
+  }
 
   async register(input: RegisterInput): Promise<RegisterResult> {
     const normalizedEmail = input.email.trim().toLowerCase();
+    // keep a pre-check for nicer fast-fail, but also handle unique-constraint
+    // race conditions by catching Prisma P2002 errors on create
     const existingUser = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -37,13 +45,23 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(input.password, this.passwordSaltRounds);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        displayName: input.displayName.trim(),
-        passwordHash,
-      },
-    });
+    let user;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          displayName: input.displayName.trim(),
+          passwordHash,
+        },
+      });
+    } catch (err) {
+      // Handle unique constraint errors robustly (P2002)
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        // This can happen in a race where another process created the user
+        throw new ConflictException('Email is already registered');
+      }
+      throw err;
+    }
 
     return {
       id: user.id,
