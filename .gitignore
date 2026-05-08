@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+build/
+coverage/
+
+# logs
+*.log
+pnpm-debug.log*
+
+# environment
+.env
+.env.*
+!.env.example
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# tooling
+.turbo/
+.husky/_/
+
+# local infra data
+infrastructure/docker/data/
