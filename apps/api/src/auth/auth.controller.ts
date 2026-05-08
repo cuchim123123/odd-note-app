@@ -1,18 +1,8 @@
 import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
-import { z, ZodError } from 'zod';
+import { ZodError } from 'zod';
 import { AuthService } from './auth.service';
-
-const registerSchema = z
-  .object({
-    email: z.string().email(),
-    displayName: z.string().min(2).max(100),
-    password: z.string().min(8).max(72),
-    confirmPassword: z.string().min(8).max(72),
-  })
-  .refine((value) => value.password === value.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
+import { registerSchema } from '@odd-note-app/validation';
+import type { RegisterInput, RawRegisterInput } from '@odd-note-app/validation';
 
 @Controller('auth')
 export class AuthController {
@@ -21,9 +11,9 @@ export class AuthController {
   @Post('register')
   async register(@Body() body: unknown) {
     try {
-      const input = registerSchema.parse(body);
-      const { confirmPassword, ...registerInput } = input;
-      void confirmPassword;
+      const input = registerSchema.parse(body) as RawRegisterInput;
+      const registerInput = { ...input } as unknown as RegisterInput;
+      delete (registerInput as unknown as Record<string, unknown>).confirmPassword;
       return await this.authService.register(registerInput);
     } catch (error) {
       if (error instanceof ZodError) {
