@@ -3,12 +3,7 @@ import { UserRole, Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import type { EnvConfig } from '../config/config.module';
-
-export type RegisterInput = {
-  email: string;
-  displayName: string;
-  password: string;
-};
+import type { RegisterInput } from '@odd-note-app/validation';
 
 export type RegisterResult = {
   id: string;
