@@ -1,0 +1,11 @@
+{
+  "name": "@odd-note-app/api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"api app scaffold pending\"",
+    "build": "echo \"api build scaffold pending\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  }
+}

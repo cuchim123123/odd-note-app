@@ -1,0 +1,11 @@
+{
+  "name": "@odd-note-app/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"web app scaffold pending\"",
+    "build": "echo \"web build scaffold pending\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  }
+}
