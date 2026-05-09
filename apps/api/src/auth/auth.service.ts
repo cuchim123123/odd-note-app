@@ -1,9 +1,9 @@
-import { Injectable, ConflictException, Inject } from '@nestjs/common';
+import { Injectable, ConflictException, Inject, UnauthorizedException } from '@nestjs/common';
 import { UserRole, Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import type { EnvConfig } from '../config/config.module';
-import type { RegisterInput } from '@odd-note-app/validation';
+import type { LoginInput, RegisterInput } from '@odd-note-app/validation';
 
 export type RegisterResult = {
   id: string;
@@ -13,6 +13,14 @@ export type RegisterResult = {
   isEmailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type LoginResult = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  isEmailVerified: boolean;
 };
 
 @Injectable()
@@ -66,6 +74,32 @@ export class AuthService {
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+    };
+  }
+
+  async login(input: LoginInput): Promise<LoginResult> {
+    const normalizedEmail = input.email.trim().toLowerCase();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const isPasswordValid = await bcrypt.compare(input.password, user.passwordHash);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
     };
   }
 }
