@@ -7,7 +7,15 @@ const registerBaseSchema = z.object({
   confirmPassword: z.string().min(8).max(72),
 });
 
-export const registerSchema = registerBaseSchema
+export type RegisterInput = {
+  email: string;
+  displayName: string;
+  password: string;
+};
+
+export type RegisterRequestInput = z.input<typeof registerBaseSchema>;
+
+export const registerSchema: z.ZodType<RegisterInput, z.ZodTypeDef, RegisterRequestInput> = registerBaseSchema
   .superRefine((value, ctx) => {
     if (value.password !== value.confirmPassword) {
       ctx.addIssue({
@@ -22,6 +30,3 @@ export const registerSchema = registerBaseSchema
     displayName: value.displayName,
     password: value.password,
   }));
-
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type RegisterRequestInput = z.input<typeof registerBaseSchema>;
