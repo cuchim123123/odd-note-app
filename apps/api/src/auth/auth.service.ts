@@ -1,11 +1,12 @@
-import { Injectable, ConflictException, Inject, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
+import type { User } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthConfigService } from '../config/auth-config.module';
 import { JwtConfigService } from '../config/jwt-config.module';
-import type { EnvConfig } from '../config/config.module';
 import type { LoginInput, RegisterInput } from '@odd-note-app/validation';
 import type { AuthTokens, AuthUserProfile, LoginResult, RegisterResult } from './auth.types';
 
@@ -17,17 +18,23 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
-    @Inject('ENV_CONFIG') private readonly env: EnvConfig,
+    private readonly authConfig: AuthConfigService,
   ) {
-    this.passwordSaltRounds = Number(env.PASSWORD_SALT_ROUNDS ?? 12);
+    this.passwordSaltRounds = this.authConfig.getPasswordSaltRounds();
   }
 
   /**
    * Project user from database record to client-safe profile.
    * Single source of truth for user shape across all auth operations.
    */
-  private projectUserProfile(user: AuthUserProfile): AuthUserProfile {
-    return user;
+  private projectUserProfile(user: User): AuthUserProfile {
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+    };
   }
 
   /**
