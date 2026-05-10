@@ -73,6 +73,7 @@ odd-note-app/
 ### Auth
 
 - `apps/api/src/auth/auth.module.ts` wires controller + service
+- `apps/api/src/auth/auth.module.ts` imports both `AuthConfigModule` and `JwtConfigModule` for auth runtime dependencies
 - `apps/api/src/auth/auth.controller.ts` exposes `POST /auth/register` and `POST /auth/login`
 - `apps/api/src/auth/auth.service.ts` handles register/login, password hashing, token generation, and refresh-token persistence
 - `apps/api/src/auth/auth.types.ts` holds auth result/profile/token types
