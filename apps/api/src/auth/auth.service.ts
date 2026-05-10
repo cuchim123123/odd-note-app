@@ -1,43 +1,13 @@
 import { Injectable, ConflictException, Inject, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UserRole, Prisma } from '@prisma/client';
+import { createHash } from 'crypto';
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtConfigService } from '../config/jwt-config.module';
 import type { EnvConfig } from '../config/config.module';
 import type { LoginInput, RegisterInput } from '@odd-note-app/validation';
-
-/**
- * User profile information returned to client after auth operations.
- * Centralized single source of truth for user shape across all endpoints.
- */
-export type AuthUserProfile = {
-  id: string;
-  email: string;
-  displayName: string;
-  role: UserRole;
-  isEmailVerified: boolean;
-};
-
-/**
- * JWT token pair (access + refresh).
- */
-export type AuthTokens = {
-  accessToken: string;
-  refreshToken: string;
-};
-
-/**
- * Result of registration or login - user profile + tokens.
- */
-export type AuthResult = {
-  user: AuthUserProfile;
-  tokens: AuthTokens;
-};
-
-// Type aliases for backward compatibility if needed
-export type RegisterResult = AuthResult;
-export type LoginResult = AuthResult;
+import type { AuthTokens, AuthUserProfile, LoginResult, RegisterResult } from './auth.types';
 
 @Injectable()
 export class AuthService {
@@ -56,14 +26,8 @@ export class AuthService {
    * Project user from database record to client-safe profile.
    * Single source of truth for user shape across all auth operations.
    */
-  private projectUserProfile(user: { id: string; email: string; displayName: string; role: UserRole; isEmailVerified: boolean }): AuthUserProfile {
-    return {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified,
-    };
+  private projectUserProfile(user: AuthUserProfile): AuthUserProfile {
+    return user;
   }
 
   /**
@@ -82,7 +46,7 @@ export class AuthService {
     );
 
     // Hash refresh token before storing for security (breach resistance)
-    const tokenHash = await bcrypt.hash(refreshToken, this.passwordSaltRounds);
+    const tokenHash = createHash('sha256').update(refreshToken).digest('hex');
     const expiryMs = this.jwtConfig.getRefreshTokenExpiryMs();
     const expiresAt = new Date(Date.now() + expiryMs);
 

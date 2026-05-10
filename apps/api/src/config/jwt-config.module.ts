@@ -1,39 +1,38 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { Inject, Injectable } from '@nestjs/common';
+import type { JwtSignOptions } from '@nestjs/jwt';
 import type { EnvConfig } from './config.module';
 
 @Injectable()
 export class JwtConfigService {
   constructor(@Inject('ENV_CONFIG') private readonly env: EnvConfig) {}
 
-  getAccessTokenConfig() {
+  getAccessTokenConfig(): JwtSignOptions {
     return {
       secret: this.env.JWT_ACCESS_SECRET,
-      expiresIn: this.env.JWT_ACCESS_EXPIRES_IN,
+      expiresIn: this.env.JWT_ACCESS_EXPIRES_IN as unknown as NonNullable<JwtSignOptions['expiresIn']>,
     };
   }
 
-  getRefreshTokenConfig() {
+  getRefreshTokenConfig(): JwtSignOptions {
     return {
       secret: this.env.JWT_REFRESH_SECRET,
-      expiresIn: this.env.JWT_REFRESH_EXPIRES_IN,
+      expiresIn: this.env.JWT_REFRESH_EXPIRES_IN as unknown as NonNullable<JwtSignOptions['expiresIn']>,
     };
   }
 
-  getAccessTokenSignOptions() {
+  getAccessTokenSignOptions(): JwtSignOptions {
     return {
       secret: this.env.JWT_ACCESS_SECRET,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expiresIn: this.env.JWT_ACCESS_EXPIRES_IN as any,
+      expiresIn: this.env.JWT_ACCESS_EXPIRES_IN as unknown as NonNullable<JwtSignOptions['expiresIn']>,
     };
   }
 
-  getRefreshTokenSignOptions() {
+  getRefreshTokenSignOptions(): JwtSignOptions {
     return {
       secret: this.env.JWT_REFRESH_SECRET,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expiresIn: this.env.JWT_REFRESH_EXPIRES_IN as any,
+      expiresIn: this.env.JWT_REFRESH_EXPIRES_IN as unknown as NonNullable<JwtSignOptions['expiresIn']>,
     };
   }
 
