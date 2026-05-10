@@ -15,31 +15,16 @@ The app is intentionally being built with clean architecture, strong typing, sha
 ```text
 odd-note-app/
 ├─ apps/
-│  ├─ api/        # NestJS backend
-│  └─ web/        # React + Vite frontend
-├─ packages/
-│  ├─ validation/ # shared Zod schemas and types
-│  ├─ eslint-config/
-│  ├─ tsconfig/
-│  └─ shared/     # reserved, currently empty
+ Auth config is centralized in `apps/api/src/config/auth-config.module.ts`
 ├─ infrastructure/
 │  ├─ docker/     # reserved, currently empty
-│  └─ nginx/      # reserved, currently empty
-├─ .husky/
-├─ .env.example
+ `apps/api/src/config/auth-config.module.ts` exposes auth-specific runtime config such as password salt rounds
 ├─ commitlint.config.cjs
 ├─ eslint.config.mjs
-├─ pnpm-workspace.yaml
-└─ package.json
-```
-
-## Workspace Conventions
+ `apps/api/src/auth/auth.module.ts` imports `AuthConfigModule` for auth runtime config access
 
 - Package manager: `pnpm`
-- Commit style: conventional commits
-- Git hooks: `husky` + `lint-staged` + `commitlint`
-- Language: TypeScript across apps and packages
-- Validation: `zod` shared schemas + `nestjs-zod` at API boundary
+ Auth config module extraction
 - Database: `Prisma` + PostgreSQL
 - Auth: bcrypt for password hashing, JWT for access/refresh tokens
 - Runtime style: incremental, small, reviewable changes only
@@ -58,7 +43,7 @@ odd-note-app/
 - Prisma client generated from `apps/api/prisma/schema.prisma`
 - Global validation pipe uses `nestjs-zod` in `apps/api/src/main.ts`
 - Config validation is centralized in `apps/api/src/config/env.validation.ts`
-- JWT config is centralized in `apps/api/src/config/jwt-config.module.ts`
+- JWT config module wires JWT DI only; token signing logic lives in `apps/api/src/config/jwt-config.service.ts`
 - Auth module currently supports register/login with token issuance
 - Refresh tokens are persisted in PostgreSQL and stored as `sha256` hashes
 
@@ -78,14 +63,7 @@ odd-note-app/
 
 ### Config
 
-- `apps/api/src/config/config.module.ts` loads and provides validated env config
-- `apps/api/src/config/env.validation.ts` validates database, Redis, JWT, SMTP, and S3 env values
-- `apps/api/src/config/jwt-config.module.ts` centralizes JWT signing config and refresh-token expiry parsing
-
-### Prisma
-
-- `apps/api/src/prisma/prisma.module.ts` and `prisma.service.ts` provide database access
-- `apps/api/prisma/schema.prisma` already contains:
+- JWT config service extraction
   - `User`
   - `VerificationToken`
   - `PasswordResetToken`
@@ -133,6 +111,7 @@ odd-note-app/
 - `apps/api/src/auth/auth.types.ts`
 - `apps/api/src/auth/dto/index.ts`
 - `apps/api/src/config/jwt-config.module.ts`
+- `apps/api/src/config/jwt-config.service.ts`
 - `apps/api/src/config/env.validation.ts`
 - `apps/api/prisma/schema.prisma`
 - `packages/validation/src/auth/register.schema.ts`
@@ -176,3 +155,4 @@ When making meaningful changes, update this file with:
 - files that future AI should inspect first
 
 Keep this file current. It is the session memory anchor.
+```
