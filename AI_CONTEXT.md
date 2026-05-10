@@ -65,10 +65,11 @@ odd-note-app/
 
 - `apps/api/src/config/config.module.ts` loads and provides validated env config
 - `apps/api/src/config/env.validation.ts` validates database, Redis, JWT, SMTP, and S3 env values
-- `apps/api/src/config/auth-config.module.ts` exposes auth-specific runtime config such as password salt rounds
+- `apps/api/src/config/auth-config.module.ts` wires auth config DI only; auth runtime logic lives in `apps/api/src/config/auth-config.service.ts`
 - `apps/api/src/config/jwt-config.module.ts` provides JWT module wiring and exports `JwtConfigService`
 - `apps/api/src/config/jwt-config.service.ts` centralizes JWT sign options and refresh-token expiry parsing
 - `apps/api/src/config/index.ts` re-exports config modules/services for stable internal imports
+- `apps/api/src/config/auth-config.service.ts` centralizes auth runtime config such as password salt rounds
 
 ### Prisma
 
