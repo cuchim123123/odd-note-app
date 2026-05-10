@@ -1,27 +1,43 @@
 import { Injectable, ConflictException, Inject, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { UserRole, Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { JwtConfigService } from '../config/jwt-config.module';
 import type { EnvConfig } from '../config/config.module';
 import type { LoginInput, RegisterInput } from '@odd-note-app/validation';
 
-export type RegisterResult = {
+/**
+ * User profile information returned to client after auth operations.
+ * Centralized single source of truth for user shape across all endpoints.
+ */
+export type AuthUserProfile = {
   id: string;
   email: string;
   displayName: string;
   role: UserRole;
   isEmailVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
-export type LoginResult = {
-  id: string;
-  email: string;
-  displayName: string;
-  role: UserRole;
-  isEmailVerified: boolean;
+/**
+ * JWT token pair (access + refresh).
+ */
+export type AuthTokens = {
+  accessToken: string;
+  refreshToken: string;
 };
+
+/**
+ * Result of registration or login - user profile + tokens.
+ */
+export type AuthResult = {
+  user: AuthUserProfile;
+  tokens: AuthTokens;
+};
+
+// Type aliases for backward compatibility if needed
+export type RegisterResult = AuthResult;
+export type LoginResult = AuthResult;
 
 @Injectable()
 export class AuthService {
@@ -29,15 +45,62 @@ export class AuthService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+    private readonly jwtConfig: JwtConfigService,
     @Inject('ENV_CONFIG') private readonly env: EnvConfig,
   ) {
     this.passwordSaltRounds = Number(env.PASSWORD_SALT_ROUNDS ?? 12);
   }
 
+  /**
+   * Project user from database record to client-safe profile.
+   * Single source of truth for user shape across all auth operations.
+   */
+  private projectUserProfile(user: { id: string; email: string; displayName: string; role: UserRole; isEmailVerified: boolean }): AuthUserProfile {
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+    };
+  }
+
+  /**
+   * Generate JWT access + refresh token pair and store refresh token in database.
+   * Refresh tokens are persisted for logout/invalidation and token rotation security.
+   */
+  private async generateAndStoreTokens(userId: string): Promise<AuthTokens> {
+    const accessToken = this.jwtService.sign(
+      { sub: userId },
+      this.jwtConfig.getAccessTokenSignOptions(),
+    );
+
+    const refreshToken = this.jwtService.sign(
+      { sub: userId, type: 'refresh' },
+      this.jwtConfig.getRefreshTokenSignOptions(),
+    );
+
+    // Hash refresh token before storing for security (breach resistance)
+    const tokenHash = await bcrypt.hash(refreshToken, this.passwordSaltRounds);
+    const expiryMs = this.jwtConfig.getRefreshTokenExpiryMs();
+    const expiresAt = new Date(Date.now() + expiryMs);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        tokenHash,
+        expiresAt,
+        userId,
+      },
+    });
+
+    return { accessToken, refreshToken };
+  }
+
   async register(input: RegisterInput): Promise<RegisterResult> {
     const normalizedEmail = input.email.trim().toLowerCase();
-    // keep a pre-check for nicer fast-fail, but also handle unique-constraint
-    // race conditions by catching Prisma P2002 errors on create
+
+    // Pre-check for nicer fast-fail; also catch Prisma P2002 race conditions on create
     const existingUser = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -58,22 +121,17 @@ export class AuthService {
         },
       });
     } catch (err) {
-      // Handle unique constraint errors robustly (P2002)
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        // This can happen in a race where another process created the user
         throw new ConflictException('Email is already registered');
       }
       throw err;
     }
 
+    const tokens = await this.generateAndStoreTokens(user.id);
+
     return {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      user: this.projectUserProfile(user),
+      tokens,
     };
   }
 
@@ -94,12 +152,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    const tokens = await this.generateAndStoreTokens(user.id);
+
     return {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified,
+      user: this.projectUserProfile(user),
+      tokens,
     };
   }
 }
