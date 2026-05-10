@@ -8,32 +8,19 @@ import type { EnvConfig } from './config.module';
 export class JwtConfigService {
   constructor(@Inject('ENV_CONFIG') private readonly env: EnvConfig) {}
 
-  getAccessTokenConfig(): JwtSignOptions {
+  private buildTokenSignOptions(secret: string, expiresIn: string): JwtSignOptions {
     return {
-      secret: this.env.JWT_ACCESS_SECRET,
-      expiresIn: this.env.JWT_ACCESS_EXPIRES_IN as unknown as NonNullable<JwtSignOptions['expiresIn']>,
-    };
-  }
-
-  getRefreshTokenConfig(): JwtSignOptions {
-    return {
-      secret: this.env.JWT_REFRESH_SECRET,
-      expiresIn: this.env.JWT_REFRESH_EXPIRES_IN as unknown as NonNullable<JwtSignOptions['expiresIn']>,
+      secret,
+      expiresIn: expiresIn as unknown as NonNullable<JwtSignOptions['expiresIn']>,
     };
   }
 
   getAccessTokenSignOptions(): JwtSignOptions {
-    return {
-      secret: this.env.JWT_ACCESS_SECRET,
-      expiresIn: this.env.JWT_ACCESS_EXPIRES_IN as unknown as NonNullable<JwtSignOptions['expiresIn']>,
-    };
+    return this.buildTokenSignOptions(this.env.JWT_ACCESS_SECRET, this.env.JWT_ACCESS_EXPIRES_IN);
   }
 
   getRefreshTokenSignOptions(): JwtSignOptions {
-    return {
-      secret: this.env.JWT_REFRESH_SECRET,
-      expiresIn: this.env.JWT_REFRESH_EXPIRES_IN as unknown as NonNullable<JwtSignOptions['expiresIn']>,
-    };
+    return this.buildTokenSignOptions(this.env.JWT_REFRESH_SECRET, this.env.JWT_REFRESH_EXPIRES_IN);
   }
 
   getRefreshTokenExpiryMs(): number {
@@ -59,12 +46,7 @@ export class JwtConfigService {
 }
 
 @Module({
-  imports: [
-    JwtModule.registerAsync({
-      useFactory: (jwtConfig: JwtConfigService) => jwtConfig.getAccessTokenConfig(),
-      inject: [JwtConfigService],
-    }),
-  ],
+  imports: [JwtModule],
   providers: [JwtConfigService],
   exports: [JwtModule, JwtConfigService],
 })
