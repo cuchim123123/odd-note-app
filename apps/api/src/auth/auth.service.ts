@@ -5,8 +5,7 @@ import { Prisma } from '@prisma/client';
 import type { User } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthConfigService } from '../config/auth-config.module';
-import { JwtConfigService } from '../config/jwt-config.service';
+import { AuthConfigService, JwtConfigService } from '../config';
 import type { LoginInput, RegisterInput } from '@odd-note-app/validation';
 import type { AuthTokens, AuthUserProfile, LoginResult, RegisterResult } from './auth.types';
 

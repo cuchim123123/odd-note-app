@@ -63,7 +63,17 @@ odd-note-app/
 
 ### Config
 
-- JWT config service extraction
+- `apps/api/src/config/config.module.ts` loads and provides validated env config
+- `apps/api/src/config/env.validation.ts` validates database, Redis, JWT, SMTP, and S3 env values
+- `apps/api/src/config/auth-config.module.ts` exposes auth-specific runtime config such as password salt rounds
+- `apps/api/src/config/jwt-config.module.ts` provides JWT module wiring and exports `JwtConfigService`
+- `apps/api/src/config/jwt-config.service.ts` centralizes JWT sign options and refresh-token expiry parsing
+- `apps/api/src/config/index.ts` re-exports config modules/services for stable internal imports
+
+### Prisma
+
+- `apps/api/src/prisma/prisma.module.ts` and `prisma.service.ts` provide database access
+- `apps/api/prisma/schema.prisma` already contains:
   - `User`
   - `VerificationToken`
   - `PasswordResetToken`
@@ -83,6 +93,25 @@ odd-note-app/
 
 - Pure Zod contract stays in `packages/validation`
 - NestJS DTO wrappers exist only at API boundary
+- The global `nestjs-zod` pipe validates request bodies cleanly
+- This avoids mixing framework concerns into shared schema packages
+
+## Current Auth Implementation Notes
+
+- Registration:
+  - normalizes email
+  - checks for existing user
+  - hashes password with bcrypt
+  - creates user
+  - issues access/refresh tokens
+  - stores refresh token hash in DB
+- Login:
+  - normalizes email
+  - validates credentials
+  - issues access/refresh tokens
+  - stores refresh token hash in DB
+- Refresh token storage uses `crypto.createHash('sha256')`, not bcrypt
+  - reason: refresh tokens should be hashed with a fast one-way digest, not a password hash algorithm
 - The global `nestjs-zod` pipe validates request bodies cleanly
 - This avoids mixing framework concerns into shared schema packages
 
