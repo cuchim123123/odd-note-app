@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto } from './dto';
+import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { EmailVerificationService } from './email-verification.service';
 
 @Controller('auth')
@@ -23,5 +23,16 @@ export class AuthController {
   @Get('verify-email/:token')
   async verifyEmail(@Param('token') token: string) {
     return await this.emailVerificationService.verifyEmailToken(token);
+  }
+
+  @Post('refresh')
+  async refresh(@Body() input: RefreshTokenDto) {
+    return await this.authService.refresh(input.refreshToken);
+  }
+
+  @Post('logout')
+  async logout(@Body() input: RefreshTokenDto) {
+    await this.authService.logout(input.refreshToken);
+    return { success: true };
   }
 }
