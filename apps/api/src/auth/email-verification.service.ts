@@ -4,6 +4,7 @@ import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { VerificationTokenService } from './verification-token.service';
 import { MailerService } from '../common/mailer/mailer.service';
+import { AuthUrlService } from '../common/auth-url.service';
 import { AuthUserMapper } from './auth-user.mapper';
 import type { AuthUserProfile } from './auth.types';
 
@@ -12,6 +13,7 @@ export class EmailVerificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly verificationTokenService: VerificationTokenService,
+    private readonly authUrlService: AuthUrlService,
     private readonly mailerService: MailerService,
     private readonly authUserMapper: AuthUserMapper,
   ) {}
@@ -21,10 +23,12 @@ export class EmailVerificationService {
   }
 
   async sendVerificationForUser(user: User, token: string): Promise<void> {
+    const verificationUrl = this.authUrlService.buildVerificationEmailUrl(token);
+
     await this.mailerService.sendVerificationEmail({
       to: user.email,
       displayName: user.displayName,
-      token,
+      verificationUrl,
     });
   }
 

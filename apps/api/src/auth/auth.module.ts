@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { SessionTokenService } from './session-token.service';
 import { AuthConfigModule, JwtConfigModule } from '../config';
 import { MailerService } from '../common/mailer/mailer.service';
+import { AuthUrlService } from '../common/auth-url.service';
 import { AuthUserMapper } from './auth-user.mapper';
 import { EmailVerificationService } from './email-verification.service';
 import { VerificationTokenService } from './verification-token.service';
@@ -18,6 +19,7 @@ import { VerificationTokenService } from './verification-token.service';
     SessionTokenService,
     VerificationTokenService,
     MailerService,
+    AuthUrlService,
     AuthUserMapper,
     EmailVerificationService,
   ],
