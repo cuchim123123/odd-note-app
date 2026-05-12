@@ -38,27 +38,30 @@ export class VerificationTokenService {
 
   async validateAndUseVerificationToken(token: string): Promise<string> {
     const tokenHash = this.hashToken(token);
-    const verificationToken = await this.prisma.verificationToken.findUnique({
-      where: { tokenHash },
+    return this.prisma.$transaction(async (tx) => {
+      const verificationToken = await tx.verificationToken.findUnique({
+        where: { tokenHash },
+      });
+
+      if (!verificationToken || verificationToken.usedAt || verificationToken.expiresAt < new Date()) {
+        throw new BadRequestException('Verification token is invalid or expired');
+      }
+
+      const now = new Date();
+      const consumeResult = await tx.verificationToken.updateMany({
+        where: {
+          id: verificationToken.id,
+          usedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { usedAt: now },
+      });
+
+      if (consumeResult.count !== 1) {
+        throw new BadRequestException('Verification token is invalid or expired');
+      }
+
+      return verificationToken.userId;
     });
-
-    if (!verificationToken) {
-      throw new BadRequestException('Verification token is invalid or expired');
-    }
-
-    if (verificationToken.usedAt) {
-      throw new BadRequestException('Verification token is invalid or expired');
-    }
-
-    if (verificationToken.expiresAt < new Date()) {
-      throw new BadRequestException('Verification token is invalid or expired');
-    }
-
-    await this.prisma.verificationToken.update({
-      where: { id: verificationToken.id },
-      data: { usedAt: new Date() },
-    });
-
-    return verificationToken.userId;
   }
 }
