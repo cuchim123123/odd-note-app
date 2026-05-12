@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNote, useUpdateNote, useDeleteNote } from '../api/notes.api';
 import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin } from 'lucide-react';
+import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { appendImageToContent } from '../utils/attachments';
 
 type ViewMode = 'grid' | 'list';
 
@@ -80,6 +81,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const updateMutation = useUpdateNote(noteId);
   const { mutateAsync: updateNote, isPending: isSaving } = updateMutation;
   const deleteMutation = useDeleteNote(noteId);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -149,6 +151,31 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     }
   };
 
+  const readFileAsDataUrl = (file: File) => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => reject(new Error('Failed to read attachment'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAttachImages = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    for (const file of files) {
+      const dataUrl = await readFileAsDataUrl(file);
+      setContent((currentContent) => appendImageToContent(currentContent, dataUrl, file.name));
+    }
+
+    event.target.value = '';
+  };
+
   if (isLoading || !note) {
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading note details...</div>;
   }
@@ -177,6 +204,23 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
           </div>
 
           <div className="flex items-center gap-2 self-start">
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleAttachImages}
+              className="hidden"
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isSaving}
+              aria-label="Add image attachment"
+            >
+              <ImagePlus className="w-4 h-4" />
+            </Button>
             <Button size="sm" variant="ghost" onClick={async () => {
               try {
                 await updateNote({ isPinned: !note.isPinned });
