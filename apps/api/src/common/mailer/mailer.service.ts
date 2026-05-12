@@ -25,9 +25,11 @@ export class MailerService {
   async sendVerificationEmail(params: {
     to: string;
     displayName: string;
-    verificationUrl: string;
+    token: string;
   }): Promise<void> {
-    const { to, displayName, verificationUrl } = params;
+    const { to, displayName, token } = params;
+    const baseUrl = this.env.APP_URL.replace(/\/$/, '');
+    const verificationUrl = `${baseUrl}/auth/verify-email/${token}`;
 
     await this.transporter.sendMail({
       from: this.env.SMTP_FROM,
