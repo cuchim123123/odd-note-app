@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit"
@@ -32,6 +34,11 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "@testing-library/jest-dom": "^6.0.0",
+    "jsdom": "^24.0.0",
+    "vitest": "^2.1.8",
     "@types/node": "^22.15.21",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
