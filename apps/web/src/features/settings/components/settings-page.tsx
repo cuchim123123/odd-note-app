@@ -1,14 +1,23 @@
 import { useTheme } from '../../../providers/theme-provider';
 import { useAuthStore } from '../../auth/stores/auth.store';
+import { useNotePreferencesStore, type NoteFontSize } from '../stores/note-preferences.store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Label } from '../../../components/ui/label';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { Moon, Sun, Laptop } from 'lucide-react';
 
+const noteFontSizeLabels: Record<NoteFontSize, string> = {
+  sm: 'Small',
+  base: 'Medium',
+  lg: 'Large',
+};
+
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const user = useAuthStore((state) => state.user);
+  const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
+  const setNoteFontSize = useNotePreferencesStore((state) => state.setNoteFontSize);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -70,6 +79,32 @@ export function SettingsPage() {
                   <Laptop className="w-4 h-4 mr-2" />
                   System
                 </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+            <CardDescription>Adjust how your notes are displayed while editing.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label>Note font size</Label>
+              <div className="flex flex-wrap gap-2">
+                {(['sm', 'base', 'lg'] as NoteFontSize[]).map((size) => (
+                  <Button
+                    key={size}
+                    type="button"
+                    variant={noteFontSize === size ? 'default' : 'outline'}
+                    onClick={() => setNoteFontSize(size)}
+                    className="w-full sm:w-auto"
+                    aria-pressed={noteFontSize === size}
+                  >
+                    {noteFontSizeLabels[size]}
+                  </Button>
+                ))}
               </div>
             </div>
           </CardContent>
