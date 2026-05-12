@@ -31,6 +31,12 @@ export function NoteEditor({ content = '', onChange, readOnly = false }: NoteEdi
     },
   });
 
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!readOnly);
+    }
+  }, [editor, readOnly]);
+
   // Sync content if it changes externally (e.g., when selecting a different note)
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
@@ -43,7 +49,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false }: NoteEdi
   }
 
   return (
-    <div className="w-full border rounded-md p-4 bg-background">
+    <div data-testid="note-editor" aria-readonly={readOnly} className="w-full border rounded-md p-4 bg-background">
       {/* TODO: Add formatting toolbar here later */}
       <EditorContent editor={editor} />
     </div>

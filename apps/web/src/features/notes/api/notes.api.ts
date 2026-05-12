@@ -37,7 +37,7 @@ let mockNotes: Note[] = [
   },
 ];
 
-function getSortedNotes(): Note[] {
+export function getSortedNotes(): Note[] {
   return [...mockNotes]
     .sort((left, right) => {
       if (left.isPinned !== right.isPinned) {
@@ -49,7 +49,7 @@ function getSortedNotes(): Note[] {
     .map(cloneNote);
 }
 
-function getNoteById(id: string): Note {
+export function getNoteById(id: string): Note {
   const note = mockNotes.find((entry) => entry.id === id);
 
   if (!note) {
@@ -59,7 +59,7 @@ function getNoteById(id: string): Note {
   return cloneNote(note);
 }
 
-function createNote(input: CreateNoteInput): Note {
+export function createNote(input: CreateNoteInput): Note {
   const note: Note = {
     id: createId(),
     title: input.title,
@@ -76,7 +76,7 @@ function createNote(input: CreateNoteInput): Note {
   return cloneNote(note);
 }
 
-function updateNote(id: string, input: UpdateNoteInput): Note {
+export function updateNote(id: string, input: UpdateNoteInput): Note {
   const existing = mockNotes.find((entry) => entry.id === id);
 
   if (!existing) {
@@ -97,8 +97,35 @@ function updateNote(id: string, input: UpdateNoteInput): Note {
   return cloneNote(updated);
 }
 
-function deleteNote(id: string): void {
+export function deleteNote(id: string): void {
   mockNotes = mockNotes.filter((entry) => entry.id !== id);
+}
+
+export function resetMockNotes() {
+  mockNotes = [
+    {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Getting Started',
+      content: '<p>Welcome to odd note!</p>',
+      isPinned: true,
+      isProtected: false,
+      isShared: false,
+      labels: ['tutorial'],
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    {
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      title: 'Meeting Notes',
+      content: '<ul><li>Discuss frontend architecture</li><li>Review mock APIs</li></ul>',
+      isPinned: false,
+      isProtected: false,
+      isShared: true,
+      labels: ['work', 'meeting'],
+      createdAt: now(),
+      updatedAt: now(),
+    },
+  ];
 }
 
 // Using a unique key for notes queries

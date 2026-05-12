@@ -78,6 +78,7 @@ export function NoteDashboard() {
 function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
   const { data: note, isLoading } = useNote(noteId);
   const updateMutation = useUpdateNote(noteId);
+  const { mutateAsync: updateNote, isPending: isSaving } = updateMutation;
   const deleteMutation = useDeleteNote(noteId);
 
   const [title, setTitle] = useState('');
@@ -114,7 +115,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     const timeoutId = window.setTimeout(async () => {
       try {
         setSaveError(null);
-        const updated = await updateMutation.mutateAsync({ title, content });
+        const updated = await updateNote({ title, content });
         setLastSavedAt(updated.updatedAt);
         setIsDirty(false);
       } catch (error) {
@@ -123,14 +124,14 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     }, 650);
 
     return () => window.clearTimeout(timeoutId);
-  }, [canAutosave, content, note, title, updateMutation]);
+  }, [canAutosave, content, note, title, updateNote]);
 
   const saveStatus = useMemo(() => {
     if (saveError) {
       return { icon: AlertTriangle, label: saveError, tone: 'text-destructive' as const };
     }
 
-    if (updateMutation.isPending) {
+    if (isSaving) {
       return { icon: Loader2, label: 'Autosaving…', tone: 'text-muted-foreground' as const };
     }
 
@@ -139,7 +140,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     }
 
     return { icon: Check, label: lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved', tone: 'text-emerald-600 dark:text-emerald-400' as const };
-  }, [isDirty, lastSavedAt, saveError, updateMutation.isPending]);
+  }, [isDirty, isSaving, lastSavedAt, saveError]);
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this note?')) {
@@ -166,20 +167,23 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             <div className="flex items-center gap-2 text-xs">
               {(() => {
                 const StatusIcon = saveStatus.icon;
-                return <StatusIcon className={cn('h-3.5 w-3.5', saveStatus.tone, updateMutation.isPending && 'animate-spin')} />;
+                return <StatusIcon className={cn('h-3.5 w-3.5', saveStatus.tone, isSaving && 'animate-spin')} />;
               })()}
               <span className={cn('font-medium', saveStatus.tone)}>{saveStatus.label}</span>
+            </div>
+            <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+              {saveStatus.label}
             </div>
           </div>
 
           <div className="flex items-center gap-2 self-start">
             <Button size="sm" variant="ghost" onClick={async () => {
               try {
-                await updateMutation.mutateAsync({ isPinned: !note.isPinned });
+                await updateNote({ isPinned: !note.isPinned });
               } catch {
                 // ignore - mutation handles optimistic updates
               }
-            }} disabled={updateMutation.isPending} aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}>
+            }} disabled={isSaving} aria-label={note.isPinned ? 'Unpin note' : 'Pin note'} aria-pressed={note.isPinned}>
               <Pin className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>

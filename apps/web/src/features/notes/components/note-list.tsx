@@ -74,7 +74,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
 
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       });
-  }, [debouncedSearch, notes]);
+  }, [debouncedSearch, notes, selectedLabel]);
 
   const isGridView = viewMode === 'grid';
 
@@ -84,12 +84,18 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
     return Array.from(set).sort();
   }, [notes]);
 
+  useEffect(() => {
+    if (selectedLabel && !labels.includes(selectedLabel)) {
+      setSelectedLabel(null);
+    }
+  }, [labels, selectedLabel]);
+
   return (
     <div className="flex flex-col h-full border-r bg-muted/20">
       <div className="p-4 border-b space-y-4">
-        <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
           <h2 className="font-semibold tracking-tight">All Notes</h2>
-          <Button size="icon" variant="ghost" onClick={handleCreateNew} disabled={createNoteMutation.isPending}>
+          <Button size="icon" variant="ghost" onClick={handleCreateNew} disabled={createNoteMutation.isPending} aria-label="Create new note" title="Create new note">
             <Plus className="w-4 h-4" />
           </Button>
         </div>
@@ -114,7 +120,12 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
         ) : (
           <div className="p-3">
             <div className="mb-3 flex items-center gap-2 overflow-x-auto">
-              <Button size="sm" variant={selectedLabel === null ? 'default' : 'ghost'} onClick={() => setSelectedLabel(null)}>
+              <Button
+                size="sm"
+                variant={selectedLabel === null ? 'default' : 'ghost'}
+                onClick={() => setSelectedLabel(null)}
+                aria-pressed={selectedLabel === null}
+              >
                 All
               </Button>
               {labels.map((label) => (
@@ -123,6 +134,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                   size="sm"
                   variant={selectedLabel === label ? 'default' : 'ghost'}
                   onClick={() => setSelectedLabel((s) => (s === label ? null : label))}
+                  aria-pressed={selectedLabel === label}
                 >
                   {label}
                 </Button>
@@ -201,6 +213,7 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
               <button
                 type="button"
                 aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}
+                aria-pressed={note.isPinned}
                 onClick={handleTogglePin}
                 className="rounded p-1"
               >
