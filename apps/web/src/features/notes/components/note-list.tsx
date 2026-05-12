@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, memo } from 'react';
 import { useNotes, useCreateNote, useUpdateNote } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { Button } from '../../../components/ui/button';
@@ -151,7 +151,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
   );
 }
 
-function NoteCard({ note, isSelected, onSelect, isGridView }: { note: Note; isSelected: boolean; onSelect: () => void; isGridView: boolean }) {
+const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView }: { note: Note; isSelected: boolean; onSelect: () => void; isGridView: boolean }) {
   const update = useUpdateNote(note.id);
 
   const handleTogglePin = async (e: React.MouseEvent) => {
@@ -163,11 +163,22 @@ function NoteCard({ note, isSelected, onSelect, isGridView }: { note: Note; isSe
     }
   };
 
+  // keyboard accessibility for the card
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect();
+    }
+  };
+
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       onClick={onSelect}
       className={cn(
-        'group w-full rounded-xl border bg-background text-left transition-all hover:-translate-y-0.5 hover:shadow-md',
+        'group w-full rounded-xl border bg-background text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20',
         isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border/70 hover:border-border',
         isGridView ? 'p-4' : 'p-4',
       )}
@@ -187,9 +198,14 @@ function NoteCard({ note, isSelected, onSelect, isGridView }: { note: Note; isSe
             </div>
 
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={handleTogglePin}>
+              <button
+                type="button"
+                aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}
+                onClick={handleTogglePin}
+                className="rounded p-1"
+              >
                 <Pin className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
           </div>
 
@@ -211,6 +227,6 @@ function NoteCard({ note, isSelected, onSelect, isGridView }: { note: Note; isSe
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
-}
+});
