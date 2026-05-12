@@ -36,7 +36,7 @@ export function NoteDashboard() {
 function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
   const { data: note, isLoading } = useNote(noteId);
   const updateMutation = useUpdateNote(noteId);
-  const deleteMutation = useDeleteNote();
+  const deleteMutation = useDeleteNote(noteId);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -55,7 +55,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this note?')) {
-      await deleteMutation.mutateAsync(noteId);
+      await deleteMutation.mutateAsync();
       onDeleted();
     }
   };

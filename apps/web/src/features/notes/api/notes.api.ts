@@ -20,8 +20,28 @@ export const useNotes = () => {
       return new Promise<Note[]>((resolve) => {
         setTimeout(() => {
           resolve([
-            { id: '1', title: 'Getting Started', content: '<p>Welcome to odd note!</p>', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-            { id: '2', title: 'Meeting Notes', content: '<ul><li>Discuss frontend architecture</li><li>Review mock APIs</li></ul>', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+            { 
+              id: '550e8400-e29b-41d4-a716-446655440000', 
+              title: 'Getting Started', 
+              content: '<p>Welcome to odd note!</p>', 
+              isPinned: true,
+              isProtected: false,
+              isShared: false,
+              labels: ['tutorial'],
+              createdAt: new Date().toISOString(), 
+              updatedAt: new Date().toISOString() 
+            },
+            { 
+              id: '550e8400-e29b-41d4-a716-446655440001', 
+              title: 'Meeting Notes', 
+              content: '<ul><li>Discuss frontend architecture</li><li>Review mock APIs</li></ul>', 
+              isPinned: false,
+              isProtected: false,
+              isShared: true,
+              labels: ['work', 'meeting'],
+              createdAt: new Date().toISOString(), 
+              updatedAt: new Date().toISOString() 
+            },
           ]);
         }, 500);
       });
@@ -41,7 +61,17 @@ export const useNote = (id: string | null) => {
       // MOCK DATA
       return new Promise<Note>((resolve) => {
         setTimeout(() => {
-          resolve({ id: id!, title: 'Mock Note', content: '<p>This is a mock note.</p>', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+          resolve({ 
+            id: id!, 
+            title: 'Mock Note', 
+            content: '<p>This is a mock note.</p>', 
+            isPinned: false,
+            isProtected: false,
+            isShared: false,
+            labels: [],
+            createdAt: new Date().toISOString(), 
+            updatedAt: new Date().toISOString() 
+          });
         }, 300);
       });
     },
@@ -59,10 +89,19 @@ export const useCreateNote = () => {
       // MOCK DATA
       return new Promise<Note>((resolve) => {
         setTimeout(() => {
+          const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
           resolve({ 
-            id: Math.random().toString(36).substring(7), 
+            id: uuid, 
             title: data.title, 
             content: data.content || '', 
+            isPinned: false,
+            isProtected: false,
+            isShared: false,
+            labels: data.labels || [],
             createdAt: new Date().toISOString(), 
             updatedAt: new Date().toISOString() 
           });
@@ -90,6 +129,10 @@ export const useUpdateNote = (id: string) => {
             id, 
             title: data.title || 'Updated Title', 
             content: data.content || '', 
+            isPinned: data.isPinned ?? false,
+            isProtected: data.isProtected ?? false,
+            isShared: false,
+            labels: data.labels || [],
             createdAt: new Date().toISOString(), 
             updatedAt: new Date().toISOString() 
           });
@@ -103,7 +146,7 @@ export const useUpdateNote = (id: string) => {
   });
 };
 
-export const useDeleteNote = () => {
+export const useDeleteNote = (id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -115,6 +158,7 @@ export const useDeleteNote = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.detail(id) });
     },
   });
 };

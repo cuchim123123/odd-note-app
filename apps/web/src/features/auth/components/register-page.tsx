@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { registerSchema, type RegisterRequestInput } from '@odd-note-app/validation';
+import { registerSchema, type RegisterInput, type RegisterRequestInput } from '@odd-note-app/validation';
 import { useRegister } from '../api/auth.api';
 import { AxiosError } from 'axios';
 
@@ -13,13 +13,13 @@ import { Button } from '../../../components/ui/button';
 export function RegisterPage() {
   const navigate = useNavigate();
   const registerMutation = useRegister();
-  const { register, handleSubmit, formState: { errors } } = useForm<RegisterRequestInput>({
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterRequestInput, unknown, RegisterInput>({
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: RegisterRequestInput) => {
+  const onSubmit = async (data: RegisterInput) => {
     try {
-      await registerMutation.mutateAsync(data);
+      await registerMutation.mutateAsync(data as RegisterRequestInput);
       navigate('/', { replace: true });
     } catch (error) {
       console.error(error);
