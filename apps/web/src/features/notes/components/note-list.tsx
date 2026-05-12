@@ -1,29 +1,77 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNotes, useCreateNote } from '../api/notes.api';
 import { Button } from '../../../components/ui/button';
-import { FileText, Plus, Search } from 'lucide-react';
+import { FileText, Lock, Pin, Plus, Search, Share2 } from 'lucide-react';
 import { Input } from '../../../components/ui/input';
 import { cn } from '../../../lib/utils';
+
+type ViewMode = 'grid' | 'list';
 
 
 type NoteListProps = {
   selectedNoteId: string | null;
   onSelectNote: (id: string) => void;
+  viewMode: ViewMode;
 };
 
-export function NoteList({ selectedNoteId, onSelectNote }: NoteListProps) {
+function stripHtml(html: string | undefined): string {
+  if (!html) {
+    return '';
+  }
+
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function formatPreview(noteContent: string | undefined): string {
+  const plainText = stripHtml(noteContent);
+  if (!plainText) {
+    return 'No content yet.';
+  }
+
+  return plainText.length > 120 ? `${plainText.slice(0, 120)}…` : plainText;
+}
+
+export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListProps) {
   const { data: notes, isLoading } = useNotes();
   const createNoteMutation = useCreateNote();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim().toLowerCase());
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [search]);
 
   const handleCreateNew = async () => {
     const newNote = await createNoteMutation.mutateAsync({ title: 'Untitled Note', content: '' });
     onSelectNote(newNote.id);
   };
 
-  const filteredNotes = notes?.filter(note => 
-    note.title.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const filteredNotes = useMemo(() => {
+    const visibleNotes = notes ?? [];
+
+    return visibleNotes
+      .filter((note) => {
+        if (!debouncedSearch) {
+          return true;
+        }
+
+        const searchableText = `${note.title} ${stripHtml(note.content)}`.toLowerCase();
+        return searchableText.includes(debouncedSearch);
+      })
+      .sort((left, right) => {
+        if (left.isPinned !== right.isPinned) {
+          return Number(right.isPinned) - Number(left.isPinned);
+        }
+
+        return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+      });
+  }, [debouncedSearch, notes]);
+
+  const isGridView = viewMode === 'grid';
 
   return (
     <div className="flex flex-col h-full border-r bg-muted/20">
@@ -53,32 +101,58 @@ export function NoteList({ selectedNoteId, onSelectNote }: NoteListProps) {
             {search ? 'No notes found matching your search.' : 'No notes yet. Create one!'}
           </div>
         ) : (
-          <ul className="divide-y divide-border/50">
-            {filteredNotes.map((note) => (
-              <li key={note.id}>
+          <div className={cn('p-3', isGridView ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-2')}>
+            {filteredNotes.map((note) => {
+              const isSelected = selectedNoteId === note.id;
+
+              return (
                 <button
+                  key={note.id}
                   onClick={() => onSelectNote(note.id)}
                   className={cn(
-                    "w-full text-left px-4 py-3 hover:bg-accent hover:text-accent-foreground transition-colors flex flex-col gap-1",
-                    selectedNoteId === note.id ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                    'group w-full rounded-xl border bg-background text-left transition-all hover:-translate-y-0.5 hover:shadow-md',
+                    isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border/70 hover:border-border',
+                    isGridView ? 'p-4' : 'p-4'
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 shrink-0" />
-                    <span className={cn(
-                      "font-medium truncate",
-                      selectedNoteId === note.id ? "text-foreground" : "text-foreground/80"
-                    )}>
-                      {note.title}
-                    </span>
+                  <div className={cn('flex items-start gap-3', isGridView ? 'flex-col' : 'flex-row')}>
+                    <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted/70', isSelected && 'bg-primary/10')}>
+                      <FileText className={cn('h-4 w-4', isSelected ? 'text-primary' : 'text-muted-foreground')} />
+                    </div>
+
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={cn('truncate font-medium', isSelected ? 'text-foreground' : 'text-foreground')}>{note.title}</span>
+                            {note.isPinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : null}
+                            {note.isProtected ? <Lock className="h-3.5 w-3.5 shrink-0 text-destructive" /> : null}
+                            {note.isShared ? <Share2 className="h-3.5 w-3.5 shrink-0 text-sky-500" /> : null}
+                          </div>
+                          <p className={cn('mt-1 text-sm leading-5 text-muted-foreground', isGridView ? 'line-clamp-3' : 'line-clamp-2')}>
+                            {formatPreview(note.content)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {note.labels.map((label) => (
+                          <span key={label} className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
+                        <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
+                        <span>{new Date(note.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-xs truncate ml-6">
-                    {new Date(note.updatedAt).toLocaleDateString()}
-                  </span>
                 </button>
-              </li>
-            ))}
-          </ul>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

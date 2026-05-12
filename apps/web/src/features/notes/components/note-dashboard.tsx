@@ -4,30 +4,71 @@ import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Trash2, Save, FileEdit } from 'lucide-react';
+import { Grid2x2, List, Trash2, Save, FileEdit } from 'lucide-react';
+
+type ViewMode = 'grid' | 'list';
 
 export function NoteDashboard() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] overflow-hidden rounded-xl border bg-card shadow-sm">
-      {/* Sidebar */}
-      <div className="w-80 shrink-0 h-full border-r">
-        <NoteList selectedNoteId={selectedNoteId} onSelectNote={setSelectedNoteId} />
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Your notes</h1>
+          <p className="text-sm text-muted-foreground">
+            Switch between grid and list views, search instantly, and open any note to edit it.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 rounded-full border bg-background p-1 shadow-sm">
+          <Button
+            type="button"
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="rounded-full"
+          >
+            <Grid2x2 className="mr-2 h-4 w-4" />
+            Grid
+          </Button>
+          <Button
+            type="button"
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="rounded-full"
+          >
+            <List className="mr-2 h-4 w-4" />
+            List
+          </Button>
+        </div>
       </div>
-      
-      {/* Main Content */}
-      <div className="flex-1 h-full overflow-hidden flex flex-col bg-background relative">
-        {selectedNoteId ? (
-          <NoteDetailView noteId={selectedNoteId} onDeleted={() => setSelectedNoteId(null)} />
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-            <div className="bg-muted/30 p-6 rounded-full mb-4">
-              <FileEdit className="w-10 h-10 text-muted-foreground/50" />
+
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border bg-card shadow-sm">
+        {/* Sidebar */}
+        <div className="w-full shrink-0 border-r lg:w-[22rem]">
+          <NoteList
+            selectedNoteId={selectedNoteId}
+            onSelectNote={setSelectedNoteId}
+            viewMode={viewMode}
+          />
+        </div>
+
+        {/* Main Content */}
+        <div className="relative flex-1 overflow-hidden bg-background">
+          {selectedNoteId ? (
+            <NoteDetailView noteId={selectedNoteId} onDeleted={() => setSelectedNoteId(null)} />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center px-6 text-center text-muted-foreground">
+              <div className="mb-4 rounded-full bg-muted/30 p-6">
+                <FileEdit className="h-10 w-10 text-muted-foreground/50" />
+              </div>
+              <p className="max-w-sm">Select a note from the sidebar or create a new one.</p>
             </div>
-            <p>Select a note from the sidebar or create a new one.</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
