@@ -12,6 +12,8 @@ const now = () => new Date().toISOString();
 
 const cloneNote = (note: Note): Note => ({ ...note, labels: [...note.labels] });
 
+const normalizeLabel = (label: string) => label.trim();
+
 let mockNotes: Note[] = [
   {
     id: '550e8400-e29b-41d4-a716-446655440000',
@@ -95,6 +97,20 @@ export function updateNote(id: string, input: UpdateNoteInput): Note {
 
   mockNotes = mockNotes.map((entry) => (entry.id === id ? updated : entry));
   return cloneNote(updated);
+}
+
+export function renameLabelInNotes(oldLabel: string, newLabel: string): void {
+  const trimmedOldLabel = normalizeLabel(oldLabel);
+  const trimmedNewLabel = normalizeLabel(newLabel);
+
+  if (!trimmedOldLabel || !trimmedNewLabel || trimmedOldLabel === trimmedNewLabel) {
+    return;
+  }
+
+  mockNotes = mockNotes.map((note) => ({
+    ...note,
+    labels: note.labels.map((label) => (label === trimmedOldLabel ? trimmedNewLabel : label)),
+  }));
 }
 
 export function deleteNote(id: string): void {

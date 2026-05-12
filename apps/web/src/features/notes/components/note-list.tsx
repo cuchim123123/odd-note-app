@@ -5,6 +5,7 @@ import { Button } from '../../../components/ui/button';
 import { FileText, Lock, Pin, Plus, Search, Share2 } from 'lucide-react';
 import { Input } from '../../../components/ui/input';
 import { cn } from '../../../lib/utils';
+import { useLabelManagementStore } from '../../settings/stores/label-management.store';
 
 type ViewMode = 'grid' | 'list';
 
@@ -38,6 +39,8 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const labels = useLabelManagementStore((state) => state.labels);
+  const syncLabels = useLabelManagementStore((state) => state.syncLabels);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -78,11 +81,11 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
 
   const isGridView = viewMode === 'grid';
 
-  const labels = useMemo(() => {
-    const set = new Set<string>();
-    (notes || []).forEach((n) => n.labels.forEach((l) => set.add(l)));
-    return Array.from(set).sort();
-  }, [notes]);
+  useEffect(() => {
+    if ((notes?.length ?? 0) > 0 && labels.length === 0) {
+      syncLabels((notes ?? []).flatMap((note) => note.labels));
+    }
+  }, [labels.length, notes, syncLabels]);
 
   useEffect(() => {
     if (selectedLabel && !labels.includes(selectedLabel)) {
