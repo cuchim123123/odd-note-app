@@ -10,6 +10,8 @@ import { AuthUrlService } from '../common/auth-url.service';
 import { AuthUserMapper } from './auth-user.mapper';
 import { EmailVerificationService } from './email-verification.service';
 import { VerificationTokenService } from './verification-token.service';
+import { PasswordResetTokenService } from './password-reset-token.service';
+import { PasswordResetService } from './password-reset.service';
 
 import { TokenCleanupService } from './token-cleanup.service';
 
@@ -20,10 +22,12 @@ import { TokenCleanupService } from './token-cleanup.service';
     AuthService,
     SessionTokenService,
     VerificationTokenService,
+    PasswordResetTokenService,
     MailerService,
     AuthUrlService,
     AuthUserMapper,
     EmailVerificationService,
+    PasswordResetService,
     TokenCleanupService,
   ],
 })

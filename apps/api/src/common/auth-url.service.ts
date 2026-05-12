@@ -9,4 +9,9 @@ export class AuthUrlService {
     const baseUrl = this.env.APP_URL.replace(/\/$/, '');
     return `${baseUrl}/auth/verify-email/${token}`;
   }
+
+  buildResetPasswordUrl(token: string): string {
+    const baseUrl = this.env.APP_URL.replace(/\/$/, '');
+    return `${baseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
+  }
 }
