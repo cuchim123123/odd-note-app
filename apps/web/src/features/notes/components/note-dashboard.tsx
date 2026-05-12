@@ -4,7 +4,7 @@ import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 type ViewMode = 'grid' | 'list';
@@ -173,6 +173,15 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
           </div>
 
           <div className="flex items-center gap-2 self-start">
+            <Button size="sm" variant="ghost" onClick={async () => {
+              try {
+                await updateMutation.mutateAsync({ isPinned: !note.isPinned });
+              } catch {
+                // ignore - mutation handles optimistic updates
+              }
+            }} disabled={updateMutation.isPending} aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}>
+              <Pin className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
               <Trash2 className="w-4 h-4" />
             </Button>
