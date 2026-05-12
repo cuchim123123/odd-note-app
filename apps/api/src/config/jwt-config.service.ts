@@ -21,6 +21,10 @@ export class JwtConfigService {
     return this.buildTokenSignOptions(this.env.JWT_REFRESH_SECRET, this.env.JWT_REFRESH_EXPIRES_IN);
   }
 
+  getRefreshTokenSecret(): string {
+    return this.env.JWT_REFRESH_SECRET;
+  }
+
   getRefreshTokenExpiryMs(): number {
     const expiresIn = this.env.JWT_REFRESH_EXPIRES_IN;
     const match = expiresIn.match(/(\d+)([dhms])/);
