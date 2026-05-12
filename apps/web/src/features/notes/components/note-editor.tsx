@@ -2,6 +2,8 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEffect } from 'react';
+import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
+import { cn } from '../../../lib/utils';
 
 type NoteEditorProps = {
   content?: string;
@@ -10,6 +12,8 @@ type NoteEditorProps = {
 };
 
 export function NoteEditor({ content = '', onChange, readOnly = false }: NoteEditorProps) {
+  const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -32,6 +36,16 @@ export function NoteEditor({ content = '', onChange, readOnly = false }: NoteEdi
   });
 
   useEffect(() => {
+    if (!editor || !editor.view?.dom) {
+      return;
+    }
+
+    const dom = editor.view.dom;
+    dom.classList.remove('prose-sm', 'prose-base', 'prose-lg');
+    dom.classList.add(noteFontSize === 'sm' ? 'prose-sm' : noteFontSize === 'lg' ? 'prose-lg' : 'prose-base');
+  }, [editor, noteFontSize]);
+
+  useEffect(() => {
     if (editor) {
       editor.setEditable(!readOnly);
     }
@@ -49,9 +63,17 @@ export function NoteEditor({ content = '', onChange, readOnly = false }: NoteEdi
   }
 
   return (
-    <div data-testid="note-editor" aria-readonly={readOnly} className="w-full border rounded-md p-4 bg-background">
+    <div
+      data-testid="note-editor"
+      data-note-font-size={noteFontSize}
+      aria-readonly={readOnly}
+      className="w-full border rounded-md p-4 bg-background"
+    >
       {/* TODO: Add formatting toolbar here later */}
-      <EditorContent editor={editor} />
+      <EditorContent
+        editor={editor}
+        className={cn('prose dark:prose-invert focus:outline-none max-w-none min-h-[300px]')}
+      />
     </div>
   );
 }

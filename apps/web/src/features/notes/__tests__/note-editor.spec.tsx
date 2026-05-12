@@ -1,6 +1,19 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { cleanup, render } from '@testing-library/react';
 import { NoteEditor } from '../components/note-editor';
+import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
+
+const resetFontPreference = () => {
+  useNotePreferencesStore.getState().setNoteFontSize('base');
+};
+
+beforeEach(() => {
+  resetFontPreference();
+});
+
+afterEach(() => {
+  cleanup();
+});
 
 // Mock TipTap to simulate editor behavior without testing internals
 vi.mock('@tiptap/react', async () => {
@@ -55,6 +68,14 @@ describe('NoteEditor — observable behavior', () => {
 
     expect(wrapper.getAttribute('aria-readonly')).toBe('true');
     expect(content.innerHTML).toContain('<p>second</p>');
+  });
+
+  it('exposes the selected note font size in the editor wrapper', () => {
+    useNotePreferencesStore.getState().setNoteFontSize('lg');
+
+    const { getByTestId } = render(<NoteEditor content="<p>Text</p>" readOnly={false} />);
+
+    expect(getByTestId('note-editor')).toHaveAttribute('data-note-font-size', 'lg');
   });
 
   it('should not throw when changing between readOnly states', () => {
