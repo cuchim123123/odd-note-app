@@ -11,6 +11,8 @@ import { AuthUserMapper } from './auth-user.mapper';
 import { EmailVerificationService } from './email-verification.service';
 import { VerificationTokenService } from './verification-token.service';
 
+import { TokenCleanupService } from './token-cleanup.service';
+
 @Module({
   imports: [ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [AuthController],
@@ -22,6 +24,7 @@ import { VerificationTokenService } from './verification-token.service';
     AuthUrlService,
     AuthUserMapper,
     EmailVerificationService,
+    TokenCleanupService,
   ],
 })
 export class AuthModule {}
