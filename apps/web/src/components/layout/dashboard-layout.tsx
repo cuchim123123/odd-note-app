@@ -24,11 +24,11 @@ export function DashboardLayout() {
           </Link>
           
           <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 transition-colors">
               <Book className="w-4 h-4" />
               Notes
             </Link>
-            <Link to="/settings" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/settings" className="flex items-center gap-2 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 transition-colors">
               <SettingsIcon className="w-4 h-4" />
               Settings
             </Link>
@@ -39,7 +39,7 @@ export function DashboardLayout() {
               <span className="text-muted-foreground">Logged in as </span>
               <span className="font-medium">{user?.displayName || user?.email}</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} disabled={logoutMutation.isPending}>
+            <Button variant="ghost" size="sm" onClick={handleLogout} disabled={logoutMutation.isPending} aria-label="Logout from your account">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
