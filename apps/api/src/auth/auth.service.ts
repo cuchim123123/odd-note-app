@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { User } from '@prisma/client';
 import bcrypt from 'bcrypt';
@@ -12,6 +12,7 @@ import { EmailVerificationService } from './email-verification.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly passwordSaltRounds: number;
 
   constructor(
@@ -61,7 +62,18 @@ export class AuthService {
       return { user: newUser, verificationToken: token };
     });
 
-    await this.emailVerificationService.sendVerificationForUser(user, verificationToken);
+    // Verification email delivery is a non-critical async side effect.
+    // The account must be created even if SMTP is temporarily unavailable,
+    // otherwise users see a failed registration while the user record already exists.
+    try {
+      await this.emailVerificationService.sendVerificationForUser(user, verificationToken);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send verification email for ${user.email}`,
+        error instanceof Error ? error.stack : undefined,
+        AuthService.name,
+      );
+    }
 
     const tokens = await this.sessionTokenService.generateAndStoreTokens(user.id);
 
