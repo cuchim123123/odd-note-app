@@ -1,19 +1,18 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AppConfigService } from '../config';
 import { RegisterDto, LoginDto } from './dto';
+import { EmailVerificationService } from './email-verification.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly appConfig: AppConfigService,
+    private readonly emailVerificationService: EmailVerificationService,
   ) {}
 
   @Post('register')
   async register(@Body() input: RegisterDto) {
-    const appUrl = this.appConfig.getAppUrl();
-    return await this.authService.register(input, appUrl);
+    return await this.authService.register(input);
   }
 
   @Post('login')
@@ -23,6 +22,6 @@ export class AuthController {
 
   @Get('verify-email/:token')
   async verifyEmail(@Param('token') token: string) {
-    return await this.authService.verifyEmail(token);
+    return await this.emailVerificationService.verifyEmailToken(token);
   }
 }
