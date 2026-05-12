@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNote, useUpdateNote, useDeleteNote } from '../api/notes.api';
 import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Grid2x2, List, Trash2, Save, FileEdit } from 'lucide-react';
+import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { cn } from '../../../lib/utils';
 
 type ViewMode = 'grid' | 'list';
 
@@ -81,18 +82,64 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [isDirty, setIsDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Sync local state when note changes
   useEffect(() => {
     if (note) {
       setTitle(note.title);
       setContent(note.content || '');
+      setIsDirty(false);
+      setLastSavedAt(note.updatedAt);
+      setSaveError(null);
     }
   }, [note]);
 
-  const handleSave = () => {
-    updateMutation.mutate({ title, content });
-  };
+  const canAutosave = !!note && !isLoading;
+
+  useEffect(() => {
+    if (!canAutosave || !note) {
+      return;
+    }
+
+    const hasChanges = title !== note.title || content !== (note.content || '');
+    setIsDirty(hasChanges);
+
+    if (!hasChanges) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setSaveError(null);
+        const updated = await updateMutation.mutateAsync({ title, content });
+        setLastSavedAt(updated.updatedAt);
+        setIsDirty(false);
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : 'Failed to save note');
+      }
+    }, 650);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [canAutosave, content, note, title, updateMutation]);
+
+  const saveStatus = useMemo(() => {
+    if (saveError) {
+      return { icon: AlertTriangle, label: saveError, tone: 'text-destructive' as const };
+    }
+
+    if (updateMutation.isPending) {
+      return { icon: Loader2, label: 'Autosaving…', tone: 'text-muted-foreground' as const };
+    }
+
+    if (isDirty) {
+      return { icon: Loader2, label: 'Pending changes…', tone: 'text-muted-foreground' as const };
+    }
+
+    return { icon: Check, label: lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved', tone: 'text-emerald-600 dark:text-emerald-400' as const };
+  }, [isDirty, lastSavedAt, saveError, updateMutation.isPending]);
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this note?')) {
@@ -107,21 +154,29 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b flex items-center justify-between gap-4 bg-background">
-        <Input 
-          value={title} 
-          onChange={(e) => setTitle(e.target.value)} 
-          className="text-xl font-bold border-transparent hover:border-input focus-visible:border-input px-2 shadow-none max-w-xl"
-          placeholder="Note title..."
-        />
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
-            <Save className="w-4 h-4 mr-2" />
-            {updateMutation.isPending ? 'Saving...' : 'Save'}
-          </Button>
-          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
-            <Trash2 className="w-4 h-4" />
-          </Button>
+      <div className="border-b bg-background px-4 py-3 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Input 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+              className="border-transparent px-0 text-2xl font-semibold shadow-none focus-visible:border-input"
+              placeholder="Note title..."
+            />
+            <div className="flex items-center gap-2 text-xs">
+              {(() => {
+                const StatusIcon = saveStatus.icon;
+                return <StatusIcon className={cn('h-3.5 w-3.5', saveStatus.tone, updateMutation.isPending && 'animate-spin')} />;
+              })()}
+              <span className={cn('font-medium', saveStatus.tone)}>{saveStatus.label}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start">
+            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
       
