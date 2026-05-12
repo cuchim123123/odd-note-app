@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+const durationSchema = z.string().regex(/^\d+[dhms]$/, {
+  message: 'Expected duration format like 24h, 15m, 30s, or 7d',
+});
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   APP_URL: z.string().url(),
@@ -9,14 +13,14 @@ const envSchema = z.object({
   REDIS_URL: z.string().url(),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
-  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  JWT_ACCESS_EXPIRES_IN: durationSchema.default('15m'),
+  JWT_REFRESH_EXPIRES_IN: durationSchema.default('7d'),
   SMTP_HOST: z.string(),
   SMTP_PORT: z.coerce.number(),
   SMTP_USER: z.string().default(''),
   SMTP_PASS: z.string().default(''),
   SMTP_FROM: z.string().email(),
-  EMAIL_VERIFICATION_TOKEN_EXPIRES_IN: z.string().default('24h'),
+  EMAIL_VERIFICATION_TOKEN_EXPIRES_IN: durationSchema.default('24h'),
   S3_ENDPOINT: z.string(),
   S3_PORT: z.coerce.number(),
   S3_ACCESS_KEY: z.string(),

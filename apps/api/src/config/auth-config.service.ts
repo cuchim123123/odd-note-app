@@ -10,13 +10,13 @@ export class AuthConfigService {
   }
 
   getEmailVerificationTokenExpiryMs(): number {
-    return this.parseDurationToMs(this.env.EMAIL_VERIFICATION_TOKEN_EXPIRES_IN, 24 * 60 * 60 * 1000);
+    return this.parseDurationToMs(this.env.EMAIL_VERIFICATION_TOKEN_EXPIRES_IN);
   }
 
-  private parseDurationToMs(duration: string, fallbackMs: number): number {
+  private parseDurationToMs(duration: string): number {
     const match = duration.match(/^(\d+)([dhms])$/);
     if (!match) {
-      return fallbackMs;
+      throw new Error(`Invalid duration format: ${duration}`);
     }
 
     const value = Number(match[1]);
@@ -32,7 +32,7 @@ export class AuthConfigService {
       case 's':
         return value * 1000;
       default:
-        return fallbackMs;
+        throw new Error(`Unsupported duration unit in: ${duration}`);
     }
   }
 }
