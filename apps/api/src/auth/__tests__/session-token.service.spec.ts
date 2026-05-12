@@ -2,11 +2,11 @@ import { UnauthorizedException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../config', () => ({
+vi.mock('../../config', () => ({
   JwtConfigService: class JwtConfigService {},
 }));
 
-import { SessionTokenService } from './session-token.service';
+import { SessionTokenService } from '../session-token.service';
 
 type TransactionClientMock = {
   refreshToken: {
