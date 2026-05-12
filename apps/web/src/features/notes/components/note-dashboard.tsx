@@ -4,9 +4,10 @@ import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus } from 'lucide-react';
+import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { appendImageToContent } from '../utils/attachments';
+import { useNoteProtectionStore } from '../stores/note-protection.store';
 
 type ViewMode = 'grid' | 'list';
 
@@ -82,12 +83,21 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const { mutateAsync: updateNote, isPending: isSaving } = updateMutation;
   const deleteMutation = useDeleteNote(noteId);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const isUnlocked = useNoteProtectionStore((state) => state.isUnlocked(noteId));
+  const lockNote = useNoteProtectionStore((state) => state.lockNote);
+  const unlockNote = useNoteProtectionStore((state) => state.unlockNote);
+  const removeProtection = useNoteProtectionStore((state) => state.removeProtection);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [protectionMode, setProtectionMode] = useState<'idle' | 'protect' | 'remove'>('idle');
+  const [protectionPassword, setProtectionPassword] = useState('');
+  const [confirmProtectionPassword, setConfirmProtectionPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [protectionMessage, setProtectionMessage] = useState<string | null>(null);
 
   // Sync local state when note changes
   useEffect(() => {
@@ -97,6 +107,11 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       setIsDirty(false);
       setLastSavedAt(note.updatedAt);
       setSaveError(null);
+      setProtectionMode('idle');
+      setProtectionPassword('');
+      setConfirmProtectionPassword('');
+      setCurrentPassword('');
+      setProtectionMessage(null);
     }
   }, [note]);
 
@@ -151,6 +166,58 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     }
   };
 
+  const handleEnableProtection = async () => {
+    const normalizedPassword = protectionPassword.trim();
+
+    if (!normalizedPassword) {
+      setProtectionMessage('Enter a password.');
+      return;
+    }
+
+    if (normalizedPassword !== confirmProtectionPassword.trim()) {
+      setProtectionMessage('Passwords do not match.');
+      return;
+    }
+
+    const protectedNow = lockNote(noteId, normalizedPassword);
+
+    if (!protectedNow) {
+      setProtectionMessage('Enter a password.');
+      return;
+    }
+
+    await updateNote({ isProtected: true });
+    unlockNote(noteId, normalizedPassword);
+    setProtectionMode('idle');
+    setProtectionPassword('');
+    setConfirmProtectionPassword('');
+    setProtectionMessage('Protection enabled.');
+  };
+
+  const handleDisableProtection = async () => {
+    const removed = removeProtection(noteId, currentPassword);
+
+    if (!removed) {
+      setProtectionMessage('Incorrect password.');
+      return;
+    }
+
+    await updateNote({ isProtected: false });
+    setProtectionMode('idle');
+    setCurrentPassword('');
+    setProtectionMessage('Protection removed.');
+  };
+
+  const handleUnlockProtectedNote = async () => {
+    if (!unlockNote(noteId, currentPassword)) {
+      setProtectionMessage('Incorrect password.');
+      return;
+    }
+
+    setCurrentPassword('');
+    setProtectionMessage(null);
+  };
+
   const readFileAsDataUrl = (file: File) => {
     return new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -178,6 +245,43 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
   if (isLoading || !note) {
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading note details...</div>;
+  }
+
+  if (note.isProtected && !isUnlocked) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-xl border bg-background p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="rounded-full bg-muted p-3 text-muted-foreground">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">This note is protected</h2>
+              <p className="text-sm text-muted-foreground">Enter the note password to view or edit it.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Input
+              type="password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              placeholder="Password"
+              aria-label="Password"
+            />
+            {protectionMessage ? <p className="text-sm text-destructive">{protectionMessage}</p> : null}
+            <div className="flex gap-2">
+              <Button type="button" className="flex-1" onClick={handleUnlockProtectedNote}>
+                Unlock note
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setCurrentPassword('')}>
+                Clear
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -221,6 +325,15 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             >
               <ImagePlus className="w-4 h-4" />
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setProtectionMode((currentMode) => (currentMode === 'protect' || currentMode === 'remove' ? 'idle' : note.isProtected ? 'remove' : 'protect'))}
+              disabled={isSaving}
+              aria-label={note.isProtected ? 'Remove note protection' : 'Protect note'}
+            >
+              <Lock className="w-4 h-4" />
+            </Button>
             <Button size="sm" variant="ghost" onClick={async () => {
               try {
                 await updateNote({ isPinned: !note.isPinned });
@@ -236,6 +349,43 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
           </div>
         </div>
       </div>
+
+      {protectionMode !== 'idle' ? (
+        <div className="border-b bg-muted/20 px-4 py-4 sm:px-6">
+          {protectionMode === 'protect' ? (
+            <div className="space-y-3 rounded-lg border bg-background p-4 shadow-sm">
+              <div>
+                <h3 className="font-semibold">Protect this note</h3>
+                <p className="text-sm text-muted-foreground">Set a password to lock viewing, editing, and deleting.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input type="password" placeholder="New password" value={protectionPassword} onChange={(event) => setProtectionPassword(event.target.value)} />
+                <Input type="password" placeholder="Confirm password" value={confirmProtectionPassword} onChange={(event) => setConfirmProtectionPassword(event.target.value)} />
+              </div>
+              {protectionMessage ? <p className="text-sm text-destructive">{protectionMessage}</p> : null}
+              <div className="flex gap-2">
+                <Button type="button" onClick={handleEnableProtection}>Enable protection</Button>
+                <Button type="button" variant="outline" onClick={() => { setProtectionMode('idle'); setProtectionMessage(null); }}>Cancel</Button>
+              </div>
+            </div>
+          ) : null}
+
+          {protectionMode === 'remove' ? (
+            <div className="space-y-3 rounded-lg border bg-background p-4 shadow-sm">
+              <div>
+                <h3 className="font-semibold">Remove protection</h3>
+                <p className="text-sm text-muted-foreground">Enter the current password to unlock this note permanently.</p>
+              </div>
+              <Input type="password" placeholder="Current password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+              {protectionMessage ? <p className="text-sm text-destructive">{protectionMessage}</p> : null}
+              <div className="flex gap-2">
+                <Button type="button" onClick={handleDisableProtection}>Remove protection</Button>
+                <Button type="button" variant="outline" onClick={() => { setProtectionMode('idle'); setProtectionMessage(null); }}>Cancel</Button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       
       <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-background">
         <div className="max-w-4xl mx-auto">
