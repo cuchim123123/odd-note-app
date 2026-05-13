@@ -26,6 +26,7 @@ export const updateNoteSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(255).optional(),
   content: z.string().optional(),
   isPinned: z.boolean().optional(),
+  isShared: z.boolean().optional(),
   labels: z.array(z.string()).optional(),
   isProtected: z.boolean().optional(),
 });

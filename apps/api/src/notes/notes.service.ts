@@ -52,7 +52,7 @@ export class NotesService {
   async update(
     userId: string,
     noteId: string,
-    input: { title?: string; content?: string; isPinned?: boolean; labels?: string[] },
+    input: { title?: string; content?: string; isPinned?: boolean; isShared?: boolean; labels?: string[] },
   ): Promise<NoteResponse> {
     const existing = await this.prisma.note.findFirst({ where: { id: noteId, userId } });
     if (!existing) {
@@ -65,6 +65,7 @@ export class NotesService {
         title: input.title?.trim() ?? existing.title,
         content: input.content ?? existing.content,
         isPinned: input.isPinned ?? existing.isPinned,
+        isShared: input.isShared ?? existing.isShared,
         labels: input.labels ?? existing.labels,
       },
     });

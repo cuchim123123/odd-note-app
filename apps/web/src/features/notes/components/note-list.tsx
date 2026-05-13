@@ -178,6 +178,16 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
     }
   };
 
+  const handleToggleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    try {
+      await update.mutateAsync({ isShared: !note.isShared });
+    } catch {
+      // noop - optimistic updates handled by mutation
+    }
+  };
+
   // keyboard accessibility for the card
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -213,6 +223,15 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label={note.isShared ? 'Unshare note' : 'Share note'}
+                aria-pressed={note.isShared}
+                onClick={handleToggleShare}
+                className="rounded p-1"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}

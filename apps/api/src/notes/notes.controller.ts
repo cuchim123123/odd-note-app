@@ -63,6 +63,7 @@ export class NotesController {
       title?: string;
       content?: string;
       isPinned?: boolean;
+      isShared?: boolean;
       labels?: string[];
     },
     @Headers('authorization') authorizationHeader?: string,
