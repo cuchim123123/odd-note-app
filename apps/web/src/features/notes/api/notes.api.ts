@@ -1,6 +1,7 @@
 ﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/axios';
 import { useAuthStore } from '../../auth/stores/auth.store';
+import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
 import type { Note, CreateNoteInput, UpdateNoteInput, CreateNoteShareInput, UpdateNoteShareInput } from '@odd-note-app/validation';
 
 type SharePermission = 'READ' | 'EDIT';
@@ -45,6 +46,139 @@ const now = () => new Date().toISOString();
 const cloneNote = (note: Note): Note => ({ ...note, labels: [...note.labels] });
 
 const normalizeLabel = (label: string) => label.trim();
+
+const NOTES_DB_NAME = 'odd-note-app';
+const NOTES_DB_VERSION = 1;
+const NOTES_STORE_NAME = 'notes';
+
+const openNotesDb = async (): Promise<IDBDatabase> => {
+  return await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(NOTES_DB_NAME, NOTES_DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(NOTES_STORE_NAME)) {
+        db.createObjectStore(NOTES_STORE_NAME, { keyPath: 'id' });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const readAllNotesFromDb = async (): Promise<Note[]> => {
+  try {
+    const db = await openNotesDb();
+    const tx = db.transaction(NOTES_STORE_NAME, 'readonly');
+    const store = tx.objectStore(NOTES_STORE_NAME);
+
+    const notes = await new Promise<Note[]>((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve((request.result as Note[]).map(cloneNote));
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
+    return notes;
+  } catch {
+    return [];
+  }
+};
+
+const readNoteFromDb = async (id: string): Promise<Note | null> => {
+  try {
+    const db = await openNotesDb();
+    const tx = db.transaction(NOTES_STORE_NAME, 'readonly');
+    const store = tx.objectStore(NOTES_STORE_NAME);
+
+    const note = await new Promise<Note | null>((resolve, reject) => {
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result ? cloneNote(request.result as Note) : null);
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
+    return note;
+  } catch {
+    return null;
+  }
+};
+
+const upsertNoteInDb = async (note: Note): Promise<void> => {
+  try {
+    const db = await openNotesDb();
+    const tx = db.transaction(NOTES_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(NOTES_STORE_NAME);
+
+    await new Promise<void>((resolve, reject) => {
+      const request = store.put(note);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
+  } catch {
+    // Ignore offline cache write failures.
+  }
+};
+
+const upsertNotesInDb = async (notes: Note[]): Promise<void> => {
+  await Promise.all(notes.map((note) => upsertNoteInDb(note)));
+};
+
+const deleteNoteFromDb = async (id: string): Promise<void> => {
+  try {
+    const db = await openNotesDb();
+    const tx = db.transaction(NOTES_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(NOTES_STORE_NAME);
+
+    await new Promise<void>((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
+  } catch {
+    // Ignore offline cache write failures.
+  }
+};
+
+const queueOfflineMutation = (item: { type: 'create' | 'update' | 'delete' | 'share'; noteId?: string; payload: Record<string, unknown> }) => {
+  useOfflineSyncStore.getState().addToSyncQueue({
+    id: createId(),
+    type: item.type,
+    ...(item.noteId ? { noteId: item.noteId } : {}),
+    payload: item.payload,
+    timestamp: Date.now(),
+    retries: 0,
+  });
+};
+
+const getOfflineNotes = async (): Promise<Note[]> => {
+  const persistedNotes = await readAllNotesFromDb();
+  if (persistedNotes.length > 0) {
+    return persistedNotes.sort((left, right) => {
+      if (left.isPinned !== right.isPinned) {
+        return Number(right.isPinned) - Number(left.isPinned);
+      }
+
+      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+    });
+  }
+
+  return getSortedNotes();
+};
+
+const getOfflineNote = async (id: string): Promise<Note> => {
+  const persistedNote = await readNoteFromDb(id);
+  if (persistedNote) {
+    return persistedNote;
+  }
+
+  return getNoteById(id);
+};
 
 type MockShareRecord = NoteShareRecord & {
   noteId: string;
@@ -321,10 +455,12 @@ export const useNotes = () => {
     queryKey: NOTES_KEYS.all,
     queryFn: async () => {
       if (!backendNotesAvailable()) {
-        return getSortedNotes();
+        return await getOfflineNotes();
       }
 
-      return await fetchNotesFromApi();
+      const notes = await fetchNotesFromApi();
+      await upsertNotesInDb(notes);
+      return notes;
     },
   });
 };
@@ -348,10 +484,12 @@ export const useNote = (id: string | null) => {
     enabled: !!id,
     queryFn: async () => {
       if (!backendNotesAvailable()) {
-        return getNoteById(id!) as NoteDetailItem;
+        return (await getOfflineNote(id!)) as NoteDetailItem;
       }
 
-      return await fetchNoteFromApi(id!);
+      const note = await fetchNoteFromApi(id!);
+      await upsertNoteInDb(note);
+      return note;
     },
   });
 };
@@ -391,12 +529,24 @@ export const useCreateNote = () => {
   return useMutation({
     mutationFn: async (data: CreateNoteInput) => {
       if (!backendNotesAvailable()) {
-        return await new Promise<Note>((resolve) => {
-          setTimeout(() => resolve(createNote(data)), 500);
+        const createdNote = createNote(data);
+        await upsertNoteInDb(createdNote);
+        queueOfflineMutation({
+          type: 'create',
+          noteId: createdNote.id,
+          payload: {
+            title: data.title,
+            content: data.content,
+            labels: data.labels,
+            noteId: createdNote.id,
+          },
         });
+        return createdNote;
       }
 
-      return await createNoteInApi(data);
+      const createdNote = await createNoteInApi(data);
+      await upsertNoteInDb(createdNote);
+      return createdNote;
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });
@@ -428,6 +578,7 @@ export const useCreateNote = () => {
         currentNotes.map((note) => (note.id === context?.optimisticId ? createdNote : note)),
       );
       queryClient.setQueryData(NOTES_KEYS.detail(createdNote.id), createdNote);
+      void upsertNoteInDb(createdNote);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
@@ -441,12 +592,22 @@ export const useUpdateNote = (id: string) => {
   return useMutation({
     mutationFn: async (data: UpdateNoteMutationInput) => {
       if (!backendNotesAvailable()) {
-        return await new Promise<Note>((resolve) => {
-          setTimeout(() => resolve(updateNote(id, data)), 500);
+        const updatedNote = updateNote(id, data);
+        await upsertNoteInDb(updatedNote);
+        queueOfflineMutation({
+          type: 'update',
+          noteId: id,
+          payload: {
+            noteId: id,
+            ...data,
+          },
         });
+        return updatedNote;
       }
 
-      return await updateNoteInApi(id, data);
+      const updatedNote = await updateNoteInApi(id, data);
+      await upsertNoteInDb(updatedNote);
+      return updatedNote;
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });
@@ -502,6 +663,7 @@ export const useUpdateNote = (id: string) => {
         currentNotes.map((note) => (note.id === id ? normalizedNote : note)),
       );
       queryClient.setQueryData(NOTES_KEYS.detail(id), normalizedNote);
+      void upsertNoteInDb(normalizedNote);
     },
   });
 };
@@ -512,15 +674,18 @@ export const useDeleteNote = (id: string) => {
   return useMutation({
     mutationFn: async () => {
       if (!backendNotesAvailable()) {
-        return await new Promise<void>((resolve) => {
-          setTimeout(() => {
-            deleteNote(id);
-            resolve();
-          }, 500);
+        deleteNote(id);
+        await deleteNoteFromDb(id);
+        queueOfflineMutation({
+          type: 'delete',
+          noteId: id,
+          payload: { noteId: id },
         });
+        return;
       }
 
       await deleteNoteInApi(id);
+      await deleteNoteFromDb(id);
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });
@@ -547,6 +712,7 @@ export const useDeleteNote = (id: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+      void deleteNoteFromDb(id);
     },
   });
 };
@@ -575,10 +741,22 @@ export const useCreateNoteShare = (noteId: string) => {
           share,
         ];
         syncNoteShareFlag(noteId);
+        await upsertNoteInDb(getNoteById(noteId));
+        queueOfflineMutation({
+          type: 'share',
+          noteId,
+          payload: {
+            noteId,
+            recipientEmail: input.recipientEmail,
+            permission: input.permission,
+          },
+        });
         return { ...share, recipientDisplayName: share.recipientDisplayName } satisfies NoteShareRecord;
       }
 
-      return await createNoteShareInApi(noteId, input);
+      const createdShare = await createNoteShareInApi(noteId, input);
+      await upsertNoteInDb(getNoteById(noteId));
+      return createdShare;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
@@ -615,7 +793,9 @@ export const useUpdateNoteShare = (noteId: string) => {
         } satisfies NoteShareRecord;
       }
 
-      return await updateNoteShareInApi(noteId, shareId, input);
+      const updatedShare = await updateNoteShareInApi(noteId, shareId, input);
+      await upsertNoteInDb(getNoteById(noteId));
+      return updatedShare;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
@@ -634,10 +814,12 @@ export const useDeleteNoteShare = (noteId: string) => {
       if (!backendNotesAvailable()) {
         mockNoteShares = mockNoteShares.filter((record) => !(record.noteId === noteId && record.id === shareId));
         syncNoteShareFlag(noteId);
+        await upsertNoteInDb(getNoteById(noteId));
         return;
       }
 
       await deleteNoteShareInApi(noteId, shareId);
+      await upsertNoteInDb(getNoteById(noteId));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });

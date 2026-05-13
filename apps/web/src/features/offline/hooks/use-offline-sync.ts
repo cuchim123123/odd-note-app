@@ -96,8 +96,8 @@ export function useOfflineSync() {
 async function syncItem(item: SyncQueueItem, apiClient: typeof api) {
   switch (item.type) {
     case 'create': {
-      const { noteId: _ignoredNoteId, ...payload } = item.payload;
-      void _ignoredNoteId;
+      const { noteId, ...payload } = item.payload;
+      void noteId;
       return apiClient.post('/api/notes', payload);
     }
 
