@@ -13,6 +13,14 @@ vi.mock('../email-verification.service', () => ({
   EmailVerificationService: class EmailVerificationService {}
 }));
 
+vi.mock('../password-reset-token.service', () => ({
+  PasswordResetTokenService: class PasswordResetTokenService {}
+}));
+
+vi.mock('../../prisma/prisma.service', () => ({
+  PrismaService: class PrismaService {}
+}));
+
 vi.mock('@nestjs/jwt', () => ({
   JwtService: class JwtService {}
 }));
@@ -21,6 +29,8 @@ import { AuthController } from '../auth.controller';
 import type { AuthService } from '../auth.service';
 import type { EmailVerificationService } from '../email-verification.service';
 import type { PasswordResetService } from '../password-reset.service';
+import type { PasswordResetTokenService } from '../password-reset-token.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 function createController() {
   const authService = {
@@ -40,10 +50,23 @@ function createController() {
     resetPassword: vi.fn(),
   };
 
+  const passwordResetTokenService = {
+    createTokenForUser: vi.fn(),
+    validateAndMarkAsUsed: vi.fn(),
+  };
+
+  const prismaService = {
+    user: {
+      findUnique: vi.fn(),
+    },
+  };
+
   const controller = new AuthController(
     authService as unknown as AuthService,
     emailVerificationService as unknown as EmailVerificationService,
     passwordResetService as unknown as PasswordResetService,
+    passwordResetTokenService as unknown as PasswordResetTokenService,
+    prismaService as unknown as PrismaService,
   );
 
   return {
@@ -51,6 +74,8 @@ function createController() {
     authService,
     emailVerificationService,
     passwordResetService,
+    passwordResetTokenService,
+    prismaService,
   };
 }
 
