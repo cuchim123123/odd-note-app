@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState, memo } from 'react';
-import { useNotes, useCreateNote, useUpdateNote } from '../api/notes.api';
+import { useNotes, useSharedNotes, useCreateNote, useUpdateNote } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { Button } from '../../../components/ui/button';
 import { FileText, Lock, Pin, Plus, Search, Share2 } from 'lucide-react';
 import { Input } from '../../../components/ui/input';
 import { cn } from '../../../lib/utils';
 import { useLabelManagementStore } from '../../settings/stores/label-management.store';
+import type { SharedNoteItem } from '../api/notes.api';
 
 type ViewMode = 'grid' | 'list';
+
+type DisplayNote = Note | SharedNoteItem;
 
 
 type NoteListProps = {
@@ -35,6 +38,7 @@ function formatPreview(noteContent: string | undefined): string {
 
 export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListProps) {
   const { data: notes, isLoading } = useNotes();
+  const { data: sharedNotes } = useSharedNotes();
   const createNoteMutation = useCreateNote();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -55,21 +59,22 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
     onSelectNote(newNote.id);
   };
 
+  const matchesNote = (note: DisplayNote) => {
+    if (!debouncedSearch) {
+      return selectedLabel ? note.labels.includes(selectedLabel) : true;
+    }
+
+    const searchableText = `${note.title} ${stripHtml(note.content)}`.toLowerCase();
+    const matchesSearch = searchableText.includes(debouncedSearch);
+    const matchesLabel = selectedLabel ? note.labels.includes(selectedLabel) : true;
+    return matchesSearch && matchesLabel;
+  };
+
   const filteredNotes = useMemo(() => {
     const visibleNotes = notes ?? [];
 
     return visibleNotes
-      .filter((note) => {
-        if (!debouncedSearch) {
-          // when there's no search, respect label filter if selected
-          return selectedLabel ? note.labels.includes(selectedLabel) : true;
-        }
-
-        const searchableText = `${note.title} ${stripHtml(note.content)}`.toLowerCase();
-        const matchesSearch = searchableText.includes(debouncedSearch);
-        const matchesLabel = selectedLabel ? note.labels.includes(selectedLabel) : true;
-        return matchesSearch && matchesLabel;
-      })
+      .filter(matchesNote)
       .sort((left, right) => {
         if (left.isPinned !== right.isPinned) {
           return Number(right.isPinned) - Number(left.isPinned);
@@ -78,6 +83,12 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       });
   }, [debouncedSearch, notes, selectedLabel]);
+
+  const filteredSharedNotes = useMemo(() => {
+    const visibleNotes = sharedNotes ?? [];
+
+    return visibleNotes.filter(matchesNote);
+  }, [debouncedSearch, selectedLabel, sharedNotes]);
 
   const isGridView = viewMode === 'grid';
 
@@ -116,7 +127,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="p-4 text-sm text-muted-foreground text-center animate-pulse">Loading notes...</div>
-        ) : filteredNotes.length === 0 ? (
+        ) : filteredNotes.length === 0 && filteredSharedNotes.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
             {search ? 'No notes found matching your search.' : 'No notes yet. Create one!'}
           </div>
@@ -159,6 +170,31 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                 );
               })}
             </div>
+
+            {filteredSharedNotes.length > 0 ? (
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Share2 className="h-3.5 w-3.5" />
+                  Shared with me
+                </div>
+
+                <div className={cn(isGridView ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-2')}>
+                  {filteredSharedNotes.map((note) => {
+                    const isSelected = selectedNoteId === note.id;
+
+                    return (
+                      <NoteCard
+                        key={`shared-${note.id}`}
+                        note={note}
+                        isSelected={isSelected}
+                        onSelect={() => onSelectNote(note.id)}
+                        isGridView={isGridView}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </div>
@@ -166,8 +202,9 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
   );
 }
 
-const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView }: { note: Note; isSelected: boolean; onSelect: () => void; isGridView: boolean }) {
+const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView }: { note: DisplayNote; isSelected: boolean; onSelect: () => void; isGridView: boolean }) {
   const update = useUpdateNote(note.id);
+  const isSharedAccess = 'accessMode' in note && note.accessMode === 'shared';
 
   const handleTogglePin = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -223,21 +260,24 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label={note.isShared ? 'Unshare note' : 'Share note'}
-                aria-pressed={note.isShared}
-                onClick={handleToggleShare}
-                className="rounded p-1"
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
+              {isSharedAccess ? null : (
+                <button
+                  type="button"
+                  aria-label={note.isShared ? 'Unshare note' : 'Share note'}
+                  aria-pressed={note.isShared}
+                  onClick={handleToggleShare}
+                  className="rounded p-1"
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
+              )}
               <button
                 type="button"
                 aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}
                 aria-pressed={note.isPinned}
                 onClick={handleTogglePin}
                 className="rounded p-1"
+                disabled={isSharedAccess}
               >
                 <Pin className="h-4 w-4" />
               </button>
@@ -247,6 +287,12 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
           <p className={cn('mt-1 text-sm leading-5 text-muted-foreground', isGridView ? 'line-clamp-3' : 'line-clamp-2')}>
             {formatPreview(note.content)}
           </p>
+
+          {'accessMode' in note && note.accessMode === 'shared' ? (
+            <p className="text-xs text-muted-foreground">
+              Shared by {note.sharedBy.displayName} · {note.sharedPermission === 'EDIT' ? 'Can edit' : 'Read only'}
+            </p>
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-2">
             {note.labels.map((label: string) => (

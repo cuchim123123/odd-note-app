@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useNote,
+  useNoteShares,
+  useCreateNoteShare,
+  useUpdateNoteShare,
+  useDeleteNoteShare,
   useUpdateNote,
   useDeleteNote,
   getNoteProtectionStatus,
@@ -88,9 +92,13 @@ export function NoteDashboard() {
 
 function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
   const { data: note, isLoading } = useNote(noteId);
+  const { data: shares } = useNoteShares(noteId);
   const updateMutation = useUpdateNote(noteId);
   const { mutateAsync: updateNote, isPending: isSaving } = updateMutation;
   const deleteMutation = useDeleteNote(noteId);
+  const createShareMutation = useCreateNoteShare(noteId);
+  const updateShareMutation = useUpdateNoteShare(noteId);
+  const deleteShareMutation = useDeleteNoteShare(noteId);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const isUnlocked = useNoteProtectionStore((state) => state.isUnlocked(noteId));
   const markUnlocked = useNoteProtectionStore((state) => state.markUnlocked);
@@ -107,6 +115,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const [currentPassword, setCurrentPassword] = useState('');
   const [protectionMessage, setProtectionMessage] = useState<string | null>(null);
   const [serverProtectionStatus, setServerProtectionStatus] = useState<boolean | null>(null);
+  const [shareRecipientEmail, setShareRecipientEmail] = useState('');
+  const [sharePermission, setSharePermission] = useState<'READ' | 'EDIT'>('READ');
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   // Sync local state when note changes
   useEffect(() => {
@@ -122,6 +133,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       setCurrentPassword('');
       setProtectionMessage(null);
       setServerProtectionStatus(null);
+      setShareRecipientEmail('');
+      setSharePermission('READ');
+      setShareMessage(null);
     }
   }, [note]);
 
@@ -161,7 +175,14 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     };
   }, [markLocked, note, noteId, updateNote]);
 
-  const canAutosave = !!note && !isLoading;
+  const noteAccessMode = note && 'accessMode' in note ? note.accessMode : 'owner';
+  const sharedPermission = note && 'sharedPermission' in note ? note.sharedPermission : undefined;
+  const sharedBy = note && 'sharedBy' in note ? note.sharedBy : undefined;
+  const isSharedNote = noteAccessMode === 'shared';
+  const canEditContent = !isSharedNote || sharedPermission === 'EDIT';
+  const canManageShares = noteAccessMode === 'owner';
+
+  const canAutosave = !!note && !isLoading && canEditContent;
 
   useEffect(() => {
     if (!canAutosave || !note) {
@@ -209,6 +230,43 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     if (confirm('Are you sure you want to delete this note?')) {
       await deleteMutation.mutateAsync();
       onDeleted();
+    }
+  };
+
+  const handleAddShare = async () => {
+    const email = shareRecipientEmail.trim();
+
+    if (!email) {
+      setShareMessage('Enter a recipient email.');
+      return;
+    }
+
+    try {
+      setShareMessage(null);
+      await createShareMutation.mutateAsync({ recipientEmail: email, permission: sharePermission });
+      setShareRecipientEmail('');
+      setSharePermission('READ');
+      setShareMessage('Sharing updated.');
+    } catch (error) {
+      setShareMessage(error instanceof Error ? error.message : 'Failed to share note.');
+    }
+  };
+
+  const handleChangeSharePermission = async (shareId: string, permission: 'READ' | 'EDIT') => {
+    try {
+      await updateShareMutation.mutateAsync({ shareId, input: { permission } });
+      setShareMessage('Sharing updated.');
+    } catch (error) {
+      setShareMessage(error instanceof Error ? error.message : 'Failed to update sharing.');
+    }
+  };
+
+  const handleRemoveShare = async (shareId: string) => {
+    try {
+      await deleteShareMutation.mutateAsync(shareId);
+      setShareMessage('Share removed.');
+    } catch (error) {
+      setShareMessage(error instanceof Error ? error.message : 'Failed to remove share.');
     }
   };
 
@@ -280,6 +338,11 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   };
 
   const handleAttachImages = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canEditContent) {
+      event.target.value = '';
+      return;
+    }
+
     const files = Array.from(event.target.files ?? []);
 
     if (files.length === 0) {
@@ -319,6 +382,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   }
 
   const isProtected = serverProtectionStatus ?? note.isProtected;
+  const canEdit = canEditContent;
 
   if (isProtected && !isUnlocked) {
     return (
@@ -367,6 +431,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
               onChange={(e) => setTitle(e.target.value)} 
               className="border-transparent px-0 text-2xl font-semibold shadow-none focus-visible:border-input"
               placeholder="Note title..."
+              readOnly={!canEdit}
             />
             <div className="flex items-center gap-2 text-xs">
               {(() => {
@@ -375,6 +440,13 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
               })()}
               <span className={cn('font-medium', saveStatus.tone)}>{saveStatus.label}</span>
             </div>
+            {isSharedNote ? (
+              <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                Shared by <span className="font-medium text-foreground">{sharedBy?.displayName}</span>
+                {' '}
+                · {sharedPermission === 'EDIT' ? 'You can edit this note' : 'Read-only access'}
+              </div>
+            ) : null}
             <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
               {saveStatus.label}
             </div>
@@ -393,7 +465,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
               size="sm"
               variant="ghost"
               onClick={() => imageInputRef.current?.click()}
-              disabled={isSaving}
+              disabled={isSaving || !canEdit}
               aria-label="Add image attachment"
             >
               <ImagePlus className="w-4 h-4" />
@@ -402,7 +474,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
               size="sm"
               variant="ghost"
               onClick={() => setProtectionMode((currentMode) => (currentMode === 'protect' || currentMode === 'remove' ? 'idle' : isProtected ? 'remove' : 'protect'))}
-              disabled={isSaving}
+              disabled={isSaving || !canEdit || isSharedNote}
               aria-label={isProtected ? 'Remove note protection' : 'Protect note'}
             >
               <Lock className="w-4 h-4" />
@@ -413,10 +485,10 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
               } catch {
                 // ignore - mutation handles optimistic updates
               }
-            }} disabled={isSaving} aria-label={note.isPinned ? 'Unpin note' : 'Pin note'} aria-pressed={note.isPinned}>
+            }} disabled={isSaving || !canEdit || isSharedNote} aria-label={note.isPinned ? 'Unpin note' : 'Pin note'} aria-pressed={note.isPinned}>
               <Pin className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleDelete} disabled={deleteMutation.isPending || !canEdit || isSharedNote}>
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
@@ -459,10 +531,79 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
           ) : null}
         </div>
       ) : null}
+
+      {canManageShares ? (
+        <div className="border-b bg-muted/20 px-4 py-4 sm:px-6">
+          <div className="space-y-4 rounded-lg border bg-background p-4 shadow-sm">
+            <div>
+              <h3 className="font-semibold">Share this note</h3>
+              <p className="text-sm text-muted-foreground">Only registered users can be added. You can grant read-only or edit access.</p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
+              <Input
+                type="email"
+                placeholder="Recipient email"
+                value={shareRecipientEmail}
+                onChange={(event) => setShareRecipientEmail(event.target.value)}
+              />
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={sharePermission}
+                onChange={(event) => setSharePermission(event.target.value as 'READ' | 'EDIT')}
+              >
+                <option value="READ">Read only</option>
+                <option value="EDIT">Can edit</option>
+              </select>
+              <Button type="button" onClick={handleAddShare} disabled={createShareMutation.isPending}>
+                Share
+              </Button>
+            </div>
+
+            {shareMessage ? <p className="text-sm text-muted-foreground">{shareMessage}</p> : null}
+
+            <div className="space-y-3">
+              <div className="text-sm font-medium">Current shares</div>
+              {(shares ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">This note is not shared yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {shares?.map((share) => (
+                    <div key={share.id} className="flex flex-col gap-2 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="font-medium">{share.recipientEmail}</div>
+                        <div className="text-xs text-muted-foreground">{share.permission === 'EDIT' ? 'Can edit' : 'Read only'}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                          value={share.permission}
+                          onChange={(event) => handleChangeSharePermission(share.id, event.target.value as 'READ' | 'EDIT')}
+                          disabled={updateShareMutation.isPending}
+                        >
+                          <option value="READ">Read only</option>
+                          <option value="EDIT">Can edit</option>
+                        </select>
+                        <Button type="button" variant="outline" onClick={() => handleRemoveShare(share.id)} disabled={deleteShareMutation.isPending}>
+                          Revoke
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       
       <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-background">
         <div className="max-w-4xl mx-auto">
-          <NoteEditor content={content} onChange={setContent} />
+          <NoteEditor
+            content={content}
+            readOnly={!canEdit}
+            {...(canEdit ? { onChange: setContent } : {})}
+          />
         </div>
       </div>
     </div>

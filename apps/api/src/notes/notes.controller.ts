@@ -14,7 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { z } from 'zod';
 import { JwtConfigService } from '../config';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import { createNoteSchema, updateNoteSchema } from '@odd-note-app/validation';
+import { createNoteSchema, createNoteShareSchema, updateNoteSchema, updateNoteShareSchema } from '@odd-note-app/validation';
 import { NotesService } from './notes.service';
 
 const noteIdSchema = z.string().trim().min(1, 'noteId is required');
@@ -39,6 +39,12 @@ export class NotesController {
   async list(@Headers('authorization') authorizationHeader?: string) {
     const userId = this.resolveUserId(authorizationHeader);
     return await this.notesService.list(userId);
+  }
+
+  @Get('shared-with-me')
+  async sharedWithMe(@Headers('authorization') authorizationHeader?: string) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.listSharedWithMe(userId);
   }
 
   @Get(':noteId')
@@ -77,6 +83,43 @@ export class NotesController {
     const userId = this.resolveUserId(authorizationHeader);
     await this.notesService.delete(userId, this.parseNoteId(noteId));
     return { removed: true };
+  }
+
+  @Get(':noteId/shares')
+  async listShares(@Param('noteId') noteId: string, @Headers('authorization') authorizationHeader?: string) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.listShares(userId, this.parseNoteId(noteId));
+  }
+
+  @Post(':noteId/shares')
+  async createShare(
+    @Param('noteId') noteId: string,
+    @Body(new ZodValidationPipe(createNoteShareSchema)) body: { recipientEmail: string; permission: 'READ' | 'EDIT' },
+    @Headers('authorization') authorizationHeader?: string,
+  ) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.createShare(userId, this.parseNoteId(noteId), body);
+  }
+
+  @Patch(':noteId/shares/:shareId')
+  async updateShare(
+    @Param('noteId') noteId: string,
+    @Param('shareId') shareId: string,
+    @Body(new ZodValidationPipe(updateNoteShareSchema)) body: { permission: 'READ' | 'EDIT' },
+    @Headers('authorization') authorizationHeader?: string,
+  ) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.updateShare(userId, this.parseNoteId(noteId), this.parseNoteId(shareId), body);
+  }
+
+  @Delete(':noteId/shares/:shareId')
+  async deleteShare(
+    @Param('noteId') noteId: string,
+    @Param('shareId') shareId: string,
+    @Headers('authorization') authorizationHeader?: string,
+  ) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.deleteShare(userId, this.parseNoteId(noteId), this.parseNoteId(shareId));
   }
 
   @Get(':noteId/protection-status')

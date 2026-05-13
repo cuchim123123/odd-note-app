@@ -1,7 +1,38 @@
 ﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/axios';
 import { useAuthStore } from '../../auth/stores/auth.store';
-import type { Note, CreateNoteInput, UpdateNoteInput } from '@odd-note-app/validation';
+import type { Note, CreateNoteInput, UpdateNoteInput, CreateNoteShareInput, UpdateNoteShareInput } from '@odd-note-app/validation';
+
+type SharePermission = 'READ' | 'EDIT';
+
+type SharedByProfile = {
+  id: string;
+  email: string;
+  displayName: string;
+};
+
+export type SharedNoteItem = Note & {
+  accessMode: 'shared';
+  sharedPermission: SharePermission;
+  sharedBy: SharedByProfile;
+  sharedAt: string;
+};
+
+export type NoteDetailItem = Note & {
+  accessMode?: 'owner' | 'shared';
+  sharedPermission?: SharePermission | undefined;
+  sharedBy?: SharedByProfile | undefined;
+  sharedAt?: string | undefined;
+};
+
+export type NoteShareRecord = {
+  id: string;
+  recipientEmail: string;
+  recipientDisplayName?: string | undefined;
+  permission: SharePermission;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
   const random = Math.random() * 16 | 0;
@@ -14,6 +45,11 @@ const now = () => new Date().toISOString();
 const cloneNote = (note: Note): Note => ({ ...note, labels: [...note.labels] });
 
 const normalizeLabel = (label: string) => label.trim();
+
+type MockShareRecord = NoteShareRecord & {
+  noteId: string;
+  owner: SharedByProfile;
+};
 
 let mockNotes: Note[] = [
   {
@@ -39,6 +75,8 @@ let mockNotes: Note[] = [
     updatedAt: now(),
   },
 ];
+
+let mockNoteShares: MockShareRecord[] = [];
 
 const hasAccessToken = () => Boolean(useAuthStore.getState().accessToken);
 
@@ -68,6 +106,61 @@ async function updateNoteInApi(id: string, input: UpdateNoteInput & { isProtecte
 async function deleteNoteInApi(id: string): Promise<void> {
   await api.delete(`/notes/${id}`);
 }
+
+async function fetchSharedNotesFromApi(): Promise<SharedNoteItem[]> {
+  const response = await api.get<SharedNoteItem[]>('/notes/shared-with-me');
+  return response.data;
+}
+
+async function fetchNoteSharesFromApi(noteId: string): Promise<NoteShareRecord[]> {
+  const response = await api.get<NoteShareRecord[]>(`/notes/${noteId}/shares`);
+  return response.data;
+}
+
+async function createNoteShareInApi(noteId: string, input: CreateNoteShareInput): Promise<NoteShareRecord> {
+  const response = await api.post<NoteShareRecord>(`/notes/${noteId}/shares`, input);
+  return response.data;
+}
+
+async function updateNoteShareInApi(noteId: string, shareId: string, input: UpdateNoteShareInput): Promise<NoteShareRecord> {
+  const response = await api.patch<NoteShareRecord>(`/notes/${noteId}/shares/${shareId}`, input);
+  return response.data;
+}
+
+async function deleteNoteShareInApi(noteId: string, shareId: string): Promise<void> {
+  await api.delete(`/notes/${noteId}/shares/${shareId}`);
+}
+
+const currentUserProfile = (): SharedByProfile | null => {
+  const user = useAuthStore.getState().user;
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+  };
+};
+
+const syncNoteShareFlag = (noteId: string): void => {
+  const isShared = mockNoteShares.some((share) => share.noteId === noteId);
+  mockNotes = mockNotes.map((note) => (note.id === noteId ? { ...note, isShared } : note));
+};
+
+const toSharedNoteItem = (share: MockShareRecord): SharedNoteItem => {
+  const note = getNoteById(share.noteId);
+
+  return {
+    ...note,
+    isShared: true,
+    accessMode: 'shared',
+    sharedPermission: share.permission,
+    sharedBy: share.owner,
+    sharedAt: share.createdAt,
+  };
+};
 
 export function getSortedNotes(): Note[] {
   return [...mockNotes]
@@ -145,9 +238,11 @@ export function renameLabelInNotes(oldLabel: string, newLabel: string): void {
 
 export function deleteNote(id: string): void {
   mockNotes = mockNotes.filter((entry) => entry.id !== id);
+  mockNoteShares = mockNoteShares.filter((share) => share.noteId !== id);
 }
 
 export function resetMockNotes() {
+  mockNoteShares = [];
   mockNotes = [
     {
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -177,6 +272,8 @@ export function resetMockNotes() {
 export const NOTES_KEYS = {
   all: ['notes'] as const,
   detail: (id: string) => ['notes', id] as const,
+  shared: ['notes', 'shared'] as const,
+  shares: (id: string) => ['notes', id, 'shares'] as const,
 };
 
 export async function getNoteProtectionStatus(noteId: string): Promise<{ isProtected: boolean }> {
@@ -232,13 +329,26 @@ export const useNotes = () => {
   });
 };
 
-export const useNote = (id: string | null) => {
+export const useSharedNotes = () => {
   return useQuery({
+    queryKey: NOTES_KEYS.shared,
+    queryFn: async () => {
+      if (!backendNotesAvailable()) {
+        return mockNoteShares.map((share) => toSharedNoteItem(share));
+      }
+
+      return await fetchSharedNotesFromApi();
+    },
+  });
+};
+
+export const useNote = (id: string | null) => {
+  return useQuery<NoteDetailItem>({
     queryKey: NOTES_KEYS.detail(id!),
     enabled: !!id,
     queryFn: async () => {
       if (!backendNotesAvailable()) {
-        return getNoteById(id!);
+        return getNoteById(id!) as NoteDetailItem;
       }
 
       return await fetchNoteFromApi(id!);
@@ -246,7 +356,34 @@ export const useNote = (id: string | null) => {
   });
 };
 
-type UpdateNoteMutationInput = UpdateNoteInput & { isProtected?: boolean };
+export const useNoteShares = (noteId: string | null) => {
+  return useQuery({
+    queryKey: noteId ? NOTES_KEYS.shares(noteId) : NOTES_KEYS.shared,
+    enabled: !!noteId,
+    queryFn: async () => {
+      if (!noteId) {
+        return [];
+      }
+
+      if (!backendNotesAvailable()) {
+        return mockNoteShares
+          .filter((share) => share.noteId === noteId)
+          .map((share) => ({
+            id: share.id,
+            recipientEmail: share.recipientEmail,
+            recipientDisplayName: share.recipientDisplayName,
+            permission: share.permission,
+            createdAt: share.createdAt,
+            updatedAt: share.updatedAt,
+          }));
+      }
+
+      return await fetchNoteSharesFromApi(noteId);
+    },
+  });
+};
+
+type UpdateNoteMutationInput = UpdateNoteInput & { isProtected?: boolean; isShared?: boolean };
 
 export const useCreateNote = () => {
   const queryClient = useQueryClient();
@@ -409,6 +546,103 @@ export const useDeleteNote = (id: string) => {
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+    },
+  });
+};
+
+export const useCreateNoteShare = (noteId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateNoteShareInput) => {
+      if (!backendNotesAvailable()) {
+        const owner = currentUserProfile() ?? { id: 'local', email: input.recipientEmail, displayName: 'Local User' };
+        const recipient = input.recipientEmail.trim().toLowerCase();
+        const share: MockShareRecord = {
+          id: createId(),
+          noteId,
+          recipientEmail: recipient,
+          recipientDisplayName: recipient,
+          permission: input.permission,
+          createdAt: now(),
+          updatedAt: now(),
+          owner,
+        };
+
+        mockNoteShares = [
+          ...mockNoteShares.filter((record) => !(record.noteId === noteId && record.recipientEmail === recipient)),
+          share,
+        ];
+        syncNoteShareFlag(noteId);
+        return { ...share, recipientDisplayName: share.recipientDisplayName } satisfies NoteShareRecord;
+      }
+
+      return await createNoteShareInApi(noteId, input);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shared });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.detail(noteId) });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+    },
+  });
+};
+
+export const useUpdateNoteShare = (noteId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ shareId, input }: { shareId: string; input: UpdateNoteShareInput }) => {
+      if (!backendNotesAvailable()) {
+        mockNoteShares = mockNoteShares.map((record) =>
+          record.noteId === noteId && record.id === shareId
+            ? { ...record, permission: input.permission, updatedAt: now() }
+            : record,
+        );
+        syncNoteShareFlag(noteId);
+        const updated = mockNoteShares.find((record) => record.noteId === noteId && record.id === shareId);
+        if (!updated) {
+          throw new Error('Share not found');
+        }
+        return {
+          id: updated.id,
+          recipientEmail: updated.recipientEmail,
+          recipientDisplayName: updated.recipientDisplayName,
+          permission: updated.permission,
+          createdAt: updated.createdAt,
+          updatedAt: updated.updatedAt,
+        } satisfies NoteShareRecord;
+      }
+
+      return await updateNoteShareInApi(noteId, shareId, input);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shared });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.detail(noteId) });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+    },
+  });
+};
+
+export const useDeleteNoteShare = (noteId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (shareId: string) => {
+      if (!backendNotesAvailable()) {
+        mockNoteShares = mockNoteShares.filter((record) => !(record.noteId === noteId && record.id === shareId));
+        syncNoteShareFlag(noteId);
+        return;
+      }
+
+      await deleteNoteShareInApi(noteId, shareId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shared });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.detail(noteId) });
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
     },
   });
