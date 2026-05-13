@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -50,6 +51,9 @@ export class UploadsService {
     const endpoint = process.env.MINIO_ENDPOINT || 'http://minio:9000';
     const url = `${endpoint}/${this.bucket}/${encodeURIComponent(key)}`;
 
-    return { url, key };
+    // generate a presigned GET URL valid for 1 hour
+    const signedUrl = await getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: 3600 });
+
+    return { url, key, signedUrl };
   }
 }

@@ -16,7 +16,7 @@ export class UploadsController {
 
     try {
       const result = await this.uploadsService.uploadBuffer(file.buffer, file.originalname, file.mimetype);
-      return { url: result.url, key: result.key, originalName: file.originalname, size: file.size };
+      return { url: result.url, signedUrl: result.signedUrl, key: result.key, originalName: file.originalname, size: file.size };
     } catch (err) {
       // log the original error for debugging
        
