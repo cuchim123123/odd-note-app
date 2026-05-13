@@ -7,6 +7,7 @@ import { Button } from '../../../components/ui/button';
 import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { appendImageToContent } from '../utils/attachments';
+import { api } from '../../../lib/axios';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
 
 type ViewMode = 'grid' | 'list';
@@ -237,7 +238,27 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
     for (const file of files) {
       const dataUrl = await readFileAsDataUrl(file);
+      // Optimistically insert a data URL so the user sees the image immediately
       setContent((currentContent) => appendImageToContent(currentContent, dataUrl, file.name));
+
+      // Upload in background and replace the data URL with the returned server URL when available
+      (async () => {
+        try {
+          const form = new FormData();
+          form.append('file', file, file.name);
+          const resp = await api.post('/uploads', form, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+
+          const serverUrl = resp.data?.signedUrl ?? resp.data?.url;
+          if (serverUrl) {
+            // Replace the data URL with the server URL in the content
+            setContent((currentContent) => currentContent.split(dataUrl).join(serverUrl));
+          }
+        } catch {
+          // Upload failed — leave the inline data URL as-is. Optionally show a toast.
+        }
+      })();
     }
 
     event.target.value = '';
