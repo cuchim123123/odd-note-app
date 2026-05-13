@@ -8,6 +8,16 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new ZodValidationPipe());
 
   const env = app.get<EnvConfig>('ENV_CONFIG');
+
+  // Enable CORS for the web frontend (development origin)
+  // Uses configured APP_URL when available, falls back to default dev port.
+  app.enableCors({
+    origin: env.APP_URL ?? 'http://localhost:5173',
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true,
+  });
+
   const port = env.API_PORT;
   await app.listen(port);
 }
