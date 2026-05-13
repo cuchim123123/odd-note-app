@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { loginSchema, type LoginInput } from '@odd-note-app/validation';
 import { useLogin } from '../api/auth.api';
 import { AxiosError } from 'axios';
@@ -12,6 +12,7 @@ import { Button } from '../../../components/ui/button';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const loginMutation = useLogin();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -20,7 +21,9 @@ export function LoginPage() {
   const onSubmit = async (data: LoginInput) => {
     try {
       await loginMutation.mutateAsync(data);
-      navigate('/', { replace: true });
+      // Redirect to the location they were trying to go to, or default to /
+      const from = (location.state as { from?: Location })?.from?.pathname || '/';
+      navigate(from, { replace: true });
     } catch (error: unknown) {
       // In a real app, use toast for error
       console.error(error);
