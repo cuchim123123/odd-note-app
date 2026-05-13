@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Dev: Start API (compose)",
+      "type": "shell",
+      "command": "docker compose up --build api",
+      "problemMatcher": [],
+      "detail": "Run Docker Compose to build and start the API service"
+    },
+    {
+      "label": "Dev: Stop API (compose)",
+      "type": "shell",
+      "command": "docker compose stop api",
+      "problemMatcher": [],
+      "detail": "Stop the API service via Docker Compose"
+    },
+    {
+      "label": "Dev: Start Web (pnpm)",
+      "type": "shell",
+      "command": "pnpm --filter @odd-note-app/web dev --host 127.0.0.1",
+      "isBackground": true,
+      "problemMatcher": [],
+      "detail": "Start Vite dev server for the web app (detached/long-running)",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Dev: Stop Web (Windows)",
+      "type": "process",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$p = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p.OwningProcess -Force } else { Write-Host 'No web process found on port 5173' }"
+      ],
+      "problemMatcher": [],
+      "detail": "Stop the web dev server by killing the process listening on port 5173 (Windows)"
+    }
+  ]
+}
