@@ -14,7 +14,7 @@ describe('Optimistic updates (observable)', () => {
   it('shows newly created note immediately in the sidebar', async () => {
     renderWithQueryClient(<NoteDashboard />);
 
-    const createBtn = screen.getAllByLabelText('Create new note')[0];
+    const createBtn = screen.getAllByLabelText('Create new note')[0]!;
     await userEvent.click(createBtn);
 
     // The new note title should be visible in the list immediately
@@ -27,7 +27,7 @@ describe('Optimistic updates (observable)', () => {
     renderWithQueryClient(<NoteDashboard />);
 
     // ensure there's at least one note
-    const createBtn = screen.getAllByLabelText('Create new note')[0];
+    const createBtn = screen.getAllByLabelText('Create new note')[0]!;
     await userEvent.click(createBtn);
 
     // find the first note card and its pin button
@@ -35,7 +35,7 @@ describe('Optimistic updates (observable)', () => {
     const cardContainer = card.closest('[role="button"]');
     expect(cardContainer).toBeTruthy();
 
-    const pinButton = within(cardContainer as Element).getByLabelText(/Pin note|Unpin note/);
+    const pinButton = within(cardContainer as HTMLElement).getByLabelText(/Pin note|Unpin note/);
 
     // initial aria-pressed should be false (unpinned)
     expect(pinButton.getAttribute('aria-pressed')).toBe('false');

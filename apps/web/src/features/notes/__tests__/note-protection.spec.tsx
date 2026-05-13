@@ -16,7 +16,7 @@ describe('Note protection behavior', () => {
 
   it('blocks note content until the password is entered', async () => {
     const user = userEvent.setup();
-    const note = notesApi.getSortedNotes()[0];
+    const note = notesApi.getSortedNotes()[0]!;
 
     notesApi.updateNote(note.id, { isProtected: true });
 

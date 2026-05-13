@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/axios';
-
+import { useAuthStore } from '../../auth/stores/auth.store';
 import type { Note, CreateNoteInput, UpdateNoteInput } from '@odd-note-app/validation';
 
 const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
@@ -39,6 +39,35 @@ let mockNotes: Note[] = [
     updatedAt: now(),
   },
 ];
+
+const hasAccessToken = () => Boolean(useAuthStore.getState().accessToken);
+
+const backendNotesAvailable = () => hasAccessToken();
+
+async function fetchNotesFromApi(): Promise<Note[]> {
+  const response = await api.get<Note[]>('/notes');
+  return response.data;
+}
+
+async function fetchNoteFromApi(id: string): Promise<Note> {
+  const response = await api.get<Note>(`/notes/${id}`);
+  return response.data;
+}
+
+async function createNoteInApi(input: CreateNoteInput): Promise<Note> {
+  const response = await api.post<Note>('/notes', input);
+  return response.data;
+}
+
+async function updateNoteInApi(id: string, input: UpdateNoteInput & { isProtected?: boolean }): Promise<Note> {
+  const { isProtected, ...payload } = input;
+  const response = await api.patch<Note>(`/notes/${id}`, payload);
+  return { ...response.data, isProtected: isProtected ?? response.data.isProtected };
+}
+
+async function deleteNoteInApi(id: string): Promise<void> {
+  await api.delete(`/notes/${id}`);
+}
 
 export function getSortedNotes(): Note[] {
   return [...mockNotes]
@@ -145,28 +174,45 @@ export function resetMockNotes() {
   ];
 }
 
-// Using a unique key for notes queries
 export const NOTES_KEYS = {
   all: ['notes'] as const,
   detail: (id: string) => ['notes', id] as const,
 };
 
 export async function getNoteProtectionStatus(noteId: string): Promise<{ isProtected: boolean }> {
+  if (!backendNotesAvailable()) {
+    return { isProtected: getSortedNotes().some((note) => note.id === noteId && note.isProtected) };
+  }
+
   const response = await api.get<{ isProtected: boolean }>(`/notes/${noteId}/protection-status`);
   return response.data;
 }
 
 export async function setNotePassword(noteId: string, password: string): Promise<{ isProtected: true }> {
+  if (!backendNotesAvailable()) {
+    updateNote(noteId, { isProtected: true });
+    return { isProtected: true };
+  }
+
   const response = await api.post<{ isProtected: true }>(`/notes/${noteId}/set-password`, { password });
   return response.data;
 }
 
 export async function verifyNotePassword(noteId: string, password: string): Promise<{ verified: boolean }> {
+  if (!backendNotesAvailable()) {
+    return { verified: password === 'secret123' };
+  }
+
   const response = await api.post<{ verified: boolean }>(`/notes/${noteId}/verify-password`, { password });
   return response.data;
 }
 
 export async function removeNotePassword(noteId: string, password: string): Promise<{ removed: true }> {
+  if (!backendNotesAvailable()) {
+    updateNote(noteId, { isProtected: false });
+    return { removed: true };
+  }
+
   const response = await api.delete<{ removed: true }>(`/notes/${noteId}/password`, {
     data: { password },
   });
@@ -177,11 +223,11 @@ export const useNotes = () => {
   return useQuery({
     queryKey: NOTES_KEYS.all,
     queryFn: async () => {
-      return new Promise<Note[]>((resolve) => {
-        setTimeout(() => {
-          resolve(getSortedNotes());
-        }, 500);
-      });
+      if (!backendNotesAvailable()) {
+        return getSortedNotes();
+      }
+
+      return await fetchNotesFromApi();
     },
   });
 };
@@ -191,25 +237,29 @@ export const useNote = (id: string | null) => {
     queryKey: NOTES_KEYS.detail(id!),
     enabled: !!id,
     queryFn: async () => {
-      return new Promise<Note>((resolve) => {
-        setTimeout(() => {
-          resolve(getNoteById(id!));
-        }, 300);
-      });
+      if (!backendNotesAvailable()) {
+        return getNoteById(id!);
+      }
+
+      return await fetchNoteFromApi(id!);
     },
   });
 };
+
+type UpdateNoteMutationInput = UpdateNoteInput & { isProtected?: boolean };
 
 export const useCreateNote = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: CreateNoteInput) => {
-      return new Promise<Note>((resolve) => {
-        setTimeout(() => {
-          resolve(createNote(data));
-        }, 500);
-      });
+      if (!backendNotesAvailable()) {
+        return await new Promise<Note>((resolve) => {
+          setTimeout(() => resolve(createNote(data)), 500);
+        });
+      }
+
+      return await createNoteInApi(data);
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });
@@ -252,12 +302,14 @@ export const useUpdateNote = (id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: UpdateNoteInput) => {
-      return new Promise<Note>((resolve) => {
-        setTimeout(() => {
-          resolve(updateNote(id, data));
-        }, 500);
-      });
+    mutationFn: async (data: UpdateNoteMutationInput) => {
+      if (!backendNotesAvailable()) {
+        return await new Promise<Note>((resolve) => {
+          setTimeout(() => resolve(updateNote(id, data)), 500);
+        });
+      }
+
+      return await updateNoteInApi(id, data);
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });
@@ -307,9 +359,12 @@ export const useUpdateNote = (id: string) => {
         queryClient.setQueryData(NOTES_KEYS.detail(id), context.previousNote);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.detail(id) });
+    onSuccess: (updatedNote, input) => {
+      const normalizedNote = input.isProtected === undefined ? updatedNote : { ...updatedNote, isProtected: input.isProtected };
+      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
+        currentNotes.map((note) => (note.id === id ? normalizedNote : note)),
+      );
+      queryClient.setQueryData(NOTES_KEYS.detail(id), normalizedNote);
     },
   });
 };
@@ -319,12 +374,16 @@ export const useDeleteNote = (id: string) => {
 
   return useMutation({
     mutationFn: async () => {
-      return new Promise<void>((resolve) => {
-        setTimeout(() => {
-          deleteNote(id);
-          resolve();
-        }, 500);
-      });
+      if (!backendNotesAvailable()) {
+        return await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            deleteNote(id);
+            resolve();
+          }, 500);
+        });
+      }
+
+      await deleteNoteInApi(id);
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });

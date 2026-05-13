@@ -17,7 +17,7 @@ describe('Autosave behavior (observable)', () => {
     const firstRender = renderWithQueryClient(<NoteDashboard />);
 
     // create a new note via the sidebar button
-    const createBtn = screen.getAllByLabelText('Create new note')[0];
+    const createBtn = screen.getAllByLabelText('Create new note')[0]!;
     await user.click(createBtn);
 
     // editor should mount
