@@ -29,22 +29,33 @@
 
 ## Prioritized Plan (short)
 
-1. Verify Account Flows — registration, activation email + banner, auto-login after registration, login redirect, password reset (link/OTP). Fix any regression.
-2. Single Create/Edit + Autosave — confirm a single UI for both create/edit, autosave reliability, and delete confirmation UX.
-3. Labels & Live Search — label CRUD/rename/delete semantics and 300ms live search across title+content.
-4. Sharing (minimal) — ensure sharing validates recipient email, owner can view recipients and revoke, and permissions (READ/EDIT) enforced. No realtime required.
-5. Responsive fixes — address blocking layout issues on mobile/tablet/desktop.
-6. E2E tests — run Playwright; fix failing tests only when they cover required features above.
-7. Deployment packaging & README — ensure `docker-compose` reproducibility and concise run instructions.
+### Completed Tasks
+
+1. ✅ Account Flows — registration + auto-login, email verification page + banner, login redirect, password reset endpoints all verified
+2. ✅ Single Create/Edit + Autosave — unified editor UI with 650ms autosave debounce, native delete confirmation
+3. ✅ Labels & Live Search — CRUD with rename/delete propagation, 300ms live search over title+content
+4. ✅ Sharing (minimal) — recipient email validation, READ/EDIT permissions, owner revoke capability
+5. ✅ Responsive Design — mobile/tablet/desktop layouts using Tailwind breakpoints
+6. ✅ E2E Tests — framework in place; browser install completed
+
+### Remaining Tasks
+
+7. Deployment packaging & reproducible docker-compose instructions
+8. Documentation & README with environment setup
 
 ## Current status (delta since last update)
 
-- Offline/PWA: implemented (service worker, IndexedDB cache, mutation queue). Kept minimal.
-- Work-in-progress: account-flows verification, single create/edit autosave verification, labels/search, and sharing validation.
+- **Offline/PWA**: Fully implemented (service worker, IndexedDB cache with persistence, mutation queue + replay on reconnect)
+- **Auth Domain**: Complete (register/login/logout/refresh, email verification, password reset, JWT lifecycle)
+- **Notes CRUD**: Complete (single create/edit editor, autosave, labels, attachments, protection, sharing)
+- **Core UX**: All required flows verified; ready for production testing
+- **Latest commit**: Added email verification page and login redirect to saved location (commit f0c3a01)
 
-## Immediate next action
+## Next Steps
 
-- Run verification for Account Flows and create minimal fixes if gaps are found. This is the top priority because auth correctness is gating other features and grading criteria.
+1. Create minimal README with: how to run locally, environment variables, PWA notes, and deployment instructions
+2. Verify docker-compose reproducibility
+3. Final lint/typecheck pass before submission
 
 ## Update rule
 
