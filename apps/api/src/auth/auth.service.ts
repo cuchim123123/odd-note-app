@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthConfigService } from '../config';
 import type { LoginInput, RegisterInput } from '@odd-note-app/validation';
-import type { AuthTokens, LoginResult, RegisterResult } from './auth.types';
+import type { AuthTokens, AuthUserProfile, LoginResult, RegisterResult } from './auth.types';
 import { SessionTokenService } from './session-token.service';
 import { AuthUserMapper } from './auth-user.mapper';
 import { EmailVerificationService } from './email-verification.service';
@@ -112,5 +112,17 @@ export class AuthService {
 
   async refresh(refreshToken: string): Promise<AuthTokens> {
     return this.sessionTokenService.rotateRefreshToken(refreshToken);
+  }
+
+  async getCurrentUser(userId: string): Promise<AuthUserProfile> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.authUserMapper.toProfile(user);
   }
 }

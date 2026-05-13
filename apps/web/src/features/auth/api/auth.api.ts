@@ -56,3 +56,25 @@ export const useLogout = () => {
     },
   });
 };
+
+export const useAuthSessionBootstrap = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const updateUser = useAuthStore((state) => state.updateUser);
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.get<{ user: UserProfile }>('/auth/me');
+      return response.data.user;
+    },
+    onSuccess: (user) => {
+      updateUser(user);
+    },
+    onError: () => {
+      // Let the axios interceptor handle refresh/logout.
+    },
+    meta: {
+      enabled: isAuthenticated && Boolean(accessToken),
+    },
+  });
+};

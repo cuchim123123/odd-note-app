@@ -13,10 +13,16 @@ vi.mock('../email-verification.service', () => ({
   EmailVerificationService: class EmailVerificationService {}
 }));
 
+vi.mock('@nestjs/jwt', () => ({
+  JwtService: class JwtService {}
+}));
+
 import { AuthController } from '../auth.controller';
 import type { AuthService } from '../auth.service';
 import type { EmailVerificationService } from '../email-verification.service';
 import type { PasswordResetService } from '../password-reset.service';
+import type { JwtService } from '@nestjs/jwt';
+import type { JwtConfigService } from '../../config';
 
 function createController() {
   const authService = {
@@ -24,6 +30,7 @@ function createController() {
     login: vi.fn(),
     logout: vi.fn(),
     refresh: vi.fn(),
+    getCurrentUser: vi.fn(),
   };
 
   const emailVerificationService = {
@@ -35,10 +42,20 @@ function createController() {
     resetPassword: vi.fn(),
   };
 
+  const jwtService = {
+    verify: vi.fn(),
+  };
+
+  const jwtConfig = {
+    getAccessTokenSecret: vi.fn(),
+  };
+
   const controller = new AuthController(
     authService as unknown as AuthService,
     emailVerificationService as unknown as EmailVerificationService,
     passwordResetService as unknown as PasswordResetService,
+    jwtService as unknown as JwtService,
+    jwtConfig as unknown as JwtConfigService,
   );
 
   return {
@@ -46,6 +63,8 @@ function createController() {
     authService,
     emailVerificationService,
     passwordResetService,
+    jwtService,
+    jwtConfig,
   };
 }
 
@@ -90,6 +109,21 @@ describe('AuthController', () => {
     const result = await controller.verifyEmail(token);
 
     expect(emailVerificationService.verifyEmailToken).toHaveBeenCalledWith(token);
+    expect(result).toEqual(expectedResult);
+  });
+
+  it('returns the current user profile from the access token', async () => {
+    const { controller, authService, jwtService, jwtConfig } = createController();
+    const expectedResult = { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: false };
+
+    jwtConfig.getAccessTokenSecret.mockReturnValue('secret');
+    jwtService.verify.mockReturnValue({ sub: 'user-1', type: 'access' });
+    authService.getCurrentUser.mockResolvedValue(expectedResult);
+
+    const result = await controller.me('Bearer access-token');
+
+    expect(jwtService.verify).toHaveBeenCalledWith('access-token', { secret: 'secret' });
+    expect(authService.getCurrentUser).toHaveBeenCalledWith('user-1');
     expect(result).toEqual(expectedResult);
   });
 

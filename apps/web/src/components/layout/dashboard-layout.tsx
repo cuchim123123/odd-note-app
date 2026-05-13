@@ -8,6 +8,7 @@ export function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
   const logoutMutation = useLogout();
   const navigate = useNavigate();
+  const isUnverified = Boolean(user && !user.isEmailVerified);
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
@@ -46,6 +47,14 @@ export function DashboardLayout() {
           </div>
         </div>
       </header>
+
+      {isUnverified ? (
+        <div className="border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100">
+          <div className="container py-3 text-sm font-medium">
+            Your account is not verified yet. Check your email and open the activation link to unlock the verified account state.
+          </div>
+        </div>
+      ) : null}
       
       <main className="flex-1 container py-6 h-[calc(100vh-3.5rem)]">
         <Outlet />
