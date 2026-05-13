@@ -12,6 +12,7 @@ import { EmailVerificationService } from './email-verification.service';
 import { VerificationTokenService } from './verification-token.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
 import { PasswordResetService } from './password-reset.service';
+import { AccessTokenGuard } from './access-token.guard';
 
 import { TokenCleanupService } from './token-cleanup.service';
 
@@ -29,6 +30,7 @@ import { TokenCleanupService } from './token-cleanup.service';
     EmailVerificationService,
     PasswordResetService,
     TokenCleanupService,
+    AccessTokenGuard,
   ],
 })
 export class AuthModule {}

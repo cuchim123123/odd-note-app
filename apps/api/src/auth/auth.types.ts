@@ -13,6 +13,11 @@ export type AuthTokens = {
   refreshToken: string;
 };
 
+export type AccessTokenPayload = {
+  sub?: string;
+  type?: string;
+};
+
 export type AuthResult = {
   user: AuthUserProfile;
   tokens: AuthTokens;
