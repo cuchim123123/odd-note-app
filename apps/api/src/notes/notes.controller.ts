@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Body,
   Controller,
@@ -6,6 +6,7 @@ import {
   Get,
   Headers,
   Param,
+  Patch,
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { z } from 'zod';
 import { JwtConfigService } from '../config';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { createNoteSchema, updateNoteSchema } from '@odd-note-app/validation';
 import { NotesService } from './notes.service';
 
 const noteIdSchema = z.string().trim().min(1, 'noteId is required');
@@ -33,14 +35,56 @@ export class NotesController {
     private readonly jwtConfig: JwtConfigService,
   ) {}
 
+  @Get()
+  async list(@Headers('authorization') authorizationHeader?: string) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.list(userId);
+  }
+
+  @Get(':noteId')
+  async getById(@Param('noteId') noteId: string, @Headers('authorization') authorizationHeader?: string) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.getById(userId, this.parseNoteId(noteId));
+  }
+
+  @Post()
+  async create(
+    @Body(new ZodValidationPipe(createNoteSchema)) body: { title: string; content?: string; labels?: string[] },
+    @Headers('authorization') authorizationHeader?: string,
+  ) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.create(userId, body);
+  }
+
+  @Patch(':noteId')
+  async update(
+    @Param('noteId') noteId: string,
+    @Body(new ZodValidationPipe(updateNoteSchema)) body: {
+      title?: string;
+      content?: string;
+      isPinned?: boolean;
+      labels?: string[];
+    },
+    @Headers('authorization') authorizationHeader?: string,
+  ) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.update(userId, this.parseNoteId(noteId), body);
+  }
+
+  @Delete(':noteId')
+  async delete(@Param('noteId') noteId: string, @Headers('authorization') authorizationHeader?: string) {
+    const userId = this.resolveUserId(authorizationHeader);
+    await this.notesService.delete(userId, this.parseNoteId(noteId));
+    return { removed: true };
+  }
+
   @Get(':noteId/protection-status')
   async getProtectionStatus(
     @Param('noteId') noteId: string,
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    const normalizedNoteId = this.parseNoteId(noteId);
-    return await this.notesService.getProtectionStatus(userId, normalizedNoteId);
+    return await this.notesService.getProtectionStatus(userId, this.parseNoteId(noteId));
   }
 
   @Post(':noteId/set-password')
@@ -50,8 +94,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    const normalizedNoteId = this.parseNoteId(noteId);
-    return await this.notesService.setPassword(userId, normalizedNoteId, body.password.trim());
+    return await this.notesService.setPassword(userId, this.parseNoteId(noteId), body.password.trim());
   }
 
   @Post(':noteId/verify-password')
@@ -61,8 +104,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    const normalizedNoteId = this.parseNoteId(noteId);
-    return await this.notesService.verifyPassword(userId, normalizedNoteId, body.password.trim());
+    return await this.notesService.verifyPassword(userId, this.parseNoteId(noteId), body.password.trim());
   }
 
   @Delete(':noteId/password')
@@ -72,8 +114,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    const normalizedNoteId = this.parseNoteId(noteId);
-    return await this.notesService.removePassword(userId, normalizedNoteId, body.password.trim());
+    return await this.notesService.removePassword(userId, this.parseNoteId(noteId), body.password.trim());
   }
 
   private parseNoteId(noteId: string): string {

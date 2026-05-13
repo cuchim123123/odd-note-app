@@ -29,7 +29,25 @@ model User {
   emailTokens       VerificationToken[] @relation("EmailVerificationTokens")
   passwordResetTokens PasswordResetToken[] @relation("PasswordResetTokens")
   refreshTokens     RefreshToken[]
+  notes             Note[]
   noteProtections   NoteProtection[]
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  title       String
+  content     String?
+  isPinned    Boolean  @default(false)
+  isShared    Boolean  @default(false)
+  labels      String[] @default([])
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([updatedAt])
+  @@index([isPinned])
 }
 
 model NoteProtection {
