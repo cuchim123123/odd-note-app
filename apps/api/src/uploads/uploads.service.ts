@@ -8,16 +8,26 @@ export class UploadsService {
   private readonly logger = new Logger(UploadsService.name);
   private readonly client: S3Client;
   private readonly bucket: string;
+  private readonly endpoint: string;
 
   constructor() {
-    const endpoint = process.env.MINIO_ENDPOINT || 'http://minio:9000';
+    const useSsl = (process.env.S3_USE_SSL || 'false').toLowerCase() === 'true';
+    const protocol = useSsl ? 'https' : 'http';
+
+    const s3Host = process.env.S3_ENDPOINT;
+    const s3Port = process.env.S3_PORT;
+
+    this.endpoint = s3Host
+      ? `${s3Host.startsWith('http://') || s3Host.startsWith('https://') ? s3Host : `${protocol}://${s3Host}`}${s3Port ? `:${s3Port}` : ''}`
+      : process.env.MINIO_ENDPOINT || 'http://minio:9000';
+
     const region = process.env.MINIO_REGION || 'us-east-1';
-    const accessKey = process.env.MINIO_ACCESS_KEY || 'minioadmin';
-    const secretKey = process.env.MINIO_SECRET_KEY || 'minioadmin';
-    this.bucket = process.env.MINIO_BUCKET || 'oddnote-uploads';
+    const accessKey = process.env.S3_ACCESS_KEY || process.env.MINIO_ACCESS_KEY || 'minioadmin';
+    const secretKey = process.env.S3_SECRET_KEY || process.env.MINIO_SECRET_KEY || 'minioadmin';
+    this.bucket = process.env.S3_BUCKET || process.env.MINIO_BUCKET || 'oddnote-uploads';
 
     this.client = new S3Client({
-      endpoint,
+      endpoint: this.endpoint,
       region,
       credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
       forcePathStyle: true,
@@ -48,8 +58,7 @@ export class UploadsService {
       }),
     );
 
-    const endpoint = process.env.MINIO_ENDPOINT || 'http://minio:9000';
-    const url = `${endpoint}/${this.bucket}/${encodeURIComponent(key)}`;
+    const url = `${this.endpoint}/${this.bucket}/${encodeURIComponent(key)}`;
 
     // generate a presigned GET URL valid for 1 hour
     const signedUrl = await getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: 3600 });
