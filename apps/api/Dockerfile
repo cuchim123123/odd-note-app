@@ -15,6 +15,11 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source and build the API package
 COPY . .
+
+# Build validation package to JS for Node runtime in the container and point main to dist
+RUN pnpm exec tsc --module commonjs --moduleResolution node --target ES2022 --declaration false --outDir packages/validation/dist --rootDir packages/validation/src packages/validation/src/index.ts
+RUN node -e "const fs=require('fs');const p='packages/validation/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.main='dist/index.js';fs.writeFileSync(p,JSON.stringify(j,null,2));"
+
 WORKDIR /workspace/apps/api
 RUN pnpm --filter @odd-note-app/api prisma:generate
 RUN pnpm --filter @odd-note-app/api build
