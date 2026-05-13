@@ -16,6 +16,7 @@ vi.mock('../email-verification.service', () => ({
 import { AuthController } from '../auth.controller';
 import type { AuthService } from '../auth.service';
 import type { EmailVerificationService } from '../email-verification.service';
+import type { PasswordResetService } from '../password-reset.service';
 
 function createController() {
   const authService = {
@@ -29,15 +30,22 @@ function createController() {
     verifyEmailToken: vi.fn(),
   };
 
+  const passwordResetService = {
+    sendResetPasswordEmail: vi.fn(),
+    resetPassword: vi.fn(),
+  };
+
   const controller = new AuthController(
     authService as unknown as AuthService,
     emailVerificationService as unknown as EmailVerificationService,
+    passwordResetService as unknown as PasswordResetService,
   );
 
   return {
     controller,
     authService,
     emailVerificationService,
+    passwordResetService,
   };
 }
 
