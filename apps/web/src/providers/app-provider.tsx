@@ -2,8 +2,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { AuthSessionBootstrap } from '../features/auth/components/auth-session-bootstrap';
+import {
+  OfflineDetectionProvider,
+  OfflineBanner,
+} from '../features/offline/components/offline-banner';
+import { useOfflineSync } from '../features/offline/hooks/use-offline-sync';
 
 type AppProviderProps = { children: ReactNode };
+
+function OfflineSyncInitializer() {
+  useOfflineSync();
+  return null;
+}
 
 export function AppProvider({ children }: AppProviderProps) {
   const [queryClient] = useState(
@@ -21,7 +31,10 @@ export function AppProvider({ children }: AppProviderProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <OfflineDetectionProvider />
+      <OfflineSyncInitializer />
       <AuthSessionBootstrap />
+      <OfflineBanner />
       {children}
     </QueryClientProvider>
   );
