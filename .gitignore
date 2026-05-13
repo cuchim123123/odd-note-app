@@ -26,5 +26,11 @@ Thumbs.db
 .turbo/
 .husky/_/
 
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # local infra data
 infrastructure/docker/data/
