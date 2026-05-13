@@ -15,6 +15,8 @@ export default defineConfig({
       '/api': {
         target: process.env.API_URL ?? 'http://localhost:4000',
         changeOrigin: true,
+        // Remove the `/api` prefix when forwarding to the backend
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
