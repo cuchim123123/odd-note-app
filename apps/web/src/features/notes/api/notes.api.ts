@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../../../lib/axios';
 
 import type { Note, CreateNoteInput, UpdateNoteInput } from '@odd-note-app/validation';
 
@@ -149,6 +150,28 @@ export const NOTES_KEYS = {
   all: ['notes'] as const,
   detail: (id: string) => ['notes', id] as const,
 };
+
+export async function getNoteProtectionStatus(noteId: string): Promise<{ isProtected: boolean }> {
+  const response = await api.get<{ isProtected: boolean }>(`/notes/${noteId}/protection-status`);
+  return response.data;
+}
+
+export async function setNotePassword(noteId: string, password: string): Promise<{ isProtected: true }> {
+  const response = await api.post<{ isProtected: true }>(`/notes/${noteId}/set-password`, { password });
+  return response.data;
+}
+
+export async function verifyNotePassword(noteId: string, password: string): Promise<{ verified: boolean }> {
+  const response = await api.post<{ verified: boolean }>(`/notes/${noteId}/verify-password`, { password });
+  return response.data;
+}
+
+export async function removeNotePassword(noteId: string, password: string): Promise<{ removed: true }> {
+  const response = await api.delete<{ removed: true }>(`/notes/${noteId}/password`, {
+    data: { password },
+  });
+  return response.data;
+}
 
 export const useNotes = () => {
   return useQuery({

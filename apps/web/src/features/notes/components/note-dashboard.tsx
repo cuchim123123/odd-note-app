@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNote, useUpdateNote, useDeleteNote } from '../api/notes.api';
+import {
+  useNote,
+  useUpdateNote,
+  useDeleteNote,
+  getNoteProtectionStatus,
+  removeNotePassword,
+  setNotePassword,
+  verifyNotePassword,
+} from '../api/notes.api';
 import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
@@ -85,9 +93,8 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const deleteMutation = useDeleteNote(noteId);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const isUnlocked = useNoteProtectionStore((state) => state.isUnlocked(noteId));
-  const lockNote = useNoteProtectionStore((state) => state.lockNote);
-  const unlockNote = useNoteProtectionStore((state) => state.unlockNote);
-  const removeProtection = useNoteProtectionStore((state) => state.removeProtection);
+  const markUnlocked = useNoteProtectionStore((state) => state.markUnlocked);
+  const markLocked = useNoteProtectionStore((state) => state.markLocked);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -99,6 +106,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const [confirmProtectionPassword, setConfirmProtectionPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [protectionMessage, setProtectionMessage] = useState<string | null>(null);
+  const [serverProtectionStatus, setServerProtectionStatus] = useState<boolean | null>(null);
 
   // Sync local state when note changes
   useEffect(() => {
@@ -113,8 +121,45 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       setConfirmProtectionPassword('');
       setCurrentPassword('');
       setProtectionMessage(null);
+      setServerProtectionStatus(null);
     }
   }, [note]);
+
+  useEffect(() => {
+    if (!note) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const syncProtectionStatus = async () => {
+      try {
+        const result = await getNoteProtectionStatus(noteId);
+        if (isCancelled) {
+          return;
+        }
+
+        setServerProtectionStatus(result.isProtected);
+        if (!result.isProtected) {
+          markLocked(noteId);
+        }
+
+        if (result.isProtected !== note.isProtected) {
+          await updateNote({ isProtected: result.isProtected });
+        }
+      } catch {
+        if (!isCancelled) {
+          setServerProtectionStatus(note.isProtected);
+        }
+      }
+    };
+
+    void syncProtectionStatus();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [markLocked, note, noteId, updateNote]);
 
   const canAutosave = !!note && !isLoading;
 
@@ -180,43 +225,48 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       return;
     }
 
-    const protectedNow = lockNote(noteId, normalizedPassword);
-
-    if (!protectedNow) {
-      setProtectionMessage('Enter a password.');
-      return;
+    try {
+      await setNotePassword(noteId, normalizedPassword);
+      await updateNote({ isProtected: true });
+      markUnlocked(noteId);
+      setServerProtectionStatus(true);
+      setProtectionMode('idle');
+      setProtectionPassword('');
+      setConfirmProtectionPassword('');
+      setProtectionMessage('Protection enabled.');
+    } catch {
+      setProtectionMessage('Failed to enable protection.');
     }
-
-    await updateNote({ isProtected: true });
-    unlockNote(noteId, normalizedPassword);
-    setProtectionMode('idle');
-    setProtectionPassword('');
-    setConfirmProtectionPassword('');
-    setProtectionMessage('Protection enabled.');
   };
 
   const handleDisableProtection = async () => {
-    const removed = removeProtection(noteId, currentPassword);
-
-    if (!removed) {
+    try {
+      await removeNotePassword(noteId, currentPassword.trim());
+      await updateNote({ isProtected: false });
+      markLocked(noteId);
+      setServerProtectionStatus(false);
+      setProtectionMode('idle');
+      setCurrentPassword('');
+      setProtectionMessage('Protection removed.');
+    } catch {
       setProtectionMessage('Incorrect password.');
-      return;
     }
-
-    await updateNote({ isProtected: false });
-    setProtectionMode('idle');
-    setCurrentPassword('');
-    setProtectionMessage('Protection removed.');
   };
 
   const handleUnlockProtectedNote = async () => {
-    if (!unlockNote(noteId, currentPassword)) {
-      setProtectionMessage('Incorrect password.');
-      return;
-    }
+    try {
+      const result = await verifyNotePassword(noteId, currentPassword.trim());
+      if (!result.verified) {
+        setProtectionMessage('Incorrect password.');
+        return;
+      }
 
-    setCurrentPassword('');
-    setProtectionMessage(null);
+      markUnlocked(noteId);
+      setCurrentPassword('');
+      setProtectionMessage(null);
+    } catch {
+      setProtectionMessage('Incorrect password.');
+    }
   };
 
   const readFileAsDataUrl = (file: File) => {
@@ -268,7 +318,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading note details...</div>;
   }
 
-  if (note.isProtected && !isUnlocked) {
+  const isProtected = serverProtectionStatus ?? note.isProtected;
+
+  if (isProtected && !isUnlocked) {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="w-full max-w-md rounded-xl border bg-background p-6 shadow-sm">
@@ -349,9 +401,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setProtectionMode((currentMode) => (currentMode === 'protect' || currentMode === 'remove' ? 'idle' : note.isProtected ? 'remove' : 'protect'))}
+              onClick={() => setProtectionMode((currentMode) => (currentMode === 'protect' || currentMode === 'remove' ? 'idle' : isProtected ? 'remove' : 'protect'))}
               disabled={isSaving}
-              aria-label={note.isProtected ? 'Remove note protection' : 'Protect note'}
+              aria-label={isProtected ? 'Remove note protection' : 'Protect note'}
             >
               <Lock className="w-4 h-4" />
             </Button>

@@ -1,24 +1,29 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { NoteDashboard } from '../components/note-dashboard';
-import { getSortedNotes, updateNote, resetMockNotes } from '../api/notes.api';
+import * as notesApi from '../api/notes.api';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
 import { renderWithQueryClient } from '../../../test/render-with-query-client';
 
 describe('Note protection behavior', () => {
   beforeEach(() => {
-    resetMockNotes();
+    notesApi.resetMockNotes();
     useNoteProtectionStore.getState().resetProtectionState();
+    vi.restoreAllMocks();
   });
 
   it('blocks note content until the password is entered', async () => {
     const user = userEvent.setup();
-    const note = getSortedNotes()[0];
+    const note = notesApi.getSortedNotes()[0];
 
-    updateNote(note.id, { isProtected: true });
-    useNoteProtectionStore.getState().lockNote(note.id, 'secret123');
+    notesApi.updateNote(note.id, { isProtected: true });
+
+    vi.spyOn(notesApi, 'getNoteProtectionStatus').mockResolvedValue({ isProtected: true });
+    vi.spyOn(notesApi, 'verifyNotePassword').mockImplementation(async (_noteId, password) => {
+      return { verified: password === 'secret123' };
+    });
 
     renderWithQueryClient(<NoteDashboard />);
 
