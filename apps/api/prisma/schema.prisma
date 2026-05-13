@@ -29,6 +29,20 @@ model User {
   emailTokens       VerificationToken[] @relation("EmailVerificationTokens")
   passwordResetTokens PasswordResetToken[] @relation("PasswordResetTokens")
   refreshTokens     RefreshToken[]
+  noteProtections   NoteProtection[]
+}
+
+model NoteProtection {
+  id           String   @id @default(cuid())
+  noteId       String
+  passwordHash String
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, noteId])
+  @@index([noteId])
 }
 
 model VerificationToken {

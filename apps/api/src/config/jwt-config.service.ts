@@ -21,6 +21,10 @@ export class JwtConfigService {
     return this.buildTokenSignOptions(this.env.JWT_REFRESH_SECRET, this.env.JWT_REFRESH_EXPIRES_IN);
   }
 
+  getAccessTokenSecret(): string {
+    return this.env.JWT_ACCESS_SECRET;
+  }
+
   getRefreshTokenSecret(): string {
     return this.env.JWT_REFRESH_SECRET;
   }
