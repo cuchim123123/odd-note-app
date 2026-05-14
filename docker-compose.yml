@@ -1,4 +1,12 @@
 services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+
   db:
     image: postgres:15
     environment:
@@ -29,7 +37,7 @@ services:
     environment:
       DATABASE_URL: postgres://oddnote:oddnotepass@db:5432/oddnote
       APP_URL: http://localhost:5173
-      REDIS_URL: redis://localhost:6379
+      REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: this-is-a-long-dev-access-secret-at-least-32-chars
       JWT_REFRESH_SECRET: this-is-a-long-dev-refresh-secret-at-least-32-chars
       SMTP_HOST: localhost
@@ -43,12 +51,26 @@ services:
       S3_USE_SSL: false
       API_PORT: 4000
       ALLOW_TEST_ENDPOINTS: '1'
+    restart: always
     depends_on:
+      - redis
       - db
       - minio
     ports:
       - '4000:4000'
 
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000/api
+    ports:
+      - '5173:80'
+    depends_on:
+      - api
+
 volumes:
+  redis-data:
   db-data:
   minio-data:
