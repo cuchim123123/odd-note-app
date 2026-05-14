@@ -5,10 +5,11 @@ import { useAuthStore } from '../stores/auth.store';
 export function AuthSessionBootstrap() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const updateUser = useAuthStore((state) => state.updateUser);
 
   useEffect(() => {
-    if (!isAuthenticated || !accessToken) {
+    if (!hasHydrated || !isAuthenticated || !accessToken) {
       return;
     }
 
@@ -30,7 +31,7 @@ export function AuthSessionBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, isAuthenticated, updateUser]);
+  }, [accessToken, hasHydrated, isAuthenticated, updateUser]);
 
   return null;
 }

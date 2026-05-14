@@ -1,81 +1,99 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
 import { api } from '../../../lib/axios';
 import type { SyncQueueItem } from '../../../stores/offline-sync.store';
 
+const MAX_SYNC_RETRIES = 3;
+
 /**
  * Hook that syncs queued offline changes when connection is restored
- * Retries failed syncs with exponential backoff
+ * Retries failed syncs with bounded attempts.
  */
 export function useOfflineSync() {
   const queryClient = useQueryClient();
+  const syncingRef = useRef(false);
   const {
     syncQueue,
     isOnline,
+    isSyncing,
     setSyncing,
     setSyncError,
-    removeSyncQueueItem,
     updateSyncQueue,
     setLastSyncTime,
   } = useOfflineSyncStore();
 
-  // Sync pending changes when going online
   useEffect(() => {
-    if (!isOnline || syncQueue.length === 0) return;
+    if (!isOnline || syncQueue.length === 0 || isSyncing || syncingRef.current) {
+      return;
+    }
+
+    syncingRef.current = true;
 
     const syncOfflineChanges = async () => {
       setSyncing(true);
       setSyncError(null);
 
-      const failedItems: SyncQueueItem[] = [];
+      const retryableItems: SyncQueueItem[] = [];
+      let discardedCount = 0;
 
-      for (const item of syncQueue) {
-        try {
-          await syncItem(item, api);
-          removeSyncQueueItem(item.id);
-        } catch (error) {
-          failedItems.push({
-            ...item,
-            retries: item.retries + 1,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
+      try {
+        for (const item of syncQueue) {
+          try {
+            await syncItem(item, api);
+          } catch (error) {
+            const nextRetryCount = item.retries + 1;
+            if (nextRetryCount >= MAX_SYNC_RETRIES) {
+              discardedCount += 1;
+              continue;
+            }
+
+            retryableItems.push({
+              ...item,
+              retries: nextRetryCount,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
         }
-      }
 
-      if (failedItems.length > 0) {
-        updateSyncQueue(failedItems);
-        setSyncError(
-          `Failed to sync ${failedItems.length} item(s). Will retry.`,
-        );
-      } else {
+        if (retryableItems.length > 0) {
+          updateSyncQueue(retryableItems);
+          const retryMessage = `Failed to sync ${retryableItems.length} item(s). Will retry.`;
+          setSyncError(discardedCount > 0 ? `${retryMessage} Dropped ${discardedCount} item(s) after repeated failures.` : retryMessage);
+          return;
+        }
+
+        updateSyncQueue([]);
         setLastSyncTime(Date.now());
-      }
 
-      setSyncing(false);
+        if (discardedCount > 0) {
+          setSyncError(`Dropped ${discardedCount} item(s) after repeated sync failures.`);
+        }
 
-      // Refetch notes to ensure consistency
-      if (failedItems.length === 0) {
         await queryClient.refetchQueries({ queryKey: ['notes'] });
         await queryClient.refetchQueries({ queryKey: ['shared-notes'] });
+      } finally {
+        setSyncing(false);
+        syncingRef.current = false;
       }
     };
 
-    // Debounce sync to avoid multiple triggers
-    const timeoutId = setTimeout(syncOfflineChanges, 500);
+    const timeoutId = setTimeout(() => {
+      void syncOfflineChanges();
+    }, 500);
+
     return () => clearTimeout(timeoutId);
   }, [
     isOnline,
     syncQueue,
+    isSyncing,
     setSyncing,
     setSyncError,
-    removeSyncQueueItem,
     updateSyncQueue,
     setLastSyncTime,
     queryClient,
   ]);
 
-  // Listen for sync event from service worker
   useEffect(() => {
     const handleSyncReady = () => {
       if (isOnline && syncQueue.length > 0) {

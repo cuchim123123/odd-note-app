@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useNote,
   useNoteShares,
@@ -11,7 +12,9 @@ import {
   removeNotePassword,
   setNotePassword,
   verifyNotePassword,
+  NOTES_KEYS,
 } from '../api/notes.api';
+import type { Note } from '@odd-note-app/validation';
 import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
@@ -91,6 +94,7 @@ export function NoteDashboard() {
 }
 
 function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
+  const queryClient = useQueryClient();
   const { data: note, isLoading } = useNote(noteId);
   const { data: shares } = useNoteShares(noteId);
   const updateMutation = useUpdateNote(noteId);
@@ -100,6 +104,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const updateShareMutation = useUpdateNoteShare(noteId);
   const deleteShareMutation = useDeleteNoteShare(noteId);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const loadedNoteIdRef = useRef<string | null>(null);
   const isUnlocked = useNoteProtectionStore((state) => state.isUnlocked(noteId));
   const markUnlocked = useNoteProtectionStore((state) => state.markUnlocked);
   const markLocked = useNoteProtectionStore((state) => state.markLocked);
@@ -118,10 +123,12 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const [shareRecipientEmail, setShareRecipientEmail] = useState('');
   const [sharePermission, setSharePermission] = useState<'READ' | 'EDIT'>('READ');
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // Sync local state when note changes
   useEffect(() => {
-    if (note) {
+    if (note && loadedNoteIdRef.current !== note.id) {
+      loadedNoteIdRef.current = note.id;
       setTitle(note.title);
       setContent(note.content || '');
       setIsDirty(false);
@@ -227,10 +234,13 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   }, [isDirty, isSaving, lastSavedAt, saveError]);
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this note?')) {
-      await deleteMutation.mutateAsync();
-      onDeleted();
-    }
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    await deleteMutation.mutateAsync();
+    setDeleteConfirmOpen(false);
+    onDeleted();
   };
 
   const handleAddShare = async () => {
@@ -244,6 +254,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     try {
       setShareMessage(null);
       await createShareMutation.mutateAsync({ recipientEmail: email, permission: sharePermission });
+      await queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
       setShareRecipientEmail('');
       setSharePermission('READ');
       setShareMessage('Sharing updated.');
@@ -255,6 +266,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const handleChangeSharePermission = async (shareId: string, permission: 'READ' | 'EDIT') => {
     try {
       await updateShareMutation.mutateAsync({ shareId, input: { permission } });
+      await queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
       setShareMessage('Sharing updated.');
     } catch (error) {
       setShareMessage(error instanceof Error ? error.message : 'Failed to update sharing.');
@@ -264,6 +276,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const handleRemoveShare = async (shareId: string) => {
     try {
       await deleteShareMutation.mutateAsync(shareId);
+      await queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
       setShareMessage('Share removed.');
     } catch (error) {
       setShareMessage(error instanceof Error ? error.message : 'Failed to remove share.');
@@ -428,7 +441,23 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
           <div className="min-w-0 flex-1 space-y-2">
             <Input 
               value={title} 
-              onChange={(e) => setTitle(e.target.value)} 
+              onChange={(e) => {
+                const nextTitle = e.target.value;
+                setTitle(nextTitle);
+                if (note) {
+                  const updatedAt = new Date().toISOString();
+                  queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
+                    currentNotes.map((currentNote) =>
+                      currentNote.id === note.id
+                        ? { ...currentNote, title: nextTitle, updatedAt }
+                        : currentNote,
+                    ),
+                  );
+                  queryClient.setQueryData(NOTES_KEYS.detail(note.id), (currentNote) =>
+                    currentNote ? { ...currentNote, title: nextTitle, updatedAt } : currentNote,
+                  );
+                }
+              }} 
               className="border-transparent px-0 text-2xl font-semibold shadow-none focus-visible:border-input"
               placeholder="Note title..."
               readOnly={!canEdit}
@@ -488,12 +517,29 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             }} disabled={isSaving || !canEdit || isSharedNote} aria-label={note.isPinned ? 'Unpin note' : 'Pin note'} aria-pressed={note.isPinned}>
               <Pin className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleDelete} disabled={deleteMutation.isPending || !canEdit || isSharedNote}>
+            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleDelete} disabled={deleteMutation.isPending || !canEdit || isSharedNote} aria-label="Delete note">
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </div>
+
+      {deleteConfirmOpen ? (
+        <div className="border-b bg-muted/20 px-4 py-4 sm:px-6">
+          <div className="rounded-lg border border-destructive/30 bg-background p-4 shadow-sm">
+            <h3 className="font-semibold text-destructive">Delete this note?</h3>
+            <p className="mt-1 text-sm text-muted-foreground">This action cannot be undone.</p>
+            <div className="mt-4 flex gap-2">
+              <Button type="button" variant="destructive" onClick={handleConfirmDelete} disabled={deleteMutation.isPending}>
+                Delete
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {protectionMode !== 'idle' ? (
         <div className="border-b bg-muted/20 px-4 py-4 sm:px-6">
@@ -602,6 +648,8 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
           <NoteEditor
             content={content}
             readOnly={!canEdit}
+            onInsertImage={() => imageInputRef.current?.click()}
+            syncKey={note?.id ?? noteId}
             {...(canEdit ? { onChange: setContent } : {})}
           />
         </div>

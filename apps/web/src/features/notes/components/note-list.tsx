@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, memo } from 'react';
+import { flushSync } from 'react-dom';
 import { useNotes, useSharedNotes, useCreateNote, useUpdateNote } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { Button } from '../../../components/ui/button';
@@ -55,6 +56,8 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
   }, [search]);
 
   const handleCreateNew = async () => {
+    flushSync(() => {
+    });
     const newNote = await createNoteMutation.mutateAsync({ title: 'Untitled Note', content: '' });
     onSelectNote(newNote.id);
   };
@@ -240,7 +243,7 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
       onKeyDown={onKeyDown}
       onClick={onSelect}
       className={cn(
-        'group w-full rounded-xl border bg-background text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20',
+        'note-item group w-full rounded-xl border bg-background text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20',
         isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border/70 hover:border-border',
         isGridView ? 'p-4' : 'p-4',
       )}

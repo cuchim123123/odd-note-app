@@ -63,7 +63,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         // Initial state
         cachedNotes: new Map(),
         syncQueue: [],
-        isOnline: navigator.onLine,
+        isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
         isSyncing: false,
         lastSyncTime: null,
         syncError: null,
@@ -99,9 +99,12 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
 
         setOnline: (online: boolean) => {
           set({ isOnline: online });
-          // Trigger sync when connection restored
-          if (online && get().syncQueue.length > 0) {
-            // Emit event to trigger sync in React component
+
+          if (
+            online &&
+            get().syncQueue.length > 0 &&
+            typeof window !== 'undefined'
+          ) {
             window.dispatchEvent(new Event('offline-sync-ready'));
           }
         },

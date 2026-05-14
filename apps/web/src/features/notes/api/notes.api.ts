@@ -565,6 +565,7 @@ export const useCreateNote = () => {
       };
 
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes) => [optimisticNote, ...(currentNotes || [])]);
+      queryClient.setQueryData<NoteDetailItem>(NOTES_KEYS.detail(optimisticNote.id), optimisticNote);
 
       return { previousNotes, optimisticId: optimisticNote.id };
     },

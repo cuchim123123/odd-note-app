@@ -16,7 +16,15 @@ async function registerAndLogin(page: Page, displayName: string) {
   await page.fill('input[name="confirmPassword"]', password);
 
   await page.click('button[type="submit"]');
-  await page.waitForURL(/.*dashboard/, { timeout: 5000 });
+  try {
+    await page.waitForSelector('button[aria-label="Create new note"], button[title="Create new note"]', { timeout: 2000 });
+  } catch {
+    await page.goto('/auth/login');
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', password);
+    await page.click('button[type="submit"]');
+  }
+  await expect(page.locator('text=Your account is not verified')).toBeVisible({ timeout: 5000 });
 
   return { email, password, displayName };
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type UserProfile = {
   id: string;
@@ -14,10 +14,12 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
   setAuth: (user: UserProfile, accessToken: string, refreshToken: string) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   updateUser: (user: Partial<UserProfile>) => void;
   logout: () => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -27,6 +29,9 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      hasHydrated: false,
+
+      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
 
       setAuth: (user, accessToken, refreshToken) =>
         set({ user, accessToken, refreshToken, isAuthenticated: true }),
@@ -44,16 +49,16 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'odd-note-auth',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
-        // We persist the refreshToken and user profile. 
-        // Access token can be regenerated or persisted, but typically safer in memory, 
-        // but for simplicity in this frontend we'll let zustand persist it too, 
-        // or just rely on the interceptor.
-        accessToken: state.accessToken, 
+        accessToken: state.accessToken,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
