@@ -15,6 +15,12 @@ export type TypingParticipant = {
   updatedAt: number;
 };
 
+export type PresenceParticipant = {
+  userId: string;
+  displayName: string;
+  color: string;
+};
+
 type UseCollaborationOptions = {
   noteId: string | null;
   /** Only connect when the shared note has EDIT permission */
@@ -54,6 +60,7 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
   const accessToken = useAuthStore((state) => state.accessToken);
   const socketRef = useRef<Socket | null>(null);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [presenceParticipants, setPresenceParticipants] = useState<PresenceParticipant[]>([]);
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -71,6 +78,7 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
         socketRef.current = null;
         setIsConnected(false);
         setCollaborators([]);
+        setPresenceParticipants([]);
         setTypingParticipants([]);
       }
       return;
@@ -95,11 +103,16 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
     socket.on('disconnect', () => {
       setIsConnected(false);
       setCollaborators([]);
+      setPresenceParticipants([]);
       setTypingParticipants([]);
     });
 
     socket.on('collaborators:list', (list: Collaborator[]) => {
       setCollaborators(list);
+    });
+
+    socket.on('presence:list', (list: PresenceParticipant[]) => {
+      setPresenceParticipants(list);
     });
 
     socket.on('collaborator:joined', (collaborator: Collaborator) => {
@@ -131,6 +144,7 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
       socketRef.current = null;
       setIsConnected(false);
       setCollaborators([]);
+      setPresenceParticipants([]);
       setTypingParticipants([]);
     };
   }, [noteId, enabled, accessToken]);
@@ -164,6 +178,7 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
 
   return {
     collaborators,
+    presenceParticipants,
     typingParticipants,
     isConnected,
     sendContentUpdate,

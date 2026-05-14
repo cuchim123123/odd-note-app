@@ -214,7 +214,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     [],
   );
 
-  const { collaborators, typingParticipants, isConnected: isWsConnected, sendContentUpdate, sendTypingState } = useCollaboration({
+  const { presenceParticipants, typingParticipants, isConnected: isWsConnected, sendContentUpdate, sendTypingState } = useCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
@@ -704,19 +704,19 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-background">
         <div className="max-w-4xl mx-auto">
           {/* Collaborator presence indicators */}
-          {isCollaborativeNote && collaborators.length > 0 ? (
+          {isCollaborativeNote && presenceParticipants.length > 0 ? (
             <div className="mb-3 flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Editing now:</span>
+              <span className="text-xs text-muted-foreground">Viewing now:</span>
               <div className="flex -space-x-2">
-                {collaborators.map((c) => (
+                {presenceParticipants.map((participant) => (
                   <div
-                    key={c.userId}
+                    key={participant.userId}
                     className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-[10px] font-bold text-white"
-                    style={{ backgroundColor: c.color }}
-                    title={c.displayName}
+                    style={{ backgroundColor: participant.color }}
+                    title={participant.displayName}
                   >
-                    {c.displayName.charAt(0).toUpperCase()}
+                    {participant.displayName.charAt(0).toUpperCase()}
                   </div>
                 ))}
               </div>
