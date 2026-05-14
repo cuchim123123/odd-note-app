@@ -2,6 +2,7 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../features/auth/stores/auth.store';
 import { useLogout } from '../../features/auth/api/auth.api';
 import { Button } from '../ui/button';
+import { NotificationCenter } from '../NotificationCenter';
 import { Sparkles, LogOut, Settings as SettingsIcon, Book } from 'lucide-react';
 
 export function DashboardLayout() {
@@ -36,6 +37,7 @@ export function DashboardLayout() {
           </nav>
 
           <div className="flex items-center gap-4">
+            <NotificationCenter />
             <div className="text-sm hidden sm:block">
               <span className="text-muted-foreground">Logged in as </span>
               <span className="font-medium">{user?.displayName || user?.email}</span>
