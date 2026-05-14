@@ -1,6 +1,7 @@
-﻿import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import bcrypt from 'bcrypt';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailerService } from '../common/mailer/mailer.service';
 
 type SharePermission = 'READ' | 'EDIT';
 
@@ -68,7 +69,10 @@ export type NoteShareResponse = {
 
 @Injectable()
 export class NotesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailer: MailerService,
+  ) {}
 
   async list(userId: string): Promise<NoteResponse[]> {
     const notes = await this.prisma.note.findMany({
@@ -217,6 +221,14 @@ export class NotesService {
       throw new BadRequestException('Recipient must already have an account');
     }
 
+    // Get the owner and note details for email
+    const owner = await this.prisma.user.findUnique({ where: { id: userId } });
+    const note = await this.prisma.note.findUnique({ where: { id: noteId } });
+
+    if (!owner || !note) {
+      throw new NotFoundException('User or note not found');
+    }
+
     const share = await this.prisma.noteShare.upsert({
       where: { noteId_recipientEmail: { noteId, recipientEmail } },
       update: {
@@ -233,6 +245,42 @@ export class NotesService {
       },
       include: { recipient: { select: { displayName: true } } },
     });
+
+    // Send email notification to recipient
+    const appUrl = process.env.APP_URL || 'http://localhost:5173';
+    try {
+      await this.mailer.sendNoteSharedEmail({
+        to: recipientEmail,
+        recipientName: recipient.displayName,
+        senderName: owner.displayName,
+        noteTitle: note.title,
+        permission: input.permission,
+        appUrl,
+      });
+    } catch (error) {
+      console.error('Failed to send share notification email:', error);
+      // Don't fail the share operation if email fails
+    }
+
+    // Create in-app notification
+    try {
+      await this.prisma.notification.create({
+        data: {
+          userId: recipient.id,
+          type: 'note_shared',
+          title: `${owner.displayName} shared "${note.title}" with you`,
+          message: `You received a ${input.permission === 'EDIT' ? 'editable' : 'read-only'} note: "${note.title}"`,
+          data: JSON.stringify({
+            noteId: note.id,
+            shareId: share.id,
+            sharedByUserId: userId,
+          }),
+        },
+      });
+    } catch (error) {
+      console.error('Failed to create notification record:', error);
+      // Don't fail the share operation if notification creation fails
+    }
 
     return {
       id: share.id,
