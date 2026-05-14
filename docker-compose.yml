@@ -42,6 +42,7 @@ services:
       S3_BUCKET: oddnote-uploads
       S3_USE_SSL: false
       API_PORT: 4000
+      ALLOW_TEST_ENDPOINTS: '1'
     depends_on:
       - db
       - minio
