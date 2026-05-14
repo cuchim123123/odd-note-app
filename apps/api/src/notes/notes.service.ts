@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException, UnauthorizedExcepti
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../common/mailer/mailer.service';
+import { RedisService } from '../redis/redis.service';
 
 type SharePermission = 'READ' | 'EDIT';
 
@@ -67,11 +68,18 @@ export type NoteShareResponse = {
   updatedAt: string;
 };
 
+export type NoteDraftResponse = {
+  title: string;
+  content: string;
+  updatedAt: string;
+};
+
 @Injectable()
 export class NotesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailer: MailerService,
+    private readonly redis: RedisService,
   ) {}
 
   async list(userId: string): Promise<NoteResponse[]> {
@@ -397,6 +405,64 @@ export class NotesService {
     });
 
     return { removed: true };
+  }
+
+  async getDraft(userId: string, noteId: string): Promise<NoteDraftResponse | null> {
+    await this.ensureCanEditNote(userId, noteId);
+
+    const value = await this.redis.getClient().get(this.getDraftKey(userId, noteId));
+    if (!value) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(value) as NoteDraftResponse;
+    } catch {
+      return null;
+    }
+  }
+
+  async saveDraft(
+    userId: string,
+    noteId: string,
+    input: { title: string; content: string },
+  ): Promise<{ saved: true; updatedAt: string }> {
+    await this.ensureCanEditNote(userId, noteId);
+
+    const updatedAt = new Date().toISOString();
+    const payload: NoteDraftResponse = {
+      title: input.title,
+      content: input.content,
+      updatedAt,
+    };
+
+    await this.redis.getClient().set(this.getDraftKey(userId, noteId), JSON.stringify(payload), 'EX', 60 * 60 * 24);
+
+    return { saved: true, updatedAt };
+  }
+
+  async clearDraft(userId: string, noteId: string): Promise<{ cleared: true }> {
+    await this.ensureCanEditNote(userId, noteId);
+    await this.redis.getClient().del(this.getDraftKey(userId, noteId));
+    return { cleared: true };
+  }
+
+  private getDraftKey(userId: string, noteId: string): string {
+    return `note:draft:${userId}:${noteId}`;
+  }
+
+  private async ensureCanEditNote(userId: string, noteId: string): Promise<void> {
+    const note = await this.prisma.note.findFirst({
+      where: {
+        id: noteId,
+        OR: [{ userId }, { shares: { some: { recipientId: userId, permission: 'EDIT' } } }],
+      },
+      select: { id: true },
+    });
+
+    if (!note) {
+      throw new NotFoundException('Note not found');
+    }
   }
 
   private async ensureOwnedNote(userId: string, noteId: string): Promise<void> {

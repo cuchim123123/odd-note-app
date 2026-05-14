@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/axios';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
@@ -35,6 +35,12 @@ export type NoteShareRecord = {
   updatedAt: string;
 };
 
+export type NoteDraft = {
+  title: string;
+  content: string;
+  updatedAt: string;
+};
+
 const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
   const random = Math.random() * 16 | 0;
   const value = character === 'x' ? random : (random & 0x3 | 0x8);
@@ -48,7 +54,7 @@ const cloneNote = (note: Note): Note => ({ ...note, labels: [...note.labels] });
 const normalizeLabel = (label: string) => label.trim();
 
 const NOTES_DB_NAME = 'odd-note-app';
-const NOTES_DB_VERSION = 1;
+const NOTES_DB_VERSION = 3;
 const NOTES_STORE_NAME = 'notes';
 
 const openNotesDb = async (): Promise<IDBDatabase> => {
@@ -59,6 +65,13 @@ const openNotesDb = async (): Promise<IDBDatabase> => {
       const db = request.result;
       if (!db.objectStoreNames.contains(NOTES_STORE_NAME)) {
         db.createObjectStore(NOTES_STORE_NAME, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('syncQueue')) {
+        const queueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+        queueStore.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('metadata')) {
+        db.createObjectStore('metadata', { keyPath: 'key' });
       }
     };
 
@@ -211,6 +224,7 @@ let mockNotes: Note[] = [
 ];
 
 let mockNoteShares: MockShareRecord[] = [];
+let mockNoteDrafts: Record<string, NoteDraft> = {};
 
 const hasAccessToken = () => Boolean(useAuthStore.getState().accessToken);
 
@@ -377,6 +391,7 @@ export function deleteNote(id: string): void {
 
 export function resetMockNotes() {
   mockNoteShares = [];
+  mockNoteDrafts = {};
   mockNotes = [
     {
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -447,6 +462,36 @@ export async function removeNotePassword(noteId: string, password: string): Prom
   const response = await api.delete<{ removed: true }>(`/notes/${noteId}/password`, {
     data: { password },
   });
+  return response.data;
+}
+
+export async function getNoteDraft(noteId: string): Promise<NoteDraft | null> {
+  if (!backendNotesAvailable()) {
+    return mockNoteDrafts[noteId] ?? null;
+  }
+
+  const response = await api.get<NoteDraft | null>(`/notes/${noteId}/draft`);
+  return response.data;
+}
+
+export async function saveNoteDraft(noteId: string, title: string, content: string): Promise<{ saved: true; updatedAt: string }> {
+  if (!backendNotesAvailable()) {
+    const updatedAt = now();
+    mockNoteDrafts[noteId] = { title, content, updatedAt };
+    return { saved: true, updatedAt };
+  }
+
+  const response = await api.post<{ saved: true; updatedAt: string }>(`/notes/${noteId}/draft`, { title, content });
+  return response.data;
+}
+
+export async function clearNoteDraft(noteId: string): Promise<{ cleared: true }> {
+  if (!backendNotesAvailable()) {
+    delete mockNoteDrafts[noteId];
+    return { cleared: true };
+  }
+
+  const response = await api.delete<{ cleared: true }>(`/notes/${noteId}/draft`);
   return response.data;
 }
 
@@ -756,7 +801,6 @@ export const useCreateNoteShare = (noteId: string) => {
       }
 
       const createdShare = await createNoteShareInApi(noteId, input);
-      await upsertNoteInDb(getNoteById(noteId));
       return createdShare;
     },
     onSuccess: () => {
@@ -795,7 +839,6 @@ export const useUpdateNoteShare = (noteId: string) => {
       }
 
       const updatedShare = await updateNoteShareInApi(noteId, shareId, input);
-      await upsertNoteInDb(getNoteById(noteId));
       return updatedShare;
     },
     onSuccess: () => {

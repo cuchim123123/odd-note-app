@@ -10,6 +10,9 @@ import {
   useDeleteNote,
   getNoteProtectionStatus,
   removeNotePassword,
+  getNoteDraft,
+  saveNoteDraft,
+  clearNoteDraft,
   setNotePassword,
   verifyNotePassword,
   NOTES_KEYS,
@@ -193,6 +196,38 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const canEditContent = !isSharedNote || sharedPermission === 'EDIT';
   const canManageShares = noteAccessMode === 'owner';
 
+  useEffect(() => {
+    if (!note || !canEditContent) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadDraft = async () => {
+      try {
+        const draft = await getNoteDraft(note.id);
+        if (!draft || isCancelled) {
+          return;
+        }
+
+        const noteUpdatedAt = new Date(note.updatedAt).getTime();
+        const draftUpdatedAt = new Date(draft.updatedAt).getTime();
+        if (draftUpdatedAt >= noteUpdatedAt) {
+          setTitle(draft.title);
+          setContent(draft.content);
+        }
+      } catch {
+        // ignore draft read failures
+      }
+    };
+
+    void loadDraft();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [canEditContent, note]);
+
   const canAutosave = !!note && !isLoading && canEditContent;
 
   // Real-time collaboration: connect when this is a shared EDIT note
@@ -255,7 +290,31 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
     const hasChanges = title !== note.title || content !== (note.content || '');
     setIsDirty(hasChanges);
+  }, [canAutosave, content, note, title]);
 
+  useEffect(() => {
+    if (!canAutosave || !note) {
+      return;
+    }
+
+    const hasChanges = title !== note.title || content !== (note.content || '');
+    if (!hasChanges) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void saveNoteDraft(note.id, title, content);
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [canAutosave, content, note, title]);
+
+  useEffect(() => {
+    if (!canAutosave || !note) {
+      return;
+    }
+
+    const hasChanges = title !== note.title || content !== (note.content || '');
     if (!hasChanges) {
       return;
     }
@@ -266,10 +325,11 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
         const updated = await updateNote({ title, content });
         setLastSavedAt(updated.updatedAt);
         setIsDirty(false);
+        await clearNoteDraft(note.id);
       } catch (error) {
         setSaveError(error instanceof Error ? error.message : 'Failed to save note');
       }
-    }, 650);
+    }, 2000);
 
     return () => window.clearTimeout(timeoutId);
   }, [canAutosave, content, note, title, updateNote]);
