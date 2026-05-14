@@ -109,6 +109,8 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const deleteShareMutation = useDeleteNoteShare(noteId);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const loadedNoteIdRef = useRef<string | null>(null);
+  const isHydratingFromServerRef = useRef(false);
+  const hydrationTimeoutRef = useRef<number | null>(null);
   const isUnlocked = useNoteProtectionStore((state) => state.isUnlocked(noteId));
   const markUnlocked = useNoteProtectionStore((state) => state.markUnlocked);
   const markLocked = useNoteProtectionStore((state) => state.markLocked);
@@ -135,6 +137,10 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   // Sync local state when note changes
   useEffect(() => {
     if (note && loadedNoteIdRef.current !== note.id) {
+      isHydratingFromServerRef.current = true;
+      if (hydrationTimeoutRef.current) {
+        window.clearTimeout(hydrationTimeoutRef.current);
+      }
       loadedNoteIdRef.current = note.id;
       setTitle(note.title);
       setContent(note.content || '');
@@ -150,8 +156,23 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       setShareRecipientEmail('');
       setSharePermission('READ');
       setShareMessage(null);
+
+      hydrationTimeoutRef.current = window.setTimeout(() => {
+        if (loadedNoteIdRef.current === note.id) {
+          isHydratingFromServerRef.current = false;
+        }
+        hydrationTimeoutRef.current = null;
+      }, 0);
     }
   }, [note]);
+
+  useEffect(() => {
+    return () => {
+      if (hydrationTimeoutRef.current) {
+        window.clearTimeout(hydrationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!note) {
@@ -207,6 +228,12 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       try {
         const draft = await getNoteDraft(note.id);
         if (!draft || isCancelled) {
+          return;
+        }
+
+        const isDraftEmpty = draft.title.trim().length === 0 && draft.content.trim().length === 0;
+        const isServerNoteEmpty = note.title.trim().length === 0 && (note.content || '').trim().length === 0;
+        if (isDraftEmpty && !isServerNoteEmpty) {
           return;
         }
 
@@ -297,6 +324,10 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       return;
     }
 
+    if (isHydratingFromServerRef.current) {
+      return;
+    }
+
     const hasChanges = title !== note.title || content !== (note.content || '');
     if (!hasChanges) {
       return;
@@ -311,6 +342,10 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
   useEffect(() => {
     if (!canAutosave || !note) {
+      return;
+    }
+
+    if (isHydratingFromServerRef.current) {
       return;
     }
 
