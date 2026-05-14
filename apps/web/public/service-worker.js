@@ -7,7 +7,7 @@
  * - Background sync for offline changes
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAMES = {
   shell: `odd-note-app-shell-${CACHE_VERSION}`,
   api: `odd-note-app-api-${CACHE_VERSION}`,
@@ -22,6 +22,14 @@ const ASSETS_TO_CACHE = [
 
 const API_ROUTES = ['/api/'];
 const IMAGE_ROUTES = ['/images/', '.png', '.jpg', '.jpeg', '.gif', '.svg'];
+
+function isHtmlRequest(request) {
+  return (
+    request.mode === 'navigate' ||
+    request.destination === 'document' ||
+    request.headers.get('accept')?.includes('text/html')
+  );
+}
 
 // Install event: cache app shell
 self.addEventListener('install', (event) => {
@@ -66,6 +74,12 @@ self.addEventListener('fetch', (event) => {
   // API routes: network-first with IndexedDB fallback
   if (API_ROUTES.some((route) => url.pathname.startsWith(route))) {
     event.respondWith(networkFirstWithDb(request));
+    return;
+  }
+
+  // HTML/navigation requests: network-first so reloads get the latest UI
+  if (isHtmlRequest(request)) {
+    event.respondWith(networkFirstForShell(request));
     return;
   }
 
@@ -128,6 +142,31 @@ async function cacheFirstWithNetwork(request, cacheName) {
     }
     return response;
   } catch {
+    return new Response('Offline - no cached asset', { status: 503 });
+  }
+}
+
+// Network-first strategy for the app shell so normal reloads see fresh UI
+async function networkFirstForShell(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAMES.shell);
+      cache.put('/index.html', response.clone());
+      cache.put('/', response.clone());
+    }
+    return response;
+  } catch {
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    const fallbackResponse = (await caches.match('/index.html')) || (await caches.match('/'));
+    if (fallbackResponse) {
+      return fallbackResponse;
+    }
+
     return new Response('Offline - no cached asset', { status: 503 });
   }
 }
