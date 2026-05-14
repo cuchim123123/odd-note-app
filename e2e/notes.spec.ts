@@ -1,38 +1,6 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { registerAndLogin } from './test-helper';
 
-// Helper to generate unique email for tests
-const getUniqueEmail = () => `test-${Date.now()}@example.com`;
-
-// Helper to register and login
-async function registerAndLogin(page: Page) {
-  const email = getUniqueEmail();
-  const password = 'TestPassword123!';
-  const displayName = 'Test User';
-
-  await page.goto('/');
-  await page.click('text=Create an account');
-
-  await page.fill('input[name="displayName"]', displayName);
-  await page.fill('input[name="email"]', email);
-  await page.fill('input[name="password"]', password);
-  await page.fill('input[name="confirmPassword"]', password);
-
-  await page.click('button[type="submit"]');
-  // Ensure user is logged in: try to find the create-note button, else perform explicit login
-  try {
-    await page.waitForSelector('button[aria-label="Create new note"], button[title="Create new note"]', { timeout: 2000 });
-  } catch {
-    // Not auto-logged-in; perform explicit login
-    await page.goto('/auth/login');
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="password"]', password);
-    await page.click('button[type="submit"]');
-  }
-  // Wait for registration/login to settle by confirming the note UI is available.
-  await expect(page.locator('button[aria-label="Create new note"], button[title="Create new note"]')).toBeVisible({ timeout: 5000 });
-
-  return { email, password, displayName };
-}
 
 test.describe('Notes CRUD', () => {
   test('should create a new note', async ({ page }) => {

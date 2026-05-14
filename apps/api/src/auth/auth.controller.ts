@@ -85,4 +85,16 @@ export class AuthController {
     const raw = await this.passwordResetTokenService.createTokenForUser(user.id);
     return { token: raw };
   }
+
+  // Development-only: test login endpoint that returns auth tokens for test automation.
+  // Bypasses email verification requirement for test convenience.
+  @Post('test/login')
+  async testLogin(@Body() input: LoginDto) {
+    const allow = process.env.ALLOW_TEST_ENDPOINTS === '1' || process.env.NODE_ENV === 'test';
+    if (!allow) {
+      return { message: 'Not available' };
+    }
+
+    return await this.authService.login(input);
+  }
 }
