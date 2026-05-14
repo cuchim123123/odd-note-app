@@ -9,6 +9,7 @@ import { Button } from '../../../components/ui/button';
 import { Moon, Sun, Laptop } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getSortedNotes } from '../../notes/api/notes.api';
+import { api } from '../../../lib/axios';
 
 const noteFontSizeLabels: Record<NoteFontSize, string> = {
   sm: 'Small',
@@ -19,8 +20,11 @@ const noteFontSizeLabels: Record<NoteFontSize, string> = {
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
   const setNoteFontSize = useNotePreferencesStore((state) => state.setNoteFontSize);
+  const noteColor = useNotePreferencesStore((state) => state.noteColor);
+  const setNoteColor = useNotePreferencesStore((state) => state.setNoteColor);
   const labels = useLabelManagementStore((state) => state.labels);
   const syncLabels = useLabelManagementStore((state) => state.syncLabels);
   const addLabel = useLabelManagementStore((state) => state.addLabel);
@@ -28,6 +32,9 @@ export function SettingsPage() {
   const deleteLabel = useLabelManagementStore((state) => state.deleteLabel);
   const [newLabel, setNewLabel] = useState('');
   const [renameDrafts, setRenameDrafts] = useState<Record<string, string>>({});
+  const [displayName, setDisplayName] = useState(user?.displayName ?? '');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (labels.length === 0) {
@@ -41,6 +48,33 @@ export function SettingsPage() {
     addLabel(newLabel);
     setNewLabel('');
   };
+
+  const handleSaveProfile = async () => {
+    const trimmed = displayName.trim();
+    if (!trimmed) return;
+    setProfileSaving(true);
+    setProfileMessage(null);
+    try {
+      const response = await api.patch('/auth/profile', { displayName: trimmed });
+      if (user) {
+        updateUser({ displayName: response.data.displayName ?? trimmed });
+      }
+      setProfileMessage('Profile saved.');
+    } catch {
+      setProfileMessage('Failed to save profile.');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const noteColorOptions = [
+    { value: 'default', label: 'Default', className: 'bg-background border-2' },
+    { value: 'yellow', label: 'Yellow', className: 'bg-yellow-100 dark:bg-yellow-900/40 border-2' },
+    { value: 'green', label: 'Green', className: 'bg-green-100 dark:bg-green-900/40 border-2' },
+    { value: 'blue', label: 'Blue', className: 'bg-blue-100 dark:bg-blue-900/40 border-2' },
+    { value: 'pink', label: 'Pink', className: 'bg-pink-100 dark:bg-pink-900/40 border-2' },
+    { value: 'purple', label: 'Purple', className: 'bg-purple-100 dark:bg-purple-900/40 border-2' },
+  ] as const;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -58,14 +92,17 @@ export function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="displayName">Display Name</Label>
-              <Input id="displayName" defaultValue={user?.displayName} />
+              <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" defaultValue={user?.email} disabled />
               <p className="text-xs text-muted-foreground">Your email address cannot be changed right now.</p>
             </div>
-            <Button>Save changes</Button>
+            {profileMessage ? <p className="text-sm text-muted-foreground">{profileMessage}</p> : null}
+            <Button onClick={handleSaveProfile} disabled={profileSaving}>
+              {profileSaving ? 'Saving...' : 'Save changes'}
+            </Button>
           </CardContent>
         </Card>
 
@@ -129,6 +166,25 @@ export function SettingsPage() {
                   </Button>
                 ))}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Note color</Label>
+              <div className="flex flex-wrap gap-2">
+                {noteColorOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setNoteColor(option.value)}
+                    className={`h-10 w-10 rounded-lg transition-all ${option.className} ${noteColor === option.value ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}
+                    aria-label={option.label}
+                    aria-pressed={noteColor === option.value}
+                    title={option.label}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Choose a background color for your note cards.
+              </p>
             </div>
           </CardContent>
         </Card>

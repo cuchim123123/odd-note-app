@@ -7,7 +7,17 @@ import { FileText, Lock, Pin, Plus, Search, Share2 } from 'lucide-react';
 import { Input } from '../../../components/ui/input';
 import { cn } from '../../../lib/utils';
 import { useLabelManagementStore } from '../../settings/stores/label-management.store';
+import { useNotePreferencesStore, type NoteColor } from '../../settings/stores/note-preferences.store';
 import type { SharedNoteItem } from '../api/notes.api';
+
+const noteColorClasses: Record<NoteColor, string> = {
+  default: '',
+  yellow: 'bg-yellow-50 dark:bg-yellow-950/30',
+  green: 'bg-green-50 dark:bg-green-950/30',
+  blue: 'bg-blue-50 dark:bg-blue-950/30',
+  pink: 'bg-pink-50 dark:bg-pink-950/30',
+  purple: 'bg-purple-50 dark:bg-purple-950/30',
+};
 
 type ViewMode = 'grid' | 'list';
 
@@ -208,6 +218,8 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
 const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView }: { note: DisplayNote; isSelected: boolean; onSelect: () => void; isGridView: boolean }) {
   const update = useUpdateNote(note.id);
   const isSharedAccess = 'accessMode' in note && note.accessMode === 'shared';
+  const noteColor = useNotePreferencesStore((state) => state.noteColor);
+  const colorClass = noteColorClasses[noteColor] || '';
 
   const handleTogglePin = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -243,7 +255,8 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
       onKeyDown={onKeyDown}
       onClick={onSelect}
       className={cn(
-        'note-item group w-full rounded-xl border bg-background text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20',
+        'note-item group w-full rounded-xl border text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20',
+        colorClass || 'bg-background',
         isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border/70 hover:border-border',
         isGridView ? 'p-4' : 'p-4',
       )}
