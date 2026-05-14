@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, X, CheckCheck } from 'lucide-react';
+import { Bell, X, CheckCheck, Sparkles } from 'lucide-react';
 import { useNotifications, useMarkNotificationAsRead, useDeleteNotification, useMarkAllNotificationsAsRead } from '../hooks/useNotifications';
 import type { Notification } from '../types/notification';
 
@@ -27,59 +27,61 @@ export const NotificationCenter = () => {
 
   return (
     <div className="relative">
-      {/* Bell Icon Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-white text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:text-foreground hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+        aria-label="Open notifications"
       >
-        <Bell size={20} />
+        <Bell size={18} />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+          <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 max-w-lg bg-white rounded-lg shadow-xl z-50 max-h-96 overflow-hidden flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+        <div className="absolute right-0 z-50 mt-3 w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.14)]">
+          <div className="flex items-center justify-between border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-4 py-3">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Activity
+              </div>
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">Notifications</h3>
+            </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
                 >
                   <CheckCheck size={16} />
-                  Mark all as read
+                  Mark all read
                 </button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                aria-label="Close notifications"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
           </div>
 
-          {/* Notifications List */}
-          <div className="overflow-y-auto flex-1">
+          <div className="max-h-96 overflow-y-auto bg-slate-50/70 p-2">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">Loading notifications...</div>
-              </div>
+              <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">Loading notifications...</div>
             ) : notifications.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
-                  <Bell size={32} className="mx-auto text-gray-300 mb-2" />
-                  <p className="text-gray-500">No notifications yet</p>
+                  <Bell size={34} className="mx-auto mb-2 text-slate-300" />
+                  <p className="text-sm text-muted-foreground">No notifications yet.</p>
                 </div>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-200">
+              <ul className="space-y-2">
                 {notifications.map((notification: Notification) => (
                   <NotificationItem
                     key={notification.id}
@@ -92,10 +94,9 @@ export const NotificationCenter = () => {
             )}
           </div>
 
-          {/* Footer */}
           {notifications.length > 0 && (
-            <div className="border-t border-gray-200 p-3 bg-gray-50 text-center">
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            <div className="border-t border-border/70 bg-white px-4 py-3 text-center">
+              <button className="text-sm font-medium text-primary transition-colors hover:text-primary/80">
                 View all notifications
               </button>
             </div>
@@ -103,12 +104,8 @@ export const NotificationCenter = () => {
         </div>
       )}
 
-      {/* Backdrop */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
-        />
+        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
       )}
     </div>
   );
@@ -127,15 +124,18 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 }) => {
   return (
     <li
-      className={`p-4 transition cursor-pointer ${
-        notification.read ? 'bg-white hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'
+      className={`group rounded-2xl border p-4 transition-all ${
+        notification.read ? 'border-border/60 bg-white/95 hover:border-primary/20 hover:shadow-sm' : 'border-primary/15 bg-primary/5 hover:border-primary/25 hover:shadow-sm'
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
-          <h4 className="font-medium text-gray-900">{notification.title}</h4>
-          <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-          <span className="text-xs text-gray-500 mt-2 block">
+          <div className="flex items-center gap-2">
+            {!notification.read ? <span className="h-2 w-2 rounded-full bg-primary" /> : null}
+            <h4 className="font-semibold text-foreground">{notification.title}</h4>
+          </div>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">{notification.message}</p>
+          <span className="mt-2 block text-xs text-muted-foreground">
             {new Date(notification.createdAt).toLocaleDateString(undefined, {
               month: 'short',
               day: 'numeric',
@@ -145,14 +145,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {!notification.read && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onMarkAsRead();
               }}
-              className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+              className="rounded-full px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
             >
               Mark read
             </button>
@@ -162,7 +162,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
               e.stopPropagation();
               onDelete();
             }}
-            className="text-gray-400 hover:text-gray-600 p-1"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            aria-label="Delete notification"
           >
             <X size={16} />
           </button>

@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Label } from '../../../components/ui/label';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Moon, Sun, Laptop } from 'lucide-react';
+import { Monitor, Palette, Sparkles, Sun, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getSortedNotes } from '../../notes/api/notes.api';
 import { api } from '../../../lib/axios';
 
 const noteFontSizeLabels: Record<NoteFontSize, string> = {
-  sm: 'Small',
-  base: 'Medium',
-  lg: 'Large',
+  sm: 'Compact',
+  base: 'Comfortable',
+  lg: 'Spacious',
 };
 
 export function SettingsPage() {
@@ -68,30 +68,42 @@ export function SettingsPage() {
   };
 
   const noteColorOptions = [
-    { value: 'default', label: 'Default', className: 'bg-background border-2' },
-    { value: 'yellow', label: 'Yellow', className: 'bg-yellow-100 dark:bg-yellow-900/40 border-2' },
-    { value: 'green', label: 'Green', className: 'bg-green-100 dark:bg-green-900/40 border-2' },
-    { value: 'blue', label: 'Blue', className: 'bg-blue-100 dark:bg-blue-900/40 border-2' },
-    { value: 'pink', label: 'Pink', className: 'bg-pink-100 dark:bg-pink-900/40 border-2' },
-    { value: 'purple', label: 'Purple', className: 'bg-purple-100 dark:bg-purple-900/40 border-2' },
+    { value: 'default', label: 'Default', className: 'bg-white border-2' },
+    { value: 'yellow', label: 'Sunrise', className: 'bg-amber-100 border-2 border-amber-200' },
+    { value: 'green', label: 'Mint', className: 'bg-emerald-100 border-2 border-emerald-200' },
+    { value: 'blue', label: 'Sky', className: 'bg-sky-100 border-2 border-sky-200' },
+    { value: 'pink', label: 'Rose', className: 'bg-rose-100 border-2 border-rose-200' },
+    { value: 'purple', label: 'Lavender', className: 'bg-violet-100 border-2 border-violet-200' },
   ] as const;
 
+  const themeOptions = [
+    { value: 'light' as const, label: 'Light', icon: Sun, description: 'Bright and crisp everywhere.' },
+    { value: 'system' as const, label: 'System', icon: Monitor, description: 'Keep the app bright by default.' },
+  ];
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)] backdrop-blur">
+        <div className="flex items-start gap-4">
+          <div className="rounded-2xl bg-primary/10 p-3 text-primary shadow-sm">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+            <p className="max-w-2xl text-muted-foreground">Personalize your workspace, keep your notes comfortable to read, and shape the app around your workflow.</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Update your personal information.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><UserRound className="h-5 w-5 text-primary" />Profile</CardTitle>
+            <CardDescription>Update your display name and review the account email.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
+              <Label htmlFor="displayName">Display name</Label>
               <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </div>
             <div className="space-y-2">
@@ -108,37 +120,37 @@ export function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Appearance</CardTitle>
-            <CardDescription>Customize the look and feel of the application.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Palette className="h-5 w-5 text-primary" />Appearance</CardTitle>
+            <CardDescription>Keep the interface bright and tailor the reading experience.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
+          <CardContent className="space-y-5">
+            <div className="space-y-3">
               <Label>Theme</Label>
-              <div className="flex gap-2">
-                <Button 
-                  variant={theme === 'light' ? 'default' : 'outline'} 
-                  onClick={() => setTheme('light')}
-                  className="w-full sm:w-auto"
-                >
-                  <Sun className="w-4 h-4 mr-2" />
-                  Light
-                </Button>
-                <Button 
-                  variant={theme === 'dark' ? 'default' : 'outline'} 
-                  onClick={() => setTheme('dark')}
-                  className="w-full sm:w-auto"
-                >
-                  <Moon className="w-4 h-4 mr-2" />
-                  Dark
-                </Button>
-                <Button 
-                  variant={theme === 'system' ? 'default' : 'outline'} 
-                  onClick={() => setTheme('system')}
-                  className="w-full sm:w-auto"
-                >
-                  <Laptop className="w-4 h-4 mr-2" />
-                  System
-                </Button>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {themeOptions.map((option) => {
+                  const Icon = option.icon;
+                  const active = theme === option.value;
+
+                  return (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant={active ? 'default' : 'outline'}
+                      onClick={() => setTheme(option.value)}
+                      className="h-auto justify-start rounded-2xl px-4 py-4 text-left"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-white/20 p-2">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="font-semibold">{option.label}</div>
+                          <div className={active ? 'text-primary-foreground/80' : 'text-muted-foreground'}>{option.description}</div>
+                        </div>
+                      </div>
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
@@ -149,7 +161,7 @@ export function SettingsPage() {
             <CardTitle>Notes</CardTitle>
             <CardDescription>Adjust how your notes are displayed while editing.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-5">
             <div className="space-y-2">
               <Label>Note font size</Label>
               <div className="flex flex-wrap gap-2">
@@ -159,7 +171,7 @@ export function SettingsPage() {
                     type="button"
                     variant={noteFontSize === size ? 'default' : 'outline'}
                     onClick={() => setNoteFontSize(size)}
-                    className="w-full sm:w-auto"
+                    className="rounded-full"
                     aria-pressed={noteFontSize === size}
                   >
                     {noteFontSizeLabels[size]}
@@ -169,22 +181,20 @@ export function SettingsPage() {
             </div>
             <div className="space-y-2">
               <Label>Note color</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 {noteColorOptions.map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => setNoteColor(option.value)}
-                    className={`h-10 w-10 rounded-lg transition-all ${option.className} ${noteColor === option.value ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}
+                    className={`h-11 w-11 rounded-2xl border transition-all ${option.className} ${noteColor === option.value ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'border-border/80'}`}
                     aria-label={option.label}
                     aria-pressed={noteColor === option.value}
                     title={option.label}
                   />
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Choose a background color for your note cards.
-              </p>
+              <p className="text-xs text-muted-foreground">Choose a calm background tint for note cards.</p>
             </div>
           </CardContent>
         </Card>
@@ -192,7 +202,7 @@ export function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Labels</CardTitle>
-            <CardDescription>Manage the labels available for filtering your notes.</CardDescription>
+            <CardDescription>Manage labels used for filtering and organizing notes.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -215,7 +225,7 @@ export function SettingsPage() {
                   const draftValue = renameDrafts[label] ?? label;
 
                   return (
-                    <div key={label} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center">
+                    <div key={label} className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-background/80 p-4 sm:flex-row sm:items-center">
                       <div className="flex-1 space-y-1">
                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
                         <Input

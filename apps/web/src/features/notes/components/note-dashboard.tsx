@@ -22,7 +22,7 @@ import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock, Users } from 'lucide-react';
+import { ChevronLeft, Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock, Users, Share2, X } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { appendImageToContent } from '../utils/attachments';
 import { api } from '../../../lib/axios';
@@ -34,18 +34,29 @@ type ViewMode = 'grid' | 'list';
 export function NoteDashboard() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
+
+  const handleSelectNote = (id: string) => {
+    setSelectedNoteId(id);
+    setMobileView('editor');
+  };
+
+  const handleDeleteSelectedNote = () => {
+    setSelectedNoteId(null);
+    setMobileView('list');
+  };
 
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Your notes</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Your notes</h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
             Switch between grid and list views, search instantly, and open any note to edit it.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-full border bg-background p-1 shadow-sm">
+        <div className="hidden items-center gap-2 rounded-full border bg-background p-1 shadow-sm sm:flex">
           <Button
             type="button"
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -69,20 +80,36 @@ export function NoteDashboard() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border bg-card shadow-sm">
-        {/* Sidebar */}
+      <div className="flex items-center gap-2 rounded-full border bg-background p-1 shadow-sm sm:hidden">
+        <Button
+          type="button"
+          variant={mobileView === 'list' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setMobileView('list')}
+          className="flex-1 rounded-full"
+        >
+          Notes
+        </Button>
+        <Button
+          type="button"
+          variant={mobileView === 'editor' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setMobileView('editor')}
+          className="flex-1 rounded-full"
+          disabled={!selectedNoteId}
+        >
+          Editor
+        </Button>
+      </div>
+
+      <div className="hidden min-h-0 flex-1 overflow-hidden rounded-xl border bg-card shadow-sm lg:flex">
         <div className="w-full shrink-0 border-r lg:w-[22rem]">
-          <NoteList
-            selectedNoteId={selectedNoteId}
-            onSelectNote={setSelectedNoteId}
-            viewMode={viewMode}
-          />
+          <NoteList selectedNoteId={selectedNoteId} onSelectNote={handleSelectNote} viewMode={viewMode} />
         </div>
 
-        {/* Main Content */}
         <div className="relative flex-1 overflow-hidden bg-background">
           {selectedNoteId ? (
-            <NoteDetailView noteId={selectedNoteId} onDeleted={() => setSelectedNoteId(null)} />
+            <NoteDetailView noteId={selectedNoteId} onDeleted={handleDeleteSelectedNote} />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-6 text-center text-muted-foreground">
               <div className="mb-4 rounded-full bg-muted/30 p-6">
@@ -92,6 +119,24 @@ export function NoteDashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="space-y-3 lg:hidden">
+        {mobileView === 'list' || !selectedNoteId ? (
+          <div className="max-h-[calc(100dvh-16rem)] overflow-hidden rounded-xl border bg-card shadow-sm">
+            <NoteList selectedNoteId={selectedNoteId} onSelectNote={handleSelectNote} viewMode={viewMode} />
+          </div>
+        ) : null}
+
+        {selectedNoteId && mobileView === 'editor' ? (
+          <div className="space-y-3">
+            <Button type="button" variant="outline" className="w-full rounded-full" onClick={() => setMobileView('list')}>
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back to notes
+            </Button>
+            <NoteDetailView noteId={selectedNoteId} onDeleted={handleDeleteSelectedNote} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -129,7 +174,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const [shareRecipientEmail, setShareRecipientEmail] = useState('');
   const [sharePermission, setSharePermission] = useState<'READ' | 'EDIT'>('READ');
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [remoteCursors, setRemoteCursors] = useState<Array<{ userId: string; displayName: string; color: string; position: number }>>([]);
   const typingStopTimerRef = useRef<number | null>(null);
   /** Track whether the last content change came from a remote collaborator (skip re-broadcast) */
   const isRemoteUpdateRef = useRef(false);
@@ -156,6 +203,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       setShareRecipientEmail('');
       setSharePermission('READ');
       setShareMessage(null);
+      setShareModalOpen(false);
 
       hydrationTimeoutRef.current = window.setTimeout(() => {
         if (loadedNoteIdRef.current === note.id) {
@@ -261,11 +309,30 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const isCollaborativeNote = (isSharedNote && sharedPermission === 'EDIT') || (note?.isShared && canManageShares);
 
   const handleRemoteContentUpdate = useCallback(
-    (data: { userId: string; content: string; title?: string }) => {
+    (data: { userId: string; content: string; title?: string; isPinned?: boolean; isProtected?: boolean }) => {
       isRemoteUpdateRef.current = true;
       if (data.title !== undefined) {
         setTitle(data.title);
       }
+
+      if (data.isProtected !== undefined) {
+        setServerProtectionStatus(data.isProtected);
+      }
+
+      if (data.isPinned !== undefined && noteId) {
+        const updatedAt = new Date().toISOString();
+        queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
+          currentNotes.map((currentNote) =>
+            currentNote.id === noteId
+              ? { ...currentNote, isPinned: data.isPinned ?? currentNote.isPinned, updatedAt }
+              : currentNote,
+          ),
+        );
+        queryClient.setQueryData<Note>(NOTES_KEYS.detail(noteId), (currentNote) =>
+          currentNote ? { ...currentNote, isPinned: data.isPinned ?? currentNote.isPinned, updatedAt } : currentNote,
+        );
+      }
+
       setContent(data.content);
       // Let the flag reset after the next render cycle so the onChange handler
       // doesn't re-broadcast this change.
@@ -276,11 +343,29 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     [],
   );
 
-  const { presenceParticipants, typingParticipants, isConnected: isWsConnected, sendContentUpdate, sendTypingState } = useCollaboration({
+  const handleRemoteCursor = useCallback((data: { userId: string; displayName: string; position: number; color: string }) => {
+    setRemoteCursors((current) => {
+      const filtered = current.filter((cursor) => cursor.userId !== data.userId);
+      return [...filtered, data];
+    });
+  }, []);
+
+  const { collaborators, presenceParticipants, typingParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, sendTypingState } = useCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
+    onRemoteCursor: handleRemoteCursor,
   });
+
+  const presenceCount = collaborators.length > 0 ? collaborators.length : presenceParticipants.length;
+  const realtimeLabel = isCollaborativeNote
+    ? (isWsConnected
+      ? presenceCount > 0
+        ? `Watching · ${presenceCount}`
+        : 'Realtime · Connected'
+      : 'Realtime · Offline')
+    : 'Realtime · Off';
+  const realtimeTone = isCollaborativeNote && isWsConnected ? 'text-emerald-600' : 'text-muted-foreground';
 
   const notifyTypingActivity = useCallback(() => {
     if (!isCollaborativeNote) {
@@ -309,6 +394,12 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       }
     };
   }, [isCollaborativeNote, sendTypingState]);
+
+  useEffect(() => {
+    if (!isCollaborativeNote) {
+      setRemoteCursors([]);
+    }
+  }, [isCollaborativeNote]);
 
   useEffect(() => {
     if (!canAutosave || !note) {
@@ -382,12 +473,23 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       return { icon: Loader2, label: 'Pending changes…', tone: 'text-muted-foreground' as const };
     }
 
-    return { icon: Check, label: lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved', tone: 'text-emerald-600 dark:text-emerald-400' as const };
+    return { icon: Check, label: lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved', tone: 'text-emerald-600' as const };
   }, [isDirty, isSaving, lastSavedAt, saveError]);
 
   const handleDelete = async () => {
     setDeleteConfirmOpen(true);
   };
+
+  const broadcastNoteState = useCallback(
+    (nextState: { isPinned?: boolean; isProtected?: boolean } = {}) => {
+      if (!isCollaborativeNote) {
+        return;
+      }
+
+      sendContentUpdate(content, title, nextState);
+    },
+    [content, isCollaborativeNote, sendContentUpdate, title],
+  );
 
   const handleConfirmDelete = async () => {
     await deleteMutation.mutateAsync();
@@ -450,13 +552,14 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
     try {
       await setNotePassword(noteId, normalizedPassword);
-      await updateNote({ isProtected: true });
+      const updated = await updateNote({ isProtected: true });
       markUnlocked(noteId);
       setServerProtectionStatus(true);
       setProtectionMode('idle');
       setProtectionPassword('');
       setConfirmProtectionPassword('');
       setProtectionMessage('Protection enabled.');
+      broadcastNoteState({ isProtected: updated.isProtected });
     } catch {
       setProtectionMessage('Failed to enable protection.');
     }
@@ -465,12 +568,13 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const handleDisableProtection = async () => {
     try {
       await removeNotePassword(noteId, currentPassword.trim());
-      await updateNote({ isProtected: false });
+      const updated = await updateNote({ isProtected: false });
       markLocked(noteId);
       setServerProtectionStatus(false);
       setProtectionMode('idle');
       setCurrentPassword('');
       setProtectionMessage('Protection removed.');
+      broadcastNoteState({ isProtected: updated.isProtected });
     } catch {
       setProtectionMessage('Incorrect password.');
     }
@@ -587,12 +691,12 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="border-b bg-background px-4 py-3 sm:px-6">
+    <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+      <div className="border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-4 py-4 sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1 space-y-2">
-            <Input 
-              value={title} 
+            <Input
+              value={title}
               onChange={(e) => {
                 const nextTitle = e.target.value;
                 setTitle(nextTitle);
@@ -609,21 +713,46 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                     currentNote ? { ...currentNote, title: nextTitle, updatedAt } : currentNote,
                   );
                 }
+                sendContentUpdate(content, nextTitle);
                 notifyTypingActivity();
-              }} 
-              className="border-transparent px-0 text-2xl font-semibold shadow-none focus-visible:border-input"
+              }}
+              className="h-auto border-border/60 bg-white px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
               placeholder="Note title..."
               readOnly={!canEdit}
             />
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               {(() => {
                 const StatusIcon = saveStatus.icon;
                 return <StatusIcon className={cn('h-3.5 w-3.5', saveStatus.tone, isSaving && 'animate-spin')} />;
               })()}
               <span className={cn('font-medium', saveStatus.tone)}>{saveStatus.label}</span>
+              <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-medium shadow-sm', realtimeTone === 'text-emerald-600' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-border/70 bg-background text-muted-foreground', realtimeTone)}>
+                <span className={cn('h-1.5 w-1.5 rounded-full', isCollaborativeNote && isWsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/40')} />
+                {realtimeLabel}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {note.isPinned ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 shadow-sm">
+                  <Pin className="h-3 w-3" />
+                  Pinned
+                </span>
+              ) : null}
+              {isProtected ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-700 shadow-sm">
+                  <Lock className="h-3 w-3" />
+                  Protected
+                </span>
+              ) : null}
+              {isSharedNote ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700 shadow-sm">
+                  <Share2 className="h-3 w-3" />
+                  {sharedPermission === 'EDIT' ? 'Shared · Editable' : 'Shared · Read only'}
+                </span>
+              ) : null}
             </div>
             {isSharedNote ? (
-              <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-border/70 bg-slate-50 px-4 py-3 text-sm text-muted-foreground shadow-sm">
                 Shared by <span className="font-medium text-foreground">{sharedBy?.displayName}</span>
                 {' '}
                 · {sharedPermission === 'EDIT' ? 'You can edit this note' : 'Read-only access'}
@@ -635,6 +764,19 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
           </div>
 
           <div className="flex items-center gap-2 self-start">
+            {canManageShares ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShareModalOpen(true)}
+                disabled={isSaving}
+                aria-label="Open sharing settings"
+              >
+                <Share2 className="mr-2 h-4 w-4" />
+                Share
+              </Button>
+            ) : null}
             <input
               ref={imageInputRef}
               type="file"
@@ -663,7 +805,8 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             </Button>
             <Button size="sm" variant="ghost" onClick={async () => {
               try {
-                await updateNote({ isPinned: !note.isPinned });
+                const updated = await updateNote({ isPinned: !note.isPinned });
+                broadcastNoteState({ isPinned: updated.isPinned });
               } catch {
                 // ignore - mutation handles optimistic updates
               }
@@ -678,8 +821,8 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       </div>
 
       {deleteConfirmOpen ? (
-        <div className="border-b bg-muted/20 px-4 py-4 sm:px-6">
-          <div className="rounded-lg border border-destructive/30 bg-background p-4 shadow-sm">
+        <div className="border-b border-border/70 bg-slate-50 px-4 py-4 sm:px-6">
+          <div className="rounded-2xl border border-destructive/20 bg-white p-5 shadow-sm">
             <h3 className="font-semibold text-destructive">Delete this note?</h3>
             <p className="mt-1 text-sm text-muted-foreground">This action cannot be undone.</p>
             <div className="mt-4 flex gap-2">
@@ -695,9 +838,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       ) : null}
 
       {protectionMode !== 'idle' ? (
-        <div className="border-b bg-muted/20 px-4 py-4 sm:px-6">
+        <div className="border-b border-border/70 bg-slate-50 px-4 py-4 sm:px-6">
           {protectionMode === 'protect' ? (
-            <div className="space-y-3 rounded-lg border bg-background p-4 shadow-sm">
+            <div className="space-y-3 rounded-2xl border border-border/70 bg-white p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold">Protect this note</h3>
                 <p className="text-sm text-muted-foreground">Set a password to lock viewing, editing, and deleting.</p>
@@ -715,7 +858,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
           ) : null}
 
           {protectionMode === 'remove' ? (
-            <div className="space-y-3 rounded-lg border bg-background p-4 shadow-sm">
+            <div className="space-y-3 rounded-2xl border border-border/70 bg-white p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold">Remove protection</h3>
                 <p className="text-sm text-muted-foreground">Enter the current password to unlock this note permanently.</p>
@@ -731,83 +874,97 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
         </div>
       ) : null}
 
-      {canManageShares ? (
-        <div className="border-b bg-muted/20 px-4 py-4 sm:px-6">
-          <div className="space-y-4 rounded-lg border bg-background p-4 shadow-sm">
-            <div>
-              <h3 className="font-semibold">Share this note</h3>
-              <p className="text-sm text-muted-foreground">Only registered users can be added. You can grant read-only or edit access.</p>
-            </div>
+      {canManageShares && shareModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close sharing modal"
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+            onClick={() => setShareModalOpen(false)}
+          />
 
-            <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
-              <Input
-                type="email"
-                placeholder="Recipient email"
-                value={shareRecipientEmail}
-                onChange={(event) => setShareRecipientEmail(event.target.value)}
-              />
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={sharePermission}
-                onChange={(event) => setSharePermission(event.target.value as 'READ' | 'EDIT')}
-              >
-                <option value="READ">Read only</option>
-                <option value="EDIT">Can edit</option>
-              </select>
-              <Button type="button" onClick={handleAddShare} disabled={createShareMutation.isPending}>
-                Share
+          <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_30px_100px_rgba(15,23,42,0.18)]">
+            <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight">Share this note</h3>
+                <p className="text-sm text-muted-foreground">Only registered users can be added. You can grant read-only or edit access.</p>
+              </div>
+              <Button type="button" variant="ghost" size="icon" onClick={() => setShareModalOpen(false)} aria-label="Close sharing modal">
+                <X className="h-4 w-4" />
               </Button>
             </div>
 
-            {shareMessage ? <p className="text-sm text-muted-foreground">{shareMessage}</p> : null}
+            <div className="max-h-[75vh] space-y-5 overflow-y-auto p-5">
+              <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
+                <Input
+                  type="email"
+                  placeholder="Recipient email"
+                  value={shareRecipientEmail}
+                  onChange={(event) => setShareRecipientEmail(event.target.value)}
+                />
+                <select
+                  className="h-11 rounded-xl border border-input bg-background px-3 text-sm"
+                  value={sharePermission}
+                  onChange={(event) => setSharePermission(event.target.value as 'READ' | 'EDIT')}
+                >
+                  <option value="READ">Read only</option>
+                  <option value="EDIT">Can edit</option>
+                </select>
+                <Button type="button" onClick={handleAddShare} disabled={createShareMutation.isPending}>
+                  Share
+                </Button>
+              </div>
 
-            <div className="space-y-3">
-              <div className="text-sm font-medium">Current shares</div>
-              {(shares ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">This note is not shared yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {shares?.map((share) => (
-                    <div key={share.id} className="flex flex-col gap-2 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="font-medium">{share.recipientEmail}</div>
-                        <div className="text-xs text-muted-foreground">{share.permission === 'EDIT' ? 'Can edit' : 'Read only'}</div>
+              {shareMessage ? <p className="text-sm text-muted-foreground">{shareMessage}</p> : null}
+
+              <div className="space-y-3">
+                <div className="text-sm font-medium">Current shares</div>
+                {(shares ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">This note is not shared yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {shares?.map((share) => (
+                      <div key={share.id} className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{share.recipientEmail}</div>
+                          <div className="text-xs text-muted-foreground">{share.permission === 'EDIT' ? 'Can edit' : 'Read only'}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
+                            value={share.permission}
+                            onChange={(event) => handleChangeSharePermission(share.id, event.target.value as 'READ' | 'EDIT')}
+                            disabled={updateShareMutation.isPending}
+                          >
+                            <option value="READ">Read only</option>
+                            <option value="EDIT">Can edit</option>
+                          </select>
+                          <Button type="button" variant="outline" onClick={() => handleRemoveShare(share.id)} disabled={deleteShareMutation.isPending}>
+                            Revoke
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <select
-                          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                          value={share.permission}
-                          onChange={(event) => handleChangeSharePermission(share.id, event.target.value as 'READ' | 'EDIT')}
-                          disabled={updateShareMutation.isPending}
-                        >
-                          <option value="READ">Read only</option>
-                          <option value="EDIT">Can edit</option>
-                        </select>
-                        <Button type="button" variant="outline" onClick={() => handleRemoveShare(share.id)} disabled={deleteShareMutation.isPending}>
-                          Revoke
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       ) : null}
       
-      <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-background">
-        <div className="max-w-4xl mx-auto">
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white p-4 sm:p-8">
+        <div className="mx-auto max-w-4xl">
           {/* Collaborator presence indicators */}
-          {isCollaborativeNote && presenceParticipants.length > 0 ? (
-            <div className="mb-3 flex items-center gap-2">
+          {isCollaborativeNote && (isWsConnected || collaborators.length > 0 || presenceParticipants.length > 0) ? (
+            <div className="mb-4 flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-2 shadow-sm">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Viewing now:</span>
+              <span className="text-xs font-medium text-muted-foreground">Viewing now:</span>
               <div className="flex -space-x-2">
-                {presenceParticipants.map((participant) => (
+                {(collaborators.length > 0 ? collaborators : presenceParticipants).map((participant) => (
                   <div
                     key={participant.userId}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-[10px] font-bold text-white"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white shadow-sm"
                     style={{ backgroundColor: participant.color }}
                     title={participant.displayName}
                   >
@@ -816,16 +973,16 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                 ))}
               </div>
               {isWsConnected ? (
-                <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+                <span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live
+                  {collaborators.length > 0 || presenceParticipants.length > 0 ? 'Live' : 'Connected'}
                 </span>
               ) : null}
             </div>
           ) : null}
 
           {isCollaborativeNote && typingParticipants.length > 0 ? (
-            <div className="mb-3 text-xs text-muted-foreground">
+            <div className="mb-3 rounded-full border border-border/70 bg-white px-3 py-2 text-xs text-muted-foreground shadow-sm">
               {typingParticipants.map((participant) => participant.displayName).join(', ')} typing…
             </div>
           ) : null}
@@ -836,6 +993,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             onInsertImage={() => imageInputRef.current?.click()}
             syncKey={note?.id ?? noteId}
             collaborative={Boolean(isCollaborativeNote)}
+            remoteCursors={remoteCursors}
             {...(canEdit ? {
               onChange: (newContent: string) => {
                 setContent(newContent);
@@ -843,6 +1001,11 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                 if (!isRemoteUpdateRef.current && isCollaborativeNote) {
                   sendContentUpdate(newContent, title);
                   notifyTypingActivity();
+                }
+              },
+              onCursorMove: (position: number) => {
+                if (isCollaborativeNote) {
+                  sendCursorPosition(position);
                 }
               },
             } : {})}

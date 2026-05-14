@@ -7,7 +7,7 @@ import { router } from './routes';
 export const App: React.FC = () => {
   return (
     <AppProvider>
-      <ThemeProvider defaultTheme="system" storageKey="odd-note-theme">
+      <ThemeProvider defaultTheme="light" storageKey="odd-note-theme">
         <RouterProvider router={router} />
       </ThemeProvider>
     </AppProvider>
