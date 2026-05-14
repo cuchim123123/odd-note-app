@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -39,6 +39,12 @@ export class AuthController {
   @Get('me')
   async me(@CurrentUser() user: AccessTokenPayload) {
     return await this.authService.getCurrentUser(user.sub!);
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @Patch('profile')
+  async updateProfile(@CurrentUser() user: AccessTokenPayload, @Body() input: { displayName: string }) {
+    return await this.authService.updateProfile(user.sub!, input);
   }
 
   @Post('refresh')

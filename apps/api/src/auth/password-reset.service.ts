@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthConfigService } from '../config';
 import { MailerService } from '../common/mailer/mailer.service';

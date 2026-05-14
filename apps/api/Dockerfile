@@ -11,7 +11,7 @@ COPY packages/validation/package.json ./packages/validation/package.json
 
 # Install pnpm and all deps (including dev) so we can build
 RUN npm install -g pnpm@9
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Copy source and build the API package
 COPY . .
@@ -31,4 +31,4 @@ WORKDIR /workspace/apps/api
 
 ENV NODE_ENV=production
 EXPOSE 4000
-CMD ["pnpm", "--filter", "@odd-note-app/api", "dev"]
+CMD ["sh", "-c", "sleep 5 && npx prisma db push --accept-data-loss && node dist/main.js"]

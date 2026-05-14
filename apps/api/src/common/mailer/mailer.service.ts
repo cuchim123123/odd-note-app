@@ -56,4 +56,28 @@ export class MailerService {
       `,
     });
   }
+
+  async sendNoteSharedEmail(params: {
+    to: string;
+    recipientName: string;
+    senderName: string;
+    noteTitle: string;
+    permission: string;
+    appUrl: string;
+  }): Promise<void> {
+    const { to, recipientName, senderName, noteTitle, permission, appUrl } = params;
+
+    await this.transporter.sendMail({
+      from: this.env.SMTP_FROM,
+      to,
+      subject: `${senderName} shared a note with you`,
+      html: `
+        <p>Hello ${recipientName},</p>
+        <p><strong>${senderName}</strong> shared a note with you: <strong>${noteTitle}</strong></p>
+        <p>Permission level: <strong>${permission === 'READ' ? 'Read-only' : 'Can edit'}</strong></p>
+        <p><a href="${appUrl}/notes">View the shared note</a></p>
+        <p>If you did not expect this share, you can ignore this email or log in to manage your sharing settings.</p>
+      `,
+    });
+  }
 }

@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, UnauthorizedException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { User } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthConfigService } from '../config';
 import type { LoginInput, RegisterInput } from '@odd-note-app/validation';
@@ -122,6 +122,15 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
+
+    return this.authUserMapper.toProfile(user);
+  }
+
+  async updateProfile(userId: string, input: { displayName: string }): Promise<AuthUserProfile> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { displayName: input.displayName.trim() },
+    });
 
     return this.authUserMapper.toProfile(user);
   }

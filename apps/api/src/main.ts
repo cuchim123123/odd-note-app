@@ -5,6 +5,7 @@ import type { EnvConfig } from './config/config.module';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());
 
   const env = app.get<EnvConfig>('ENV_CONFIG');
@@ -19,7 +20,7 @@ async function bootstrap(): Promise<void> {
   });
 
   const port = env.API_PORT;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 }
 
 void bootstrap();

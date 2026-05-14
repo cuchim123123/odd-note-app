@@ -39,10 +39,14 @@ export class UploadsService {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
       this.logger.log(`Bucket '${this.bucket}' already exists`);
     } catch (err) {
-      this.logger.log(`Bucket '${this.bucket}' not found; creating`);
-      this.logger.debug(String(err));
-      await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
-      this.logger.log(`Bucket '${this.bucket}' created`);
+      this.logger.log(`Bucket '${this.bucket}' not found or MinIO not ready; attempting to create...`);
+      try {
+        await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+        this.logger.log(`Bucket '${this.bucket}' created`);
+      } catch (createErr) {
+        this.logger.error(`Failed to create bucket '${this.bucket}'. MinIO might not be fully initialized yet.`);
+        // Don't throw the error, allow the app to start. MinIO uploads might fail until it's ready.
+      }
     }
   }
 

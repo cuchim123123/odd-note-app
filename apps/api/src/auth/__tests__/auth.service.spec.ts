@@ -13,7 +13,7 @@ vi.mock('bcrypt', () => ({
   },
 }));
 
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { AuthService } from '../auth.service';
 
 type TransactionClientMock = {

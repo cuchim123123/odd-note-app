@@ -46,8 +46,14 @@ export class SessionTokenService {
   ): Promise<AuthTokens> {
     const client = prismaClient ?? this.prisma;
 
+    // Fetch displayName for JWT payload (used by collaboration gateway)
+    const user = await client.user.findUnique({
+      where: { id: userId },
+      select: { displayName: true },
+    });
+
     const accessToken = this.jwtService.sign(
-      { sub: userId },
+      { sub: userId, displayName: user?.displayName ?? 'User' },
       this.jwtConfig.getAccessTokenSignOptions(),
     );
 
