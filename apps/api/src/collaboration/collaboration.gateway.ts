@@ -50,9 +50,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   private subClient: Redis | null = null;
   private redisEnabled = false;
   private redisWarningLogged = false;
-  private readonly memorySocketRooms = new Map<string, { noteId: string; user: CollaboratorInfo }>();
-  private readonly memoryParticipants = new Map<string, Map<string, CollaboratorInfo>>();
-  private readonly memoryTyping = new Map<string, Map<string, TypingInfo>>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -61,35 +58,60 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   ) {}
 
   afterInit(server: Server): void {
-    void this.initializeRedisAdapter(server);
+    void this.initializeRedisAdapter(server).catch((err) => {
+      // Fail fast: if Redis cannot be initialized after retries, throw so the
+      // application does not silently run without Redis. This makes the
+      // deployment immediately visible and forces Redis to be fixed.
+      this.logger.error('Failed to initialize Redis adapter for collaboration', err as Error);
+      // Throwing here will surface the error; Nest will log and shutdown.
+      throw err;
+    });
   }
 
   private async initializeRedisAdapter(server: Server): Promise<void> {
-    try {
-      this.pubClient = this.redis.createClient();
-      this.subClient = this.redis.createClient();
+    const maxAttempts = 8;
+    let attempt = 0;
+    const baseDelayMs = 250;
 
-      await Promise.all([
-        this.redis.getClient().ping(),
-        this.pubClient.ping(),
-        this.subClient.ping(),
-      ]);
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      try {
+        this.pubClient = this.redis.createClient();
+        this.subClient = this.redis.createClient();
 
-      server.adapter(createAdapter(this.pubClient, this.subClient));
-      this.redisEnabled = true;
-      this.logger.log('Collaboration gateway initialized with Redis adapter');
-    } catch (error) {
-      this.redisEnabled = false;
-      this.markRedisUnavailable(error);
+        // Ensure the underlying client (shared) is reachable and pub/sub clients respond.
+        await Promise.all([
+          this.redis.getClient().ping(),
+          this.pubClient.ping(),
+          this.subClient.ping(),
+        ]);
+
+        server.adapter(createAdapter(this.pubClient, this.subClient));
+        this.redisEnabled = true;
+        this.logger.log('Collaboration gateway initialized with Redis adapter');
+        return;
+      } catch (error) {
+        this.logger.warn(`Redis initialization attempt ${attempt} failed: ${String(error)}`);
+        // Clean up created clients before retrying
+        try { await this.pubClient?.quit(); } catch {}
+        try { await this.subClient?.quit(); } catch {}
+        this.pubClient = null;
+        this.subClient = null;
+
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        await new Promise((res) => setTimeout(res, delay));
+      }
     }
+
+    throw new Error(`Unable to connect to Redis after ${maxAttempts} attempts`);
   }
 
   private markRedisUnavailable(error: unknown): void {
-    this.redisEnabled = false;
-    if (!this.redisWarningLogged) {
-      this.redisWarningLogged = true;
-      this.logger.warn(`Redis unavailable for collaboration, falling back to in-memory state: ${String(error)}`);
-    }
+    // Redis is required for collaboration. Surface the error to fail fast so
+    // operators notice and fix infrastructure rather than silently falling back.
+    this.logger.error(`Redis unavailable for collaboration: ${String(error)}`);
+    // Throw to stop processing and make the failure visible at runtime.
+    throw new Error(String(error));
   }
 
   async handleConnection(client: Socket): Promise<void> {
@@ -286,40 +308,37 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
 
   private async setSocketRoom(socketId: string, noteId: string, user: CollaboratorInfo): Promise<void> {
     if (!this.redisEnabled) {
-      this.memorySocketRooms.set(socketId, { noteId, user });
-      return;
+      this.logger.error('Redis adapter not initialized when setting socket room');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
       await this.redis.getClient().set(this.socketKey(socketId), JSON.stringify({ noteId, user }));
     } catch (error) {
       this.markRedisUnavailable(error);
-      this.memorySocketRooms.set(socketId, { noteId, user });
     }
   }
 
   private async getSocketRoom(socketId: string): Promise<{ noteId: string; user: CollaboratorInfo } | null> {
     if (!this.redisEnabled) {
-      return this.memorySocketRooms.get(socketId) ?? null;
+      this.logger.error('Redis adapter not initialized when reading socket room');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
       const value = await this.redis.getClient().get(this.socketKey(socketId));
-      if (!value) {
-        return null;
-      }
-
+      if (!value) return null;
       return JSON.parse(value) as { noteId: string; user: CollaboratorInfo };
     } catch (error) {
       this.markRedisUnavailable(error);
-      return this.memorySocketRooms.get(socketId) ?? null;
+      return null;
     }
   }
 
   private async clearSocketRoom(socketId: string): Promise<void> {
-    this.memorySocketRooms.delete(socketId);
     if (!this.redisEnabled) {
-      return;
+      this.logger.error('Redis adapter not initialized when clearing socket room');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
@@ -330,15 +349,9 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   private async addParticipant(noteId: string, socketId: string, user: CollaboratorInfo): Promise<void> {
-    let room = this.memoryParticipants.get(noteId);
-    if (!room) {
-      room = new Map<string, CollaboratorInfo>();
-      this.memoryParticipants.set(noteId, room);
-    }
-    room.set(socketId, user);
-
     if (!this.redisEnabled) {
-      return;
+      this.logger.error('Redis adapter not initialized when adding participant');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
@@ -349,14 +362,9 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   private async removeParticipant(noteId: string, socketId: string): Promise<void> {
-    const room = this.memoryParticipants.get(noteId);
-    room?.delete(socketId);
-    if (room && room.size === 0) {
-      this.memoryParticipants.delete(noteId);
-    }
-
     if (!this.redisEnabled) {
-      return;
+      this.logger.error('Redis adapter not initialized when removing participant');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
@@ -367,9 +375,9 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   private async getCollaboratorsInRoom(noteId: string): Promise<CollaboratorInfo[]> {
-    const memoryValues = Array.from(this.memoryParticipants.get(noteId)?.values() ?? []);
     if (!this.redisEnabled) {
-      return memoryValues;
+      this.logger.error('Redis adapter not initialized when listing collaborators');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
@@ -385,20 +393,14 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
         .filter((value): value is CollaboratorInfo => Boolean(value));
     } catch (error) {
       this.markRedisUnavailable(error);
-      return memoryValues;
     }
+    return [];
   }
 
   private async setTyping(noteId: string, typing: TypingInfo): Promise<void> {
-    let room = this.memoryTyping.get(noteId);
-    if (!room) {
-      room = new Map<string, TypingInfo>();
-      this.memoryTyping.set(noteId, room);
-    }
-    room.set(typing.userId, typing);
-
     if (!this.redisEnabled) {
-      return;
+      this.logger.error('Redis adapter not initialized when setting typing');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
@@ -410,14 +412,9 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   private async removeTyping(noteId: string, userId: string): Promise<void> {
-    const room = this.memoryTyping.get(noteId);
-    room?.delete(userId);
-    if (room && room.size === 0) {
-      this.memoryTyping.delete(noteId);
-    }
-
     if (!this.redisEnabled) {
-      return;
+      this.logger.error('Redis adapter not initialized when removing typing');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
@@ -429,20 +426,9 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
 
   private async getTypingInRoom(noteId: string): Promise<TypingInfo[]> {
     const now = Date.now();
-    const memoryRoom = this.memoryTyping.get(noteId);
-    const memoryValues = Array.from(memoryRoom?.values() ?? []).filter((value) => now - value.updatedAt <= TYPING_STALE_AFTER_MS);
-
-    if (memoryRoom) {
-      for (const [userId, typing] of memoryRoom.entries()) {
-        if (now - typing.updatedAt > TYPING_STALE_AFTER_MS) {
-          memoryRoom.delete(userId);
-        }
-      }
-    }
-
-
     if (!this.redisEnabled) {
-      return memoryValues;
+      this.logger.error('Redis adapter not initialized when listing typing');
+      throw new Error('Redis adapter not initialized');
     }
 
     try {
@@ -479,8 +465,8 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       return parsed;
     } catch (error) {
       this.markRedisUnavailable(error);
-      return memoryValues;
     }
+    return [];
   }
 
   private async broadcastCollaborators(noteId: string): Promise<void> {
