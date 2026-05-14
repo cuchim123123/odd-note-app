@@ -10,6 +10,15 @@ coverage/
 # logs
 *.log
 pnpm-debug.log*
+api-logs.txt
+
+# generated local reports
+DELIVERY_SUMMARY.md
+DEVELOPER_GUIDE.md
+DOCS_INDEX.md
+FEATURE_COMPLETION_REPORT.md
+IMPLEMENTATION_SUMMARY.md
+VERIFICATION_CHECKLIST.md
 
 # environment
 .env
