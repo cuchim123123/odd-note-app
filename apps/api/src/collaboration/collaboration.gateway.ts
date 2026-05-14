@@ -2,15 +2,17 @@ import {
   WebSocketGateway,
   WebSocketServer,
   SubscribeMessage,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
+import type { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { JwtConfigService } from '../config';
+import { RedisService } from '../redis/redis.service';
 import { Server, Socket } from 'socket.io';
+import type Redis from 'ioredis';
 
 type CollaboratorInfo = {
   userId: string;
@@ -30,21 +32,26 @@ const COLLABORATOR_COLORS = [
   },
   namespace: '/collaboration',
 })
-export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
   private readonly logger = new Logger(CollaborationGateway.name);
-
-  /**
-   * Maps a socket ID to the note room it joined plus user metadata.
-   */
-  private readonly socketRooms = new Map<string, { noteId: string; user: CollaboratorInfo }>();
+  private pubClient: Redis | null = null;
+  private subClient: Redis | null = null;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
+    private readonly redis: RedisService,
   ) {}
+
+  afterInit(server: Server): void {
+    this.pubClient = this.redis.createClient();
+    this.subClient = this.redis.createClient();
+    server.adapter(createAdapter(this.pubClient, this.subClient));
+    this.logger.log('Collaboration gateway initialized with Redis adapter');
+  }
 
   async handleConnection(client: Socket): Promise<void> {
     try {
@@ -77,37 +84,39 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  handleDisconnect(client: Socket): void {
-    const entry = this.socketRooms.get(client.id);
+  async handleDisconnect(client: Socket): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
     if (entry) {
-      // Notify others in the room that this collaborator left
+      await this.removeParticipant(entry.noteId, client.id);
       client.to(entry.noteId).emit('collaborator:left', { userId: entry.user.userId });
-      this.socketRooms.delete(client.id);
-
-      // Broadcast updated collaborator list
-      this.broadcastCollaborators(entry.noteId);
+      await this.broadcastCollaborators(entry.noteId);
+      await this.broadcastPresence(entry.noteId);
     }
+
+    await this.clearSocketRoom(client.id);
     this.logger.log(`Client ${client.id} disconnected`);
   }
 
   @SubscribeMessage('note:join')
-  handleJoinNote(
+  async handleJoinNote(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string },
-  ): void {
+  ): Promise<void> {
     const { noteId } = data;
     const { userId, displayName } = client.data;
 
     // Leave any previous room
-    const prevEntry = this.socketRooms.get(client.id);
+    const prevEntry = await this.getSocketRoom(client.id);
     if (prevEntry) {
       void client.leave(prevEntry.noteId);
+      await this.removeParticipant(prevEntry.noteId, client.id);
       client.to(prevEntry.noteId).emit('collaborator:left', { userId: prevEntry.user.userId });
-      this.broadcastCollaborators(prevEntry.noteId);
+      await this.broadcastCollaborators(prevEntry.noteId);
+      await this.broadcastPresence(prevEntry.noteId);
     }
 
     // Assign a color based on how many collaborators are in the room
-    const roomSockets = this.getCollaboratorsInRoom(noteId);
+    const roomSockets = await this.getCollaboratorsInRoom(noteId);
     const colorIndex = roomSockets.length % COLLABORATOR_COLORS.length;
 
     const collaborator: CollaboratorInfo = {
@@ -117,37 +126,42 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     };
 
     void client.join(noteId);
-    this.socketRooms.set(client.id, { noteId, user: collaborator });
+    await this.setSocketRoom(client.id, noteId, collaborator);
+    await this.addParticipant(noteId, client.id, collaborator);
 
     // Notify the room about the new collaborator
     client.to(noteId).emit('collaborator:joined', collaborator);
 
     // Send the joining client the current list of collaborators
-    const collaborators = this.getCollaboratorsInRoom(noteId);
+    const collaborators = await this.getCollaboratorsInRoom(noteId);
     client.emit('collaborators:list', collaborators);
+    client.emit('presence:list', collaborators);
+    await this.broadcastPresence(noteId);
 
     this.logger.log(`User ${userId} joined note ${noteId}`);
   }
 
   @SubscribeMessage('note:leave')
-  handleLeaveNote(
+  async handleLeaveNote(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
-  ): void {
-    const entry = this.socketRooms.get(client.id);
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
     if (entry) {
       void client.leave(entry.noteId);
+      await this.removeParticipant(entry.noteId, client.id);
       client.to(entry.noteId).emit('collaborator:left', { userId: entry.user.userId });
-      this.socketRooms.delete(client.id);
-      this.broadcastCollaborators(entry.noteId);
+      await this.clearSocketRoom(client.id);
+      await this.broadcastCollaborators(entry.noteId);
+      await this.broadcastPresence(entry.noteId);
     }
   }
 
   @SubscribeMessage('note:update')
-  handleNoteUpdate(
+  async handleNoteUpdate(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; content: string; title?: string },
-  ): void {
-    const entry = this.socketRooms.get(client.id);
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
     if (!entry || entry.noteId !== data.noteId) {
       return;
     }
@@ -162,11 +176,11 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   @SubscribeMessage('note:cursor')
-  handleCursorUpdate(
+  async handleCursorUpdate(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; position: number },
-  ): void {
-    const entry = this.socketRooms.get(client.id);
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
     if (!entry || entry.noteId !== data.noteId) {
       return;
     }
@@ -188,18 +202,63 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     return queryToken ?? null;
   }
 
-  private getCollaboratorsInRoom(noteId: string): CollaboratorInfo[] {
-    const collaborators: CollaboratorInfo[] = [];
-    for (const [, entry] of this.socketRooms) {
-      if (entry.noteId === noteId) {
-        collaborators.push(entry.user);
-      }
-    }
-    return collaborators;
+  private socketKey(socketId: string): string {
+    return `collab:socket:${socketId}`;
   }
 
-  private broadcastCollaborators(noteId: string): void {
-    const collaborators = this.getCollaboratorsInRoom(noteId);
+  private participantsKey(noteId: string): string {
+    return `collab:note:${noteId}:participants`;
+  }
+
+  private async setSocketRoom(socketId: string, noteId: string, user: CollaboratorInfo): Promise<void> {
+    await this.redis.getClient().set(this.socketKey(socketId), JSON.stringify({ noteId, user }));
+  }
+
+  private async getSocketRoom(socketId: string): Promise<{ noteId: string; user: CollaboratorInfo } | null> {
+    const value = await this.redis.getClient().get(this.socketKey(socketId));
+    if (!value) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(value) as { noteId: string; user: CollaboratorInfo };
+    } catch {
+      return null;
+    }
+  }
+
+  private async clearSocketRoom(socketId: string): Promise<void> {
+    await this.redis.getClient().del(this.socketKey(socketId));
+  }
+
+  private async addParticipant(noteId: string, socketId: string, user: CollaboratorInfo): Promise<void> {
+    await this.redis.getClient().hset(this.participantsKey(noteId), socketId, JSON.stringify(user));
+  }
+
+  private async removeParticipant(noteId: string, socketId: string): Promise<void> {
+    await this.redis.getClient().hdel(this.participantsKey(noteId), socketId);
+  }
+
+  private async getCollaboratorsInRoom(noteId: string): Promise<CollaboratorInfo[]> {
+    const values = await this.redis.getClient().hvals(this.participantsKey(noteId));
+    return values
+      .map((value) => {
+        try {
+          return JSON.parse(value) as CollaboratorInfo;
+        } catch {
+          return null;
+        }
+      })
+      .filter((value): value is CollaboratorInfo => Boolean(value));
+  }
+
+  private async broadcastCollaborators(noteId: string): Promise<void> {
+    const collaborators = await this.getCollaboratorsInRoom(noteId);
     this.server.to(noteId).emit('collaborators:list', collaborators);
+  }
+
+  private async broadcastPresence(noteId: string): Promise<void> {
+    const viewers = await this.getCollaboratorsInRoom(noteId);
+    this.server.to(noteId).emit('presence:list', viewers);
   }
 }
