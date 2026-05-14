@@ -38,6 +38,7 @@ model User {
   noteProtections   NoteProtection[]
   noteSharesOwned   NoteShare[] @relation("NoteSharesOwned")
   noteSharesReceived NoteShare[] @relation("NoteSharesReceived")
+  notifications     Notification[]
 }
 
 model Note {
@@ -120,4 +121,19 @@ model RefreshToken {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // 'note_shared'
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  data      String?  // JSON string for additional context (noteId, shareId, etc)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
 }
