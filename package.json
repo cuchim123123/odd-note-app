@@ -26,6 +26,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
     "prettier": "^3.5.3",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.31.0"
   },
@@ -44,5 +46,9 @@
       "bcrypt",
       "prisma"
     ]
+  },
+  "dependencies": {
+    "@nestjs/platform-socket.io": "10.4.15",
+    "@nestjs/websockets": "10.4.15"
   }
 }

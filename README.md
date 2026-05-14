@@ -129,7 +129,7 @@ pnpm test:e2e:ui
 # Build and start all services
 docker compose up -d --build
 
-# The app is accessible at http://localhost
+# The app is accessible at http://localhost:5173
 ```
 
 ### Database Setup
