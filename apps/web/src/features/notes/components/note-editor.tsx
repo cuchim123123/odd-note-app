@@ -18,9 +18,12 @@ type NoteEditorProps = {
   // should replace the editor contents. If omitted, the editor will only
   // sync content on initial mount.
   syncKey?: string | null;
+  /** When true, content prop changes are always pushed into the editor (for
+   *  real-time collaboration where remote users push updates). */
+  collaborative?: boolean;
 };
 
-export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey }: NoteEditorProps) {
+export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false }: NoteEditorProps) {
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
 
   const editor = useEditor({
@@ -101,14 +104,33 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
   useEffect(() => {
     if (!editor) return;
 
-    const isInitial = lastSyncKeyRef.current === null;
     const syncKeyChanged = syncKey !== undefined && lastSyncKeyRef.current !== syncKey;
 
-    if ((isInitial || syncKeyChanged) && content !== editor.getHTML()) {
-      editor.commands.setContent(content, false);
+    if (syncKeyChanged) {
       lastSyncKeyRef.current = syncKey ?? null;
+      // Always set content when switching to a different note
+      editor.commands.setContent(content, false);
+      return;
     }
-  }, [editor, content, syncKey]);
+
+    // In collaborative mode, push content updates from remote users into the
+    // editor whenever the content prop changes, as long as it actually differs
+    // from what the editor currently has.
+    if (collaborative && content !== editor.getHTML()) {
+      // Preserve cursor position when applying remote changes
+      const { from, to } = editor.state.selection;
+      editor.commands.setContent(content, false);
+      // Try to restore cursor — clamp to new doc length
+      const maxPos = editor.state.doc.content.size;
+      const safeFrom = Math.min(from, maxPos);
+      const safeTo = Math.min(to, maxPos);
+      try {
+        editor.commands.setTextSelection({ from: safeFrom, to: safeTo });
+      } catch {
+        // ignore if position is invalid after content change
+      }
+    }
+  }, [editor, content, syncKey, collaborative]);
 
   if (!editor) {
     return null;

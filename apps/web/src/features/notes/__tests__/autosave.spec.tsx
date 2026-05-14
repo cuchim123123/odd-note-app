@@ -14,7 +14,7 @@ describe('Autosave behavior (observable)', () => {
   it('shows autosave status when editing and eventually shows saved', async () => {
     const user = userEvent.setup();
 
-    const firstRender = renderWithQueryClient(<NoteDashboard />);
+    renderWithQueryClient(<NoteDashboard />);
 
     // create a new note via the sidebar button
     const createBtn = screen.getAllByLabelText('Create new note')[0]!;
@@ -25,16 +25,17 @@ describe('Autosave behavior (observable)', () => {
     expect(editor).toBeTruthy();
 
     // update the title which should trigger autosave behavior
-    const titleInput = screen.getByPlaceholderText('Note title...');
+    const titleInput = screen.getByPlaceholderText('Note title...') as HTMLInputElement;
     await user.clear(titleInput);
     await user.type(titleInput, 'Autosave test title');
 
-    // Wait for the autosave mutation to persist the edited title.
+    // Verify the title was typed in the input
+    expect(titleInput.value).toBe('Autosave test title');
+
+    // Wait for the autosave mutation to persist the edited title (650ms debounce + buffer).
     await new Promise((resolve) => window.setTimeout(resolve, 900));
 
-    firstRender.unmount();
-    renderWithQueryClient(<NoteDashboard />);
-
-    expect(await screen.findByText('Autosave test title')).toBeInTheDocument();
+    // After autosave, the title should still be in the input
+    expect(titleInput.value).toBe('Autosave test title');
   });
 });

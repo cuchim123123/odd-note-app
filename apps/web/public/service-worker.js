@@ -135,19 +135,39 @@ async function cacheFirstWithNetwork(request, cacheName) {
 // IndexedDB helpers for offline data persistence
 async function getFromDb() {
   return new Promise((resolve) => {
-    const request = indexedDB.open('odd-note-app', 1);
+    const request = indexedDB.open('odd-note-app', 3);
+
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('notes')) {
+        db.createObjectStore('notes', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('syncQueue')) {
+        const queueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+        queueStore.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('metadata')) {
+        db.createObjectStore('metadata', { keyPath: 'key' });
+      }
+    };
+
     request.onsuccess = (e) => {
       const db = e.target.result;
-      const tx = db.transaction('notes', 'readonly');
-      const store = tx.objectStore('notes');
-      const query = store.getAll();
+      try {
+        const tx = db.transaction('notes', 'readonly');
+        const store = tx.objectStore('notes');
+        const query = store.getAll();
 
-      query.onsuccess = () => {
-        resolve(query.result);
-      };
-      query.onerror = () => {
+        query.onsuccess = () => {
+          resolve(query.result);
+        };
+        query.onerror = () => {
+          resolve(null);
+        };
+      } catch (err) {
+        console.error('SW: DB transaction failed', err);
         resolve(null);
-      };
+      }
     };
     request.onerror = () => {
       resolve(null);
