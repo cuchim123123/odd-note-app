@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a complete implementation of a secure, offline-first note management application with the following key capabilities:
+This repository contains a largely implemented secure, offline-first note management application. Most core backend and frontend features are implemented and covered by E2E tests; a small set of UI polish and offline/toolbar features remain in progress. Key capabilities include:
 
 - **User Authentication** - Register, login, password reset, email verification
 - **Note Management** - Create, read, update, delete notes with rich text editing
@@ -23,7 +23,7 @@ This is a complete implementation of a secure, offline-first note management app
 
 ## Feature Completion Status
 
-### ✅ Requirement 2.1 - Account Management
+### ✅ Requirement 2.1 - Account Management (mostly implemented)
 
 - [x] Registration with display name, email, password confirmation
 - [x] Passwords bcrypt-hashed (never stored in plaintext)
@@ -92,23 +92,23 @@ This is a complete implementation of a secure, offline-first note management app
 - Owner retains full control (can revoke anytime)
 - Shared notes show clear attribution
 
-## How to Run
+## How to Run (development)
 
-### Quick Start
+Quick steps to run the app locally (API + web):
 
-```bash
-# Install dependencies
+```powershell
+# From repository root
 pnpm install
 
-# Start Docker services
+# Start backend API (Docker)
 docker compose up -d --build api
 
-# Start dev server (in separate terminal)
-cd apps/web
+# Start frontend in a separate terminal
+Set-Location 'd:\odd-todo-app\odd-note-app\apps\web'
 pnpm dev
 ```
 
-App available at `http://localhost:5173/`
+App available at `http://localhost:5173/` once both services are running.
 
 ### Production Deployment
 
@@ -125,7 +125,7 @@ All services configured via `docker-compose.yml` and `.env` files.
 - **Linting**: `pnpm lint` (ESLint)
 - **Type Checking**: `pnpm typecheck` (TypeScript)
 
-All checks passing at submission time.
+Playwright E2E tests were successfully run for Chromium and WebKit in the current environment; a small set of timing/flakiness issues remain on Firefox and are tracked in the TODOs.
 
 ## Code Quality
 
@@ -144,11 +144,15 @@ All checks passing at submission time.
 
 ## Notes for Grader
 
-1. **Email Setup**: For email verification and password reset to work, configure SMTP in `.env`
-2. **Offline Testing**: Disable network in DevTools to test Service Worker + IndexedDB sync
-3. **Test Endpoints**: Set `ALLOW_TEST_ENDPOINTS=1` to enable E2E test token generation
-4. **Database**: Migrations run automatically on API startup
-5. **Development**: Use `pnpm dev` in separate terminal from `docker compose up`
+1. **Email Setup**: For email verification and password reset to work, configure SMTP in `.env`.
+2. **Offline Testing**: Disable network in DevTools to test Service Worker + IndexedDB sync.
+3. **Test Endpoints**: Set `ALLOW_TEST_ENDPOINTS=1` to enable E2E test token generation.
+4. **Database**: Migrations run automatically on API startup.
+5. **Development**: Use `pnpm dev` in a separate terminal from `docker compose up`.
+
+## CHANGELOG (docs)
+
+- 2026-05-14: Clarified README and submission summary to reflect current implementation state and outstanding work (frontend toolbar, some offline sync polish, Firefox E2E stabilization).
 
 ## Compliance with Requirements
 
