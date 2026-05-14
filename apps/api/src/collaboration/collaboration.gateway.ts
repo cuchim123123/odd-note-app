@@ -72,6 +72,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     const maxAttempts = 8;
     let attempt = 0;
     const baseDelayMs = 250;
+    const socketServer = this.getSocketServer(server);
 
     while (attempt < maxAttempts) {
       attempt += 1;
@@ -86,15 +87,15 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
           this.subClient.ping(),
         ]);
 
-        server.adapter(createAdapter(this.pubClient, this.subClient));
+        socketServer.adapter(createAdapter(this.pubClient, this.subClient));
         this.redisEnabled = true;
         this.logger.log('Collaboration gateway initialized with Redis adapter');
         return;
       } catch (error) {
         this.logger.warn(`Redis initialization attempt ${attempt} failed: ${String(error)}`);
         // Clean up created clients before retrying
-        try { await this.pubClient?.quit(); } catch {}
-        try { await this.subClient?.quit(); } catch {}
+        try { await this.pubClient?.quit(); } catch { void 0; }
+        try { await this.subClient?.quit(); } catch { void 0; }
         this.pubClient = null;
         this.subClient = null;
 
@@ -104,6 +105,11 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     }
 
     throw new Error(`Unable to connect to Redis after ${maxAttempts} attempts`);
+  }
+
+  private getSocketServer(server: Server): Server {
+    const candidate = server as Server & { server?: Server };
+    return typeof candidate.adapter === 'function' ? candidate : candidate.server ?? candidate;
   }
 
   private markRedisUnavailable(error: unknown): void {
@@ -227,7 +233,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   @SubscribeMessage('note:update')
   async handleNoteUpdate(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
-    @MessageBody() data: { noteId: string; content: string; title?: string },
+    @MessageBody() data: { noteId: string; content: string; title?: string; isPinned?: boolean; isProtected?: boolean },
   ): Promise<void> {
     const entry = await this.getSocketRoom(client.id);
     if (!entry || entry.noteId !== data.noteId) {
@@ -239,6 +245,8 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       userId: client.data.userId,
       content: data.content,
       title: data.title,
+      isPinned: data.isPinned,
+      isProtected: data.isProtected,
       timestamp: Date.now(),
     });
   }

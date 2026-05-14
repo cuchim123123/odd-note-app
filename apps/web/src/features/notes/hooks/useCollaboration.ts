@@ -26,34 +26,50 @@ type UseCollaborationOptions = {
   /** Only connect when the shared note has EDIT permission */
   enabled: boolean;
   /** Called when a remote user pushes a content update */
-  onRemoteContentUpdate?: (data: { userId: string; content: string; title?: string; timestamp: number }) => void;
+  onRemoteContentUpdate?: (data: {
+    userId: string;
+    content: string;
+    title?: string;
+    isPinned?: boolean;
+    isProtected?: boolean;
+    timestamp: number;
+  }) => void;
   /** Called when a remote cursor position is received */
   onRemoteCursor?: (data: { userId: string; displayName: string; position: number; color: string }) => void;
 };
 
-// Derive the WS URL from the current page location so it works in
-// both local dev (localhost:4000) and Docker (same origin via proxy).
+// Derive the Socket.IO base URL from the current environment.
+// Socket.IO expects an http(s) URL here, not ws(s).
 function getWsUrl(): string {
   if (typeof window === 'undefined') return '';
 
   // In production/Docker, the API is typically reverse-proxied through the same origin
   // or exposed on a known host.  Check for an env variable first.
   const envUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_WS_URL;
-  if (envUrl) return envUrl;
+  if (envUrl) {
+    try {
+      const url = new URL(envUrl);
+      if (url.protocol === 'ws:') url.protocol = 'http:';
+      if (url.protocol === 'wss:') url.protocol = 'https:';
+      return url.origin;
+    } catch {
+      return envUrl.startsWith('ws://') ? envUrl.replace(/^ws:\/\//, 'http://') : envUrl.replace(/^wss:\/\//, 'https://');
+    }
+  }
 
   // Fallback: use the same base as the REST API
   const apiBaseUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_URL;
   if (apiBaseUrl) {
     try {
       const url = new URL(apiBaseUrl);
-      return `${url.protocol === 'https:' ? 'wss' : 'ws'}://${url.host}`;
+      return url.origin;
     } catch {
       // ignore parse errors
     }
   }
 
   // Last resort: same host, port 4000
-  return `ws://${window.location.hostname}:4000`;
+  return `${window.location.protocol === 'https:' ? 'https' : 'http'}://${window.location.hostname}:4000`;
 }
 
 export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRemoteCursor }: UseCollaborationOptions) {
@@ -126,7 +142,14 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
       setCollaborators((prev) => prev.filter((c) => c.userId !== data.userId));
     });
 
-    socket.on('note:updated', (data: { userId: string; content: string; title?: string; timestamp: number }) => {
+    socket.on('note:updated', (data: {
+      userId: string;
+      content: string;
+      title?: string;
+      isPinned?: boolean;
+      isProtected?: boolean;
+      timestamp: number;
+    }) => {
       onRemoteContentUpdateRef.current?.(data);
     });
 
@@ -150,9 +173,9 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
   }, [noteId, enabled, accessToken]);
 
   const sendContentUpdate = useCallback(
-    (content: string, title?: string) => {
+    (content: string, title?: string, metadata?: { isPinned?: boolean; isProtected?: boolean }) => {
       if (socketRef.current?.connected && noteId) {
-        socketRef.current.emit('note:update', { noteId, content, title });
+        socketRef.current.emit('note:update', { noteId, content, title, ...metadata });
       }
     },
     [noteId],
