@@ -8,6 +8,13 @@ export type Collaborator = {
   color: string;
 };
 
+export type TypingParticipant = {
+  userId: string;
+  displayName: string;
+  color: string;
+  updatedAt: number;
+};
+
 type UseCollaborationOptions = {
   noteId: string | null;
   /** Only connect when the shared note has EDIT permission */
@@ -47,6 +54,7 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
   const accessToken = useAuthStore((state) => state.accessToken);
   const socketRef = useRef<Socket | null>(null);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
   // Keep callback refs stable to avoid reconnection loops
@@ -63,6 +71,7 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
         socketRef.current = null;
         setIsConnected(false);
         setCollaborators([]);
+        setTypingParticipants([]);
       }
       return;
     }
@@ -86,6 +95,7 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
     socket.on('disconnect', () => {
       setIsConnected(false);
       setCollaborators([]);
+      setTypingParticipants([]);
     });
 
     socket.on('collaborators:list', (list: Collaborator[]) => {
@@ -111,12 +121,17 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
       onRemoteCursorRef.current?.(data);
     });
 
+    socket.on('typing:list', (list: TypingParticipant[]) => {
+      setTypingParticipants(list);
+    });
+
     return () => {
       socket.emit('note:leave');
       socket.disconnect();
       socketRef.current = null;
       setIsConnected(false);
       setCollaborators([]);
+      setTypingParticipants([]);
     };
   }, [noteId, enabled, accessToken]);
 
@@ -138,10 +153,21 @@ export function useCollaboration({ noteId, enabled, onRemoteContentUpdate, onRem
     [noteId],
   );
 
+  const sendTypingState = useCallback(
+    (isTyping: boolean) => {
+      if (socketRef.current?.connected && noteId) {
+        socketRef.current.emit('note:typing', { noteId, isTyping });
+      }
+    },
+    [noteId],
+  );
+
   return {
     collaborators,
+    typingParticipants,
     isConnected,
     sendContentUpdate,
     sendCursorPosition,
+    sendTypingState,
   };
 }

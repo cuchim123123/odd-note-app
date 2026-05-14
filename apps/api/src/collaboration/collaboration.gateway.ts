@@ -20,6 +20,15 @@ type CollaboratorInfo = {
   color: string;
 };
 
+type TypingInfo = {
+  userId: string;
+  displayName: string;
+  color: string;
+  updatedAt: number;
+};
+
+const TYPING_STALE_AFTER_MS = 5000;
+
 const COLLABORATOR_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e',
   '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
@@ -88,9 +97,11 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     const entry = await this.getSocketRoom(client.id);
     if (entry) {
       await this.removeParticipant(entry.noteId, client.id);
+      await this.removeTyping(entry.noteId, entry.user.userId);
       client.to(entry.noteId).emit('collaborator:left', { userId: entry.user.userId });
       await this.broadcastCollaborators(entry.noteId);
       await this.broadcastPresence(entry.noteId);
+      await this.broadcastTyping(entry.noteId);
     }
 
     await this.clearSocketRoom(client.id);
@@ -110,9 +121,11 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     if (prevEntry) {
       void client.leave(prevEntry.noteId);
       await this.removeParticipant(prevEntry.noteId, client.id);
+      await this.removeTyping(prevEntry.noteId, prevEntry.user.userId);
       client.to(prevEntry.noteId).emit('collaborator:left', { userId: prevEntry.user.userId });
       await this.broadcastCollaborators(prevEntry.noteId);
       await this.broadcastPresence(prevEntry.noteId);
+      await this.broadcastTyping(prevEntry.noteId);
     }
 
     // Assign a color based on how many collaborators are in the room
@@ -136,6 +149,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     const collaborators = await this.getCollaboratorsInRoom(noteId);
     client.emit('collaborators:list', collaborators);
     client.emit('presence:list', collaborators);
+    client.emit('typing:list', await this.getTypingInRoom(noteId));
     await this.broadcastPresence(noteId);
 
     this.logger.log(`User ${userId} joined note ${noteId}`);
@@ -149,10 +163,12 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     if (entry) {
       void client.leave(entry.noteId);
       await this.removeParticipant(entry.noteId, client.id);
+      await this.removeTyping(entry.noteId, entry.user.userId);
       client.to(entry.noteId).emit('collaborator:left', { userId: entry.user.userId });
       await this.clearSocketRoom(client.id);
       await this.broadcastCollaborators(entry.noteId);
       await this.broadcastPresence(entry.noteId);
+      await this.broadcastTyping(entry.noteId);
     }
   }
 
@@ -193,6 +209,30 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     });
   }
 
+  @SubscribeMessage('note:typing')
+  async handleTypingUpdate(
+    @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
+    @MessageBody() data: { noteId: string; isTyping: boolean },
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
+    if (!entry || entry.noteId !== data.noteId) {
+      return;
+    }
+
+    if (data.isTyping) {
+      await this.setTyping(data.noteId, {
+        userId: entry.user.userId,
+        displayName: entry.user.displayName,
+        color: entry.user.color,
+        updatedAt: Date.now(),
+      });
+    } else {
+      await this.removeTyping(data.noteId, entry.user.userId);
+    }
+
+    await this.broadcastTyping(data.noteId);
+  }
+
   private extractToken(client: Socket): string | null {
     // Try auth.token first, then query param
     const authToken = client.handshake.auth?.token as string | undefined;
@@ -208,6 +248,10 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
 
   private participantsKey(noteId: string): string {
     return `collab:note:${noteId}:participants`;
+  }
+
+  private typingKey(noteId: string): string {
+    return `collab:note:${noteId}:typing`;
   }
 
   private async setSocketRoom(socketId: string, noteId: string, user: CollaboratorInfo): Promise<void> {
@@ -252,6 +296,50 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       .filter((value): value is CollaboratorInfo => Boolean(value));
   }
 
+  private async setTyping(noteId: string, typing: TypingInfo): Promise<void> {
+    await this.redis.getClient().hset(this.typingKey(noteId), typing.userId, JSON.stringify(typing));
+    await this.redis.getClient().expire(this.typingKey(noteId), 30);
+  }
+
+  private async removeTyping(noteId: string, userId: string): Promise<void> {
+    await this.redis.getClient().hdel(this.typingKey(noteId), userId);
+  }
+
+  private async getTypingInRoom(noteId: string): Promise<TypingInfo[]> {
+    const now = Date.now();
+    const values = await this.redis.getClient().hvals(this.typingKey(noteId));
+    const parsed = values
+      .map((value) => {
+        try {
+          return JSON.parse(value) as TypingInfo;
+        } catch {
+          return null;
+        }
+      })
+      .filter((value): value is TypingInfo => Boolean(value))
+      .filter((value) => now - value.updatedAt <= TYPING_STALE_AFTER_MS);
+
+    if (parsed.length !== values.length) {
+      const staleEntries = values
+        .map((value) => {
+          try {
+            return JSON.parse(value) as TypingInfo;
+          } catch {
+            return null;
+          }
+        })
+        .filter((value): value is TypingInfo => Boolean(value))
+        .filter((value) => now - value.updatedAt > TYPING_STALE_AFTER_MS)
+        .map((value) => value.userId);
+
+      if (staleEntries.length > 0) {
+        await this.redis.getClient().hdel(this.typingKey(noteId), ...staleEntries);
+      }
+    }
+
+    return parsed;
+  }
+
   private async broadcastCollaborators(noteId: string): Promise<void> {
     const collaborators = await this.getCollaboratorsInRoom(noteId);
     this.server.to(noteId).emit('collaborators:list', collaborators);
@@ -260,5 +348,10 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   private async broadcastPresence(noteId: string): Promise<void> {
     const viewers = await this.getCollaboratorsInRoom(noteId);
     this.server.to(noteId).emit('presence:list', viewers);
+  }
+
+  private async broadcastTyping(noteId: string): Promise<void> {
+    const typing = await this.getTypingInRoom(noteId);
+    this.server.to(noteId).emit('typing:list', typing);
   }
 }

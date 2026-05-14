@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useNote,
@@ -19,11 +19,12 @@ import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock } from 'lucide-react';
+import { Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock, Users } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { appendImageToContent } from '../utils/attachments';
 import { api } from '../../../lib/axios';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
+import { useCollaboration } from '../hooks/useCollaboration';
 
 type ViewMode = 'grid' | 'list';
 
@@ -124,6 +125,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const [sharePermission, setSharePermission] = useState<'READ' | 'EDIT'>('READ');
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const typingStopTimerRef = useRef<number | null>(null);
+  /** Track whether the last content change came from a remote collaborator (skip re-broadcast) */
+  const isRemoteUpdateRef = useRef(false);
 
   // Sync local state when note changes
   useEffect(() => {
@@ -190,6 +194,59 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const canManageShares = noteAccessMode === 'owner';
 
   const canAutosave = !!note && !isLoading && canEditContent;
+
+  // Real-time collaboration: connect when this is a shared EDIT note
+  const isCollaborativeNote = (isSharedNote && sharedPermission === 'EDIT') || (note?.isShared && canManageShares);
+
+  const handleRemoteContentUpdate = useCallback(
+    (data: { userId: string; content: string; title?: string }) => {
+      isRemoteUpdateRef.current = true;
+      if (data.title !== undefined) {
+        setTitle(data.title);
+      }
+      setContent(data.content);
+      // Let the flag reset after the next render cycle so the onChange handler
+      // doesn't re-broadcast this change.
+      requestAnimationFrame(() => {
+        isRemoteUpdateRef.current = false;
+      });
+    },
+    [],
+  );
+
+  const { collaborators, typingParticipants, isConnected: isWsConnected, sendContentUpdate, sendTypingState } = useCollaboration({
+    noteId: isCollaborativeNote ? noteId : null,
+    enabled: Boolean(isCollaborativeNote),
+    onRemoteContentUpdate: handleRemoteContentUpdate,
+  });
+
+  const notifyTypingActivity = useCallback(() => {
+    if (!isCollaborativeNote) {
+      return;
+    }
+
+    sendTypingState(true);
+
+    if (typingStopTimerRef.current) {
+      window.clearTimeout(typingStopTimerRef.current);
+    }
+
+    typingStopTimerRef.current = window.setTimeout(() => {
+      sendTypingState(false);
+      typingStopTimerRef.current = null;
+    }, 1200);
+  }, [isCollaborativeNote, sendTypingState]);
+
+  useEffect(() => {
+    return () => {
+      if (typingStopTimerRef.current) {
+        window.clearTimeout(typingStopTimerRef.current);
+      }
+      if (isCollaborativeNote) {
+        sendTypingState(false);
+      }
+    };
+  }, [isCollaborativeNote, sendTypingState]);
 
   useEffect(() => {
     if (!canAutosave || !note) {
@@ -457,6 +514,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                     currentNote ? { ...currentNote, title: nextTitle, updatedAt } : currentNote,
                   );
                 }
+                notifyTypingActivity();
               }} 
               className="border-transparent px-0 text-2xl font-semibold shadow-none focus-visible:border-input"
               placeholder="Note title..."
@@ -645,12 +703,54 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       
       <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-background">
         <div className="max-w-4xl mx-auto">
+          {/* Collaborator presence indicators */}
+          {isCollaborativeNote && collaborators.length > 0 ? (
+            <div className="mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Editing now:</span>
+              <div className="flex -space-x-2">
+                {collaborators.map((c) => (
+                  <div
+                    key={c.userId}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-[10px] font-bold text-white"
+                    style={{ backgroundColor: c.color }}
+                    title={c.displayName}
+                  >
+                    {c.displayName.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+              {isWsConnected ? (
+                <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+
+          {isCollaborativeNote && typingParticipants.length > 0 ? (
+            <div className="mb-3 text-xs text-muted-foreground">
+              {typingParticipants.map((participant) => participant.displayName).join(', ')} typing…
+            </div>
+          ) : null}
+
           <NoteEditor
             content={content}
             readOnly={!canEdit}
             onInsertImage={() => imageInputRef.current?.click()}
             syncKey={note?.id ?? noteId}
-            {...(canEdit ? { onChange: setContent } : {})}
+            collaborative={Boolean(isCollaborativeNote)}
+            {...(canEdit ? {
+              onChange: (newContent: string) => {
+                setContent(newContent);
+                // Broadcast to collaborators unless this change came from a remote update
+                if (!isRemoteUpdateRef.current && isCollaborativeNote) {
+                  sendContentUpdate(newContent, title);
+                  notifyTypingActivity();
+                }
+              },
+            } : {})}
           />
         </div>
       </div>
