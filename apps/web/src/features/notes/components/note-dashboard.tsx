@@ -40,12 +40,19 @@ export function NoteDashboard() {
   const navigate = useNavigate();
   const params = useParams();
 
-  // Keep selectedNoteId in sync with route param when present
+  // Keep selectedNoteId strictly in sync with route param
   useEffect(() => {
     const routeNoteId = params.noteId ?? null;
+
     if (routeNoteId && routeNoteId !== selectedNoteId) {
       setSelectedNoteId(routeNoteId);
       setMobileView('editor');
+      return;
+    }
+
+    if (!routeNoteId && selectedNoteId !== null) {
+      setSelectedNoteId(null);
+      setMobileView('list');
     }
   }, [params.noteId, selectedNoteId]);
 
@@ -60,7 +67,7 @@ export function NoteDashboard() {
     setSelectedNoteId(null);
     setMobileView('list');
     // Remove route when note is deleted so URL doesn't point to a missing note
-    navigate('/');
+    navigate('/notes');
   };
 
   return (
@@ -142,7 +149,7 @@ export function NoteDashboard() {
 
         {selectedNoteId && mobileView === 'editor' ? (
           <div className="space-y-3">
-            <Button type="button" variant="outline" className="w-full rounded-full" onClick={() => setMobileView('list')}>
+            <Button type="button" variant="outline" className="w-full rounded-full" onClick={() => navigate('/notes')}>
               <ChevronLeft className="mr-2 h-4 w-4" />
               Back to notes
             </Button>

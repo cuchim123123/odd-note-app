@@ -20,7 +20,7 @@ export function DashboardLayout() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 border-b border-white/70 bg-white/85 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
         <div className="container flex h-16 items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-3 rounded-full border border-border/70 bg-white px-3 py-2 shadow-sm transition-transform hover:-translate-y-0.5">
+          <Link to="/notes" className="flex items-center gap-3 rounded-full border border-border/70 bg-white px-3 py-2 shadow-sm transition-transform hover:-translate-y-0.5">
             <div className="rounded-full bg-primary/10 p-2 text-primary">
               <Sparkles className="h-4 w-4" />
             </div>
@@ -31,7 +31,7 @@ export function DashboardLayout() {
           </Link>
 
           <nav className="flex items-center gap-2 text-sm font-medium">
-            <Link to="/" className="flex items-center gap-2 rounded-full px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <Link to="/notes" className="flex items-center gap-2 rounded-full px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
               <BookOpen className="h-4 w-4" />
               Notes
             </Link>

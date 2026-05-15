@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AuthLayout } from '../features/auth/components/auth-layout';
 import { LoginPage } from '../features/auth/components/login-page';
 import { RegisterPage } from '../features/auth/components/register-page';
@@ -21,6 +21,10 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: <Navigate to="/notes" replace />,
+      },
+      {
+        path: 'notes',
         element: <NoteDashboard />,
       },
       {
