@@ -32,6 +32,21 @@ import { useYjsCollaboration } from '../hooks/useYjsCollaboration';
 
 type ViewMode = 'grid' | 'list';
 
+function normalizeNoteHtml(value: string | undefined): string {
+  const html = (value ?? '').trim();
+
+  if (!html) {
+    return '';
+  }
+
+  // Treat editor-empty paragraph variants as empty content.
+  if (/^(<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+$/i.test(html)) {
+    return '';
+  }
+
+  return html;
+}
+
 export function NoteDashboard() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -413,7 +428,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       return;
     }
 
-    const hasChanges = title !== note.title || content !== (note.content || '');
+    const hasChanges =
+      title !== note.title ||
+      normalizeNoteHtml(content) !== normalizeNoteHtml(note.content || '');
     setIsDirty(hasChanges);
   }, [canAutosave, content, note, title]);
 
@@ -426,13 +443,15 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       return;
     }
 
-    const hasChanges = title !== note.title || content !== (note.content || '');
+    const hasChanges =
+      title !== note.title ||
+      normalizeNoteHtml(content) !== normalizeNoteHtml(note.content || '');
     if (!hasChanges) {
       return;
     }
 
     const timeoutId = window.setTimeout(() => {
-      void saveNoteDraft(note.id, title, content);
+      void saveNoteDraft(note.id, title, normalizeNoteHtml(content));
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
@@ -447,7 +466,10 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       return;
     }
 
-    const hasChanges = title !== note.title || content !== (note.content || '');
+    const normalizedContent = normalizeNoteHtml(content);
+    const hasChanges =
+      title !== note.title ||
+      normalizedContent !== normalizeNoteHtml(note.content || '');
     if (!hasChanges) {
       return;
     }
@@ -455,14 +477,14 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     const timeoutId = window.setTimeout(async () => {
       try {
         setSaveError(null);
-        const updated = await updateNote({ title, content });
+        const updated = await updateNote({ title, content: normalizedContent });
         setLastSavedAt(updated.updatedAt);
         setIsDirty(false);
         await clearNoteDraft(note.id);
       } catch (error) {
         setSaveError(error instanceof Error ? error.message : 'Failed to save note');
       }
-    }, 2000);
+    }, 900);
 
     return () => window.clearTimeout(timeoutId);
   }, [canAutosave, content, note, title, updateNote]);
