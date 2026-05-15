@@ -176,7 +176,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
               ))}
             </div>
 
-            <div className={cn(isGridView ? 'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(14rem,1fr))]' : 'space-y-2')}>
+            <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
               {filteredNotes.map((note) => {
                 const isSelected = selectedNoteId === note.id;
 
@@ -199,7 +199,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                   Shared with me
                 </div>
 
-                <div className={cn(isGridView ? 'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(14rem,1fr))]' : 'space-y-2')}>
+                <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
                   {filteredSharedNotes.map((note) => {
                     const isSelected = selectedNoteId === note.id;
 
@@ -262,7 +262,8 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
       onKeyDown={onKeyDown}
       onClick={onSelect}
       className={cn(
-        'note-item group w-full overflow-hidden rounded-2xl border border-border/70 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-primary/20',
+        'note-item group overflow-hidden rounded-2xl border border-border/70 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-primary/20',
+        isGridView ? 'w-64 max-w-full justify-self-center' : 'w-full',
         colorClass,
         isSelected ? 'border-primary/70 ring-2 ring-primary/20' : 'hover:border-primary/20',
         'p-4',

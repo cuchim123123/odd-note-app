@@ -129,8 +129,16 @@ export function NoteDashboard() {
       <div className="hidden min-h-0 flex-1 overflow-hidden rounded-xl border bg-card shadow-sm lg:flex">
         {selectedNoteId ? (
           // When a note is selected, show only the editor/detail view (full width)
-          <div className="relative flex-1 overflow-hidden bg-background">
-            <NoteDetailView noteId={selectedNoteId} onDeleted={handleDeleteSelectedNote} />
+          <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-background">
+            <div className="border-b border-border/70 bg-white px-4 py-3">
+              <Button type="button" variant="outline" className="rounded-full" onClick={() => navigate('/notes')}>
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back to notes
+              </Button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <NoteDetailView noteId={selectedNoteId} onDeleted={handleDeleteSelectedNote} />
+            </div>
           </div>
         ) : (
           // When no note is selected, show only the list (full width)
@@ -196,7 +204,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [remoteCursors, setRemoteCursors] = useState<Array<{ userId: string; displayName: string; color: string; position: number }>>([]);
-  const typingStopTimerRef = useRef<number | null>(null);
   /** Track whether the last content change came from a remote collaborator (skip re-broadcast) */
   const isRemoteUpdateRef = useRef(false);
 
@@ -378,7 +385,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     });
   }, []);
 
-  const { collaborators, presenceParticipants, typingParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, sendTypingState, yDoc } = useYjsCollaboration({
+  const { collaborators, presenceParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, yDoc } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
@@ -394,34 +401,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       : 'Realtime · Offline')
     : 'Realtime · Off';
   const realtimeTone = isCollaborativeNote && isWsConnected ? 'text-emerald-600' : 'text-muted-foreground';
-
-  const notifyTypingActivity = useCallback(() => {
-    if (!isCollaborativeNote) {
-      return;
-    }
-
-    sendTypingState(true);
-
-    if (typingStopTimerRef.current) {
-      window.clearTimeout(typingStopTimerRef.current);
-    }
-
-    typingStopTimerRef.current = window.setTimeout(() => {
-      sendTypingState(false);
-      typingStopTimerRef.current = null;
-    }, 1200);
-  }, [isCollaborativeNote, sendTypingState]);
-
-  useEffect(() => {
-    return () => {
-      if (typingStopTimerRef.current) {
-        window.clearTimeout(typingStopTimerRef.current);
-      }
-      if (isCollaborativeNote) {
-        sendTypingState(false);
-      }
-    };
-  }, [isCollaborativeNote, sendTypingState]);
 
   useEffect(() => {
     if (!isCollaborativeNote) {
@@ -742,7 +721,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                   );
                 }
                 sendContentUpdate(undefined, nextTitle);
-                notifyTypingActivity();
               }}
               className="h-auto border-border/60 bg-white px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
               placeholder="Note title..."
@@ -1009,12 +987,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             </div>
           ) : null}
 
-          {isCollaborativeNote && typingParticipants.length > 0 ? (
-            <div className="mb-3 rounded-full border border-border/70 bg-white px-3 py-2 text-xs text-muted-foreground shadow-sm">
-              {typingParticipants.map((participant) => participant.displayName).join(', ')} typing…
-            </div>
-          ) : null}
-
           <NoteEditor
             content={content}
             readOnly={!canEdit}
@@ -1036,8 +1008,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                   } catch {
                     // best-effort — don't block the editor if send fails
                   }
-
-                  notifyTypingActivity();
                 }
               },
               onCursorMove: (position: number) => {
