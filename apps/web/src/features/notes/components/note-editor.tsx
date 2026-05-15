@@ -45,7 +45,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
               const decorations = remoteCursorRef.current
                 .filter((cursor) => Number.isFinite(cursor.position))
                 .map((cursor) => {
-                  const position = Math.max(1, Math.min(cursor.position, state.doc.content.size));
+                  const position = Math.max(1, Math.min(cursor.position, state.doc.content.size + 1));
                   return Decoration.widget(
                     position,
                     () => {
@@ -65,7 +65,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
                       wrapper.appendChild(label);
                       return wrapper;
                     },
-                    { key: cursor.userId },
+                    { key: cursor.userId, side: 1 },
                   );
                 });
 
@@ -99,6 +99,10 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     onUpdate: ({ editor }) => {
       if (onChange) {
         onChange(editor.getHTML());
+      }
+
+      if (!readOnly && collaborative && onCursorMove) {
+        onCursorMove(editor.state.selection.from);
       }
     },
     onSelectionUpdate: ({ editor }) => {

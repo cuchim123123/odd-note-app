@@ -27,6 +27,13 @@ type TypingInfo = {
   updatedAt: number;
 };
 
+type CollaborationSnapshot = {
+  title: string;
+  content: string;
+  isPinned: boolean;
+  updatedAt: string;
+};
+
 const TYPING_STALE_AFTER_MS = 5000;
 
 const COLLABORATOR_COLORS = [
@@ -240,6 +247,15 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       return;
     }
 
+    const previousSnapshot = await this.readSnapshot(data.noteId);
+
+    await this.persistSnapshot(data.noteId, {
+      title: data.title ?? previousSnapshot?.title ?? '',
+      content: data.content,
+      isPinned: data.isPinned ?? previousSnapshot?.isPinned ?? false,
+      updatedAt: new Date().toISOString(),
+    });
+
     // Broadcast the content change to all OTHER clients in the room
     client.to(data.noteId).emit('note:updated', {
       userId: client.data.userId,
@@ -312,6 +328,10 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
 
   private typingKey(noteId: string): string {
     return `collab:note:${noteId}:typing`;
+  }
+
+  private snapshotKey(noteId: string): string {
+    return `collab:note:${noteId}:snapshot`;
   }
 
   private async setSocketRoom(socketId: string, noteId: string, user: CollaboratorInfo): Promise<void> {
@@ -490,5 +510,37 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   private async broadcastTyping(noteId: string): Promise<void> {
     const typing = await this.getTypingInRoom(noteId);
     this.server.to(noteId).emit('typing:list', typing);
+  }
+
+  private async persistSnapshot(noteId: string, snapshot: CollaborationSnapshot): Promise<void> {
+    if (!this.redisEnabled) {
+      this.logger.error('Redis adapter not initialized when persisting collaboration snapshot');
+      throw new Error('Redis adapter not initialized');
+    }
+
+    try {
+      await this.redis.getClient().set(this.snapshotKey(noteId), JSON.stringify(snapshot));
+    } catch (error) {
+      this.markRedisUnavailable(error);
+    }
+  }
+
+  private async readSnapshot(noteId: string): Promise<CollaborationSnapshot | null> {
+    if (!this.redisEnabled) {
+      this.logger.error('Redis adapter not initialized when reading collaboration snapshot');
+      throw new Error('Redis adapter not initialized');
+    }
+
+    try {
+      const value = await this.redis.getClient().get(this.snapshotKey(noteId));
+      if (!value) {
+        return null;
+      }
+
+      return JSON.parse(value) as CollaborationSnapshot;
+    } catch (error) {
+      this.markRedisUnavailable(error);
+      return null;
+    }
   }
 }

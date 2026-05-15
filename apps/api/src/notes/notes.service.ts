@@ -74,6 +74,13 @@ export type NoteDraftResponse = {
   updatedAt: string;
 };
 
+type CollaborationSnapshot = {
+  title: string;
+  content: string;
+  isPinned: boolean;
+  updatedAt: string;
+};
+
 @Injectable()
 export class NotesService {
   constructor(
@@ -89,7 +96,9 @@ export class NotesService {
       orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
     });
 
-    return await Promise.all(notes.map((note: NoteWithShares) => this.toResponse(note)));
+    return await Promise.all(
+      notes.map(async (note: NoteWithShares) => this.toResponse(note, undefined, await this.readCollaborationSnapshot(note.id))),
+    );
   }
 
   async listSharedWithMe(userId: string): Promise<SharedNoteResponse[]> {
@@ -103,7 +112,9 @@ export class NotesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return await Promise.all(sharedNotes.map((share: ShareRecordWithRelations) => this.toSharedResponse(share)));
+    return await Promise.all(
+      sharedNotes.map(async (share: ShareRecordWithRelations) => this.toSharedResponse(share, await this.readCollaborationSnapshot(share.note.id))),
+    );
   }
 
   async getById(userId: string, noteId: string): Promise<NoteResponse> {
@@ -124,7 +135,11 @@ export class NotesService {
       include: { owner: { select: { id: true, email: true, displayName: true } } },
     });
 
-    return await this.toResponse(note as NoteWithShares, sharedAccess ? { permission: sharedAccess.permission, owner: sharedAccess.owner, createdAt: sharedAccess.createdAt } : undefined);
+    return await this.toResponse(
+      note as NoteWithShares,
+      sharedAccess ? { permission: sharedAccess.permission, owner: sharedAccess.owner, createdAt: sharedAccess.createdAt } : undefined,
+      await this.readCollaborationSnapshot(noteId),
+    );
   }
 
   async create(userId: string, input: { title: string; content?: string; labels?: string[] }): Promise<NoteResponse> {
@@ -138,7 +153,8 @@ export class NotesService {
       include: { shares: { select: { id: true } } },
     });
 
-    return await this.toResponse(note as NoteWithShares);
+    const noteWithShares = note as NoteWithShares;
+    return await this.toResponse(noteWithShares, undefined, await this.readCollaborationSnapshot(note.id));
   }
 
   async update(
@@ -181,7 +197,9 @@ export class NotesService {
       include: { shares: { select: { id: true } } },
     });
 
-    return await this.toResponse(note as NoteWithShares);
+    const noteWithShares = note as NoteWithShares;
+    await this.persistCollaborationSnapshot(noteWithShares);
+    return await this.toResponse(noteWithShares, undefined, await this.readCollaborationSnapshot(note.id));
   }
 
   async delete(userId: string, noteId: string): Promise<void> {
@@ -194,6 +212,8 @@ export class NotesService {
       this.prisma.noteProtection.deleteMany({ where: { userId, noteId } }),
       this.prisma.note.delete({ where: { id: noteId } }),
     ]);
+
+    await this.clearCollaborationSnapshot(noteId);
   }
 
   async listShares(userId: string, noteId: string): Promise<NoteShareResponse[]> {
@@ -473,22 +493,27 @@ export class NotesService {
     }
   }
 
-  private async toResponse(note: NoteWithShares, sharedAccess?: { permission: SharePermission; owner: SharedByProfile; createdAt: Date }): Promise<NoteResponse> {
+  private async toResponse(
+    note: NoteWithShares,
+    sharedAccess?: { permission: SharePermission; owner: SharedByProfile; createdAt: Date },
+    snapshot?: CollaborationSnapshot | null,
+  ): Promise<NoteResponse> {
+    const effectiveNote = this.mergeNoteWithSnapshot(note, snapshot);
     const protection = await this.prisma.noteProtection.findUnique({
-      where: { userId_noteId: { userId: note.userId, noteId: note.id } },
+      where: { userId_noteId: { userId: effectiveNote.userId, noteId: effectiveNote.id } },
       select: { id: true },
     });
 
     return {
-      id: note.id,
-      title: note.title,
-      content: note.content ?? '',
-      isPinned: note.isPinned,
+      id: effectiveNote.id,
+      title: effectiveNote.title,
+      content: effectiveNote.content ?? '',
+      isPinned: effectiveNote.isPinned,
       isProtected: Boolean(protection),
-      isShared: note.isShared || note.shares.length > 0 || Boolean(sharedAccess),
-      labels: note.labels,
-      createdAt: note.createdAt.toISOString(),
-      updatedAt: note.updatedAt.toISOString(),
+      isShared: effectiveNote.isShared || effectiveNote.shares.length > 0 || Boolean(sharedAccess),
+      labels: effectiveNote.labels,
+      createdAt: effectiveNote.createdAt.toISOString(),
+      updatedAt: effectiveNote.updatedAt.toISOString(),
       accessMode: sharedAccess ? 'shared' : 'owner',
       sharedPermission: sharedAccess?.permission,
       sharedBy: sharedAccess?.owner,
@@ -496,12 +521,12 @@ export class NotesService {
     };
   }
 
-  private async toSharedResponse(share: ShareRecordWithRelations): Promise<SharedNoteResponse> {
+  private async toSharedResponse(share: ShareRecordWithRelations, snapshot?: CollaborationSnapshot | null): Promise<SharedNoteResponse> {
     const note = await this.toResponse(share.note, {
       permission: share.permission,
       owner: share.owner,
       createdAt: share.createdAt,
-    });
+    }, snapshot);
 
     return {
       ...note,
@@ -510,5 +535,57 @@ export class NotesService {
       sharedBy: share.owner,
       sharedAt: share.createdAt.toISOString(),
     };
+  }
+
+  private collaborationSnapshotKey(noteId: string): string {
+    return `collab:note:${noteId}:snapshot`;
+  }
+
+  private mergeNoteWithSnapshot(note: NoteWithShares, snapshot?: CollaborationSnapshot | null): NoteWithShares {
+    if (!snapshot) {
+      return note;
+    }
+
+    const noteUpdatedAt = new Date(note.updatedAt).getTime();
+    const snapshotUpdatedAt = new Date(snapshot.updatedAt).getTime();
+    if (Number.isNaN(snapshotUpdatedAt) || snapshotUpdatedAt <= noteUpdatedAt) {
+      return note;
+    }
+
+    return {
+      ...note,
+      title: snapshot.title,
+      content: snapshot.content,
+      isPinned: snapshot.isPinned,
+      updatedAt: new Date(snapshot.updatedAt),
+    };
+  }
+
+  private async readCollaborationSnapshot(noteId: string): Promise<CollaborationSnapshot | null> {
+    const value = await this.redis.getClient().get(this.collaborationSnapshotKey(noteId));
+    if (!value) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(value) as CollaborationSnapshot;
+    } catch {
+      return null;
+    }
+  }
+
+  private async persistCollaborationSnapshot(note: NoteWithShares): Promise<void> {
+    const snapshot: CollaborationSnapshot = {
+      title: note.title,
+      content: note.content ?? '',
+      isPinned: note.isPinned,
+      updatedAt: note.updatedAt.toISOString(),
+    };
+
+    await this.redis.getClient().set(this.collaborationSnapshotKey(note.id), JSON.stringify(snapshot));
+  }
+
+  private async clearCollaborationSnapshot(noteId: string): Promise<void> {
+    await this.redis.getClient().del(this.collaborationSnapshotKey(noteId));
   }
 }
