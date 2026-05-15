@@ -3,14 +3,11 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bold, Code, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Quote, Strikethrough, Underline as UnderlineIcon } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
 import { cn } from '../../../lib/utils';
-import { Extension } from '@tiptap/core';
-import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { Plugin } from '@tiptap/pm/state';
 
 type RemoteCursor = {
   userId: string;
@@ -32,56 +29,14 @@ type NoteEditorProps = {
 
 export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, remoteCursors = [], onCursorMove }: NoteEditorProps) {
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
-  const remoteCursorRef = useRef(remoteCursors);
-  remoteCursorRef.current = remoteCursors;
-
-  const remoteCursorExtension = useMemo(() => Extension.create({
-    name: 'remoteCursorIndicators',
-    addProseMirrorPlugins() {
-      return [
-        new Plugin({
-          props: {
-            decorations(state) {
-              const decorations = remoteCursorRef.current
-                .filter((cursor) => Number.isFinite(cursor.position))
-                .map((cursor) => {
-                  const position = Math.max(1, Math.min(cursor.position, state.doc.content.size + 1));
-                  return Decoration.widget(
-                    position,
-                    () => {
-                      const wrapper = document.createElement('span');
-                      wrapper.className = 'pointer-events-none inline-flex translate-y-0.5 select-none items-center align-middle';
-
-                      const caret = document.createElement('span');
-                      caret.className = 'inline-block h-5 border-l-2';
-                      caret.style.borderColor = cursor.color;
-
-                      const label = document.createElement('span');
-                      label.className = '-ml-px rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm';
-                      label.style.backgroundColor = cursor.color;
-                      label.textContent = cursor.displayName;
-
-                      wrapper.appendChild(caret);
-                      wrapper.appendChild(label);
-                      return wrapper;
-                    },
-                    { key: cursor.userId, side: 1 },
-                  );
-                });
-
-              return decorations.length > 0 ? DecorationSet.create(state.doc, decorations) : null;
-            },
-          },
-        }),
-      ];
-    },
-  }), []);
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastLocalCursorPositionRef = useRef<number | null>(null);
+  const [remoteCursorAnchors, setRemoteCursorAnchors] = useState<Array<RemoteCursor & { top: number; left: number }>>([]);
 
   const editor = useEditor({
     extensions: [
       StarterKit,
       Underline,
-      remoteCursorExtension,
       Link.configure({
         openOnClick: false,
         autolink: true,
@@ -101,13 +56,17 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
         onChange(editor.getHTML());
       }
 
-      if (!readOnly && collaborative && onCursorMove) {
-        onCursorMove(editor.state.selection.from);
+      const selectionPosition = editor.state.selection.from;
+      if (!readOnly && collaborative && onCursorMove && lastLocalCursorPositionRef.current !== selectionPosition) {
+        lastLocalCursorPositionRef.current = selectionPosition;
+        onCursorMove(selectionPosition);
       }
     },
     onSelectionUpdate: ({ editor }) => {
-      if (!readOnly && collaborative && onCursorMove) {
-        onCursorMove(editor.state.selection.from);
+      const selectionPosition = editor.state.selection.from;
+      if (!readOnly && collaborative && onCursorMove && lastLocalCursorPositionRef.current !== selectionPosition) {
+        lastLocalCursorPositionRef.current = selectionPosition;
+        onCursorMove(selectionPosition);
       }
     },
     editorProps: {
@@ -132,6 +91,51 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       editor.setEditable(!readOnly);
     }
   }, [editor, readOnly]);
+
+  const recalculateRemoteCursorAnchors = useCallback(() => {
+    if (!editorContainerRef.current || !editor) {
+      setRemoteCursorAnchors([]);
+      return;
+    }
+
+    const containerRect = editorContainerRef.current.getBoundingClientRect();
+    const nextAnchors = remoteCursors
+      .filter((cursor) => Number.isFinite(cursor.position))
+      .map((cursor) => {
+        const position = Math.max(1, Math.min(cursor.position, editor.state.doc.content.size));
+        const coords = editor.view.coordsAtPos(position);
+
+        return {
+          ...cursor,
+          top: coords.top - containerRect.top,
+          left: coords.left - containerRect.left,
+        };
+      });
+
+    setRemoteCursorAnchors(nextAnchors);
+  }, [editor, remoteCursors]);
+
+  useEffect(() => {
+    recalculateRemoteCursorAnchors();
+  }, [recalculateRemoteCursorAnchors, content, remoteCursors, noteFontSize, readOnly]);
+
+  useEffect(() => {
+    const handleViewportChange = () => {
+      recalculateRemoteCursorAnchors();
+    };
+
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
+  }, [recalculateRemoteCursorAnchors]);
+
+  useEffect(() => {
+    lastLocalCursorPositionRef.current = null;
+  }, [syncKey]);
 
   const lastSyncKeyRef = useRef<string | null>(null);
 
@@ -193,7 +197,8 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       data-testid="note-editor"
       data-note-font-size={noteFontSize}
       aria-readonly={readOnly}
-      className="overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.06)]"
+      ref={editorContainerRef}
+      className="relative overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.06)]"
     >
       <div className="border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-3 py-3 sm:px-4">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pr-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
@@ -235,6 +240,26 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
         editor={editor}
         className={cn('prose focus:outline-none max-w-none px-4 py-4 sm:px-5', 'min-h-[240px] sm:min-h-[320px]')}
       />
+      <div className="pointer-events-none absolute inset-0 overflow-visible">
+        {remoteCursorAnchors.map((cursor) => (
+          <div
+            key={cursor.userId}
+            className="absolute z-20"
+            style={{ left: cursor.left, top: cursor.top }}
+          >
+            <span
+              className="absolute left-0 top-0 h-5 border-l-2"
+              style={{ borderColor: cursor.color }}
+            />
+            <span
+              className="absolute left-2 -top-6 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+              style={{ backgroundColor: cursor.color }}
+            >
+              {cursor.displayName}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

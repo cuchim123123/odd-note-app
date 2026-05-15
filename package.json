@@ -5,6 +5,8 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "prepare": "husky",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up -d --build",
+    "docker:dev:down": "docker compose -f docker-compose.dev.yml down",
     "lint": "pnpm -r --if-present lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

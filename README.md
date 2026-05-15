@@ -68,6 +68,17 @@ pnpm dev
 
 The app will be available at `http://localhost:5173/`.
 
+### Docker Hot Reload
+
+If you want to edit code locally without rebuilding images every time, use the dev overlay:
+
+```bash
+pnpm docker:dev
+```
+
+That starts the API and web containers in watch mode with the repo mounted into the containers.
+The web app runs at `http://localhost:5174/` in this temporary dev setup.
+
 ### Environment Variables
 
 Create `.env.local` in the `apps/api` directory (docker-compose handles most of this):

@@ -13,6 +13,8 @@ import { JwtConfigService } from '../config';
 import { RedisService } from '../redis/redis.service';
 import { Server, Socket } from 'socket.io';
 import type Redis from 'ioredis';
+import * as Y from 'yjs';
+import * as awarenessProtocol from 'y-protocols/awareness';
 
 type CollaboratorInfo = {
   userId: string;
@@ -32,6 +34,19 @@ type CollaborationSnapshot = {
   content: string;
   isPinned: boolean;
   updatedAt: string;
+};
+
+type YDocState = {
+  stateVector: number[];
+  updates: Array<number[]>;
+};
+
+type AwarenessState = {
+  userId: string;
+  displayName: string;
+  color: string;
+  position: number;
+  selection?: { anchor: number; head: number };
 };
 
 const TYPING_STALE_AFTER_MS = 5000;
@@ -57,6 +72,11 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   private subClient: Redis | null = null;
   private redisEnabled = false;
   private redisWarningLogged = false;
+
+  // Yjs document store: maps noteId -> Y.Doc
+  private yDocs = new Map<string, Y.Doc>();
+  private yDocAwareness = new Map<string, awarenessProtocol.Awareness>();
+  private yDocCleanupTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -309,6 +329,98 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     await this.broadcastTyping(data.noteId);
   }
 
+  // ============ Yjs CRDT Message Handlers ============
+
+  @SubscribeMessage('yjs:sync-step-1')
+  async handleYjsSyncStep1(
+    @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
+    @MessageBody() data: { noteId: string; stateVector: number[] },
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
+    if (!entry || entry.noteId !== data.noteId) {
+      return;
+    }
+
+    const yDoc = await this.getOrCreateYDoc(data.noteId);
+    const update = Y.encodeStateAsUpdate(yDoc, new Uint8Array(data.stateVector));
+    client.emit('yjs:sync-step-2', {
+      noteId: data.noteId,
+      update: Array.from(update),
+    });
+  }
+
+  @SubscribeMessage('yjs:sync-step-3')
+  async handleYjsSyncStep3(
+    @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
+    @MessageBody() data: { noteId: string; update: number[] },
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
+    if (!entry || entry.noteId !== data.noteId) {
+      return;
+    }
+
+    const yDoc = await this.getOrCreateYDoc(data.noteId);
+    Y.applyUpdate(yDoc, new Uint8Array(data.update));
+
+    // Broadcast to other clients
+    client.to(data.noteId).emit('yjs:update', {
+      noteId: data.noteId,
+      update: data.update,
+    });
+
+    // Persist to Redis
+    await this.persistYDoc(data.noteId, yDoc);
+  }
+
+  @SubscribeMessage('yjs:update')
+  async handleYjsUpdate(
+    @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
+    @MessageBody() data: { noteId: string; update: number[] },
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
+    if (!entry || entry.noteId !== data.noteId) {
+      return;
+    }
+
+    const yDoc = await this.getOrCreateYDoc(data.noteId);
+    Y.applyUpdate(yDoc, new Uint8Array(data.update));
+
+    // Broadcast to other clients
+    client.to(data.noteId).emit('yjs:update', {
+      noteId: data.noteId,
+      update: data.update,
+    });
+
+    // Persist to Redis
+    await this.persistYDoc(data.noteId, yDoc);
+  }
+
+  @SubscribeMessage('yjs:awareness')
+  async handleYjsAwareness(
+    @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
+    @MessageBody() data: { noteId: string; awareness: AwarenessState },
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
+    if (!entry || entry.noteId !== data.noteId) {
+      return;
+    }
+
+    const awareness = await this.getOrCreateAwareness(data.noteId);
+    awareness.setLocalState({
+      ...data.awareness,
+      userId: client.data.userId,
+      displayName: client.data.displayName,
+      color: entry.user.color,
+    });
+
+    // Broadcast awareness to other clients
+    const states = Array.from(awareness.getStates().values());
+    client.to(data.noteId).emit('yjs:awareness:update', {
+      noteId: data.noteId,
+      states,
+    });
+  }
+
   private extractToken(client: Socket): string | null {
     // Try auth.token first, then query param
     const authToken = client.handshake.auth?.token as string | undefined;
@@ -541,6 +653,122 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     } catch (error) {
       this.markRedisUnavailable(error);
       return null;
+    }
+  }
+
+  // ============ Yjs Document Helpers ============
+
+  private yDocKey(noteId: string): string {
+    return `collab:ydoc:${noteId}`;
+  }
+
+  private async getOrCreateYDoc(noteId: string): Promise<Y.Doc> {
+    // Return cached instance if available
+    if (this.yDocs.has(noteId)) {
+      return this.yDocs.get(noteId)!;
+    }
+
+    const yDoc = new Y.Doc();
+
+    // Try to load persisted state from Redis
+    const persistedState = await this.readYDocState(noteId);
+    if (persistedState) {
+      try {
+        Y.applyUpdate(yDoc, new Uint8Array(persistedState.updates.flat()));
+      } catch (error) {
+        this.logger.warn(`Failed to apply persisted Yjs state for note ${noteId}: ${String(error)}`);
+      }
+    }
+
+    this.yDocs.set(noteId, yDoc);
+
+    // Set up cleanup timer: unload doc after 5 minutes of inactivity
+    this.resetYDocCleanupTimer(noteId);
+
+    this.logger.log(`Created/loaded Yjs document for note ${noteId}`);
+    return yDoc;
+  }
+
+  private resetYDocCleanupTimer(noteId: string): void {
+    if (this.yDocCleanupTimers.has(noteId)) {
+      clearTimeout(this.yDocCleanupTimers.get(noteId));
+    }
+
+    const timer = setTimeout(() => {
+      const yDoc = this.yDocs.get(noteId);
+      if (yDoc) {
+        yDoc.destroy();
+        this.yDocs.delete(noteId);
+        this.yDocAwareness.delete(noteId);
+        this.yDocCleanupTimers.delete(noteId);
+        this.logger.log(`Unloaded Yjs document for note ${noteId} due to inactivity`);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    this.yDocCleanupTimers.set(noteId, timer);
+  }
+
+  private async persistYDoc(noteId: string, yDoc: Y.Doc): Promise<void> {
+    if (!this.redisEnabled) {
+      this.logger.error('Redis adapter not initialized when persisting Yjs document');
+      throw new Error('Redis adapter not initialized');
+    }
+
+    try {
+      const state = Y.encodeStateAsUpdate(yDoc);
+      await this.redis.getClient().set(
+        this.yDocKey(noteId),
+        JSON.stringify({
+          stateVector: Array.from(state),
+          updates: [Array.from(state)],
+          timestamp: Date.now(),
+        } as YDocState),
+      );
+    } catch (error) {
+      this.markRedisUnavailable(error);
+    }
+  }
+
+  private async readYDocState(noteId: string): Promise<YDocState | null> {
+    if (!this.redisEnabled) {
+      return null;
+    }
+
+    try {
+      const value = await this.redis.getClient().get(this.yDocKey(noteId));
+      if (!value) {
+        return null;
+      }
+
+      return JSON.parse(value) as YDocState;
+    } catch (error) {
+      this.logger.warn(`Failed to read Yjs state for note ${noteId}: ${String(error)}`);
+      return null;
+    }
+  }
+
+  private async getOrCreateAwareness(noteId: string): Promise<awarenessProtocol.Awareness> {
+    if (this.yDocAwareness.has(noteId)) {
+      return this.yDocAwareness.get(noteId)!;
+    }
+
+    const yDoc = await this.getOrCreateYDoc(noteId);
+    const awareness = new awarenessProtocol.Awareness(yDoc);
+
+    this.yDocAwareness.set(noteId, awareness);
+    this.logger.log(`Created Awareness for note ${noteId}`);
+    return awareness;
+  }
+
+  private async clearYDocState(noteId: string): Promise<void> {
+    if (!this.redisEnabled) {
+      return;
+    }
+
+    try {
+      await this.redis.getClient().del(this.yDocKey(noteId));
+    } catch (error) {
+      this.logger.warn(`Failed to clear Yjs state for note ${noteId}: ${String(error)}`);
     }
   }
 }

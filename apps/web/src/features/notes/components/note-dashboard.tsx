@@ -346,6 +346,16 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const handleRemoteCursor = useCallback((data: { userId: string; displayName: string; position: number; color: string }) => {
     setRemoteCursors((current) => {
       const filtered = current.filter((cursor) => cursor.userId !== data.userId);
+      const existing = current.find((cursor) => cursor.userId === data.userId);
+      if (
+        existing &&
+        existing.position === data.position &&
+        existing.displayName === data.displayName &&
+        existing.color === data.color
+      ) {
+        return current;
+      }
+
       return [...filtered, data];
     });
   }, []);
