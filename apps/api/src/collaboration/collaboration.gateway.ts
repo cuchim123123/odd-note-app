@@ -198,51 +198,56 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string },
   ): Promise<void> {
-    const { noteId } = data;
-    const { userId, displayName } = client.data;
+    try {
+      const { noteId } = data;
+      const { userId, displayName } = client.data;
 
-    // Leave any previous room
-    const prevEntry = await this.getSocketRoom(client.id);
-    if (prevEntry) {
-      void client.leave(prevEntry.noteId);
-      await this.removeAwareness(prevEntry.noteId, client.id);
-      await this.removeParticipant(prevEntry.noteId, client.id);
-      await this.removeTyping(prevEntry.noteId, prevEntry.user.userId);
-      client.to(prevEntry.noteId).emit('collaborator:left', { userId: prevEntry.user.userId });
-      await this.broadcastCollaborators(prevEntry.noteId);
-      await this.broadcastPresence(prevEntry.noteId);
-      await this.broadcastTyping(prevEntry.noteId);
+      // Leave any previous room
+      const prevEntry = await this.getSocketRoom(client.id);
+      if (prevEntry) {
+        void client.leave(prevEntry.noteId);
+        await this.removeAwareness(prevEntry.noteId, client.id);
+        await this.removeParticipant(prevEntry.noteId, client.id);
+        await this.removeTyping(prevEntry.noteId, prevEntry.user.userId);
+        client.to(prevEntry.noteId).emit('collaborator:left', { userId: prevEntry.user.userId });
+        await this.broadcastCollaborators(prevEntry.noteId);
+        await this.broadcastPresence(prevEntry.noteId);
+        await this.broadcastTyping(prevEntry.noteId);
+      }
+
+      // Assign a color based on how many collaborators are in the room
+      const roomSockets = await this.getCollaboratorsInRoom(noteId);
+      const colorIndex = roomSockets.length % COLLABORATOR_COLORS.length;
+
+      const collaborator: CollaboratorInfo = {
+        userId,
+        displayName,
+        color: COLLABORATOR_COLORS[colorIndex] ?? COLLABORATOR_COLORS[0] ?? '#ef4444',
+      };
+
+      void client.join(noteId);
+      await this.setSocketRoom(client.id, noteId, collaborator);
+      await this.addParticipant(noteId, client.id, collaborator);
+
+      // Notify the room about the new collaborator
+      client.to(noteId).emit('collaborator:joined', collaborator);
+
+      // Send the joining client the current list of collaborators
+      const collaborators = await this.getCollaboratorsInRoom(noteId);
+      client.emit('collaborators:list', collaborators);
+      client.emit('presence:list', collaborators);
+      client.emit('typing:list', await this.getTypingInRoom(noteId));
+      client.emit('yjs:awareness:list', {
+        noteId,
+        states: await this.getAwarenessStates(noteId, client.id),
+      });
+      await this.broadcastPresence(noteId);
+
+      this.logger.log(`User ${userId} joined note ${noteId}`);
+    } catch (error) {
+      this.logger.error(`Error handling note:join: ${String(error)}`, error as Error);
+      throw error;
     }
-
-    // Assign a color based on how many collaborators are in the room
-    const roomSockets = await this.getCollaboratorsInRoom(noteId);
-    const colorIndex = roomSockets.length % COLLABORATOR_COLORS.length;
-
-    const collaborator: CollaboratorInfo = {
-      userId,
-      displayName,
-      color: COLLABORATOR_COLORS[colorIndex] ?? COLLABORATOR_COLORS[0] ?? '#ef4444',
-    };
-
-    void client.join(noteId);
-    await this.setSocketRoom(client.id, noteId, collaborator);
-    await this.addParticipant(noteId, client.id, collaborator);
-
-    // Notify the room about the new collaborator
-    client.to(noteId).emit('collaborator:joined', collaborator);
-
-    // Send the joining client the current list of collaborators
-    const collaborators = await this.getCollaboratorsInRoom(noteId);
-    client.emit('collaborators:list', collaborators);
-    client.emit('presence:list', collaborators);
-    client.emit('typing:list', await this.getTypingInRoom(noteId));
-    client.emit('yjs:awareness:list', {
-      noteId,
-      states: await this.getAwarenessStates(noteId, client.id),
-    });
-    await this.broadcastPresence(noteId);
-
-    this.logger.log(`User ${userId} joined note ${noteId}`);
   }
 
   @SubscribeMessage('note:leave')
@@ -342,17 +347,25 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; stateVector: number[] },
   ): Promise<void> {
-    const entry = await this.getSocketRoom(client.id);
-    if (!entry || entry.noteId !== data.noteId) {
-      return;
-    }
+    try {
+      this.logger.log(`Received yjs:sync-step-1 from ${client.data.userId} for note ${data.noteId}`);
+      const entry = await this.getSocketRoom(client.id);
+      if (!entry || entry.noteId !== data.noteId) {
+        this.logger.warn(`yjs:sync-step-1: Socket room entry not found or noteId mismatch`);
+        return;
+      }
 
-    const yDoc = await this.getOrCreateYDoc(data.noteId);
-    const update = Y.encodeStateAsUpdate(yDoc, new Uint8Array(data.stateVector));
-    client.emit('yjs:sync-step-2', {
-      noteId: data.noteId,
-      update: Array.from(update),
-    });
+      const yDoc = await this.getOrCreateYDoc(data.noteId);
+      const update = Y.encodeStateAsUpdate(yDoc, new Uint8Array(data.stateVector));
+      this.logger.log(`Sending yjs:sync-step-2 with ${update.length} bytes to ${client.data.userId}`);
+      client.emit('yjs:sync-step-2', {
+        noteId: data.noteId,
+        update: Array.from(update),
+      });
+    } catch (error) {
+      this.logger.error(`Error handling yjs:sync-step-1: ${String(error)}`, error as Error);
+      throw error;
+    }
   }
 
   @SubscribeMessage('yjs:sync-step-3')

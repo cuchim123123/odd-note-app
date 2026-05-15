@@ -114,22 +114,18 @@ export function useYjsCollaboration({
     setYDoc(nextYDoc);
     setAwareness(nextAwareness);
 
-    const socket = io(`${getWsUrl()}/collaboration`, {
-      auth: { token: accessToken },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
-    });
-
-    socketRef.current = socket;
-
     const syncState = () => {
-      socket.emit('note:join', { noteId });
-      socket.emit('yjs:sync-step-1', {
-        noteId,
-        stateVector: Array.from(Y.encodeStateVector(nextYDoc)),
-      });
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('note:join', { noteId });
+        setTimeout(() => {
+          if (socketRef.current?.connected) {
+            socketRef.current.emit('yjs:sync-step-1', {
+              noteId,
+              stateVector: Array.from(Y.encodeStateVector(nextYDoc)),
+            });
+          }
+        }, 50);
+      }
     };
 
     const handleRemoteUpdate = (update: Uint8Array) => {
@@ -146,15 +142,31 @@ export function useYjsCollaboration({
         return;
       }
 
-      socket.emit('yjs:update', {
-        noteId,
-        update: Array.from(update),
-      });
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('yjs:update', {
+          noteId,
+          update: Array.from(update),
+        });
+      }
     };
 
+    const socket = io(`${getWsUrl()}/collaboration`, {
+      auth: { token: accessToken },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    });
+
+    socketRef.current = socket;
+
     socket.on('connect', () => {
+      console.log('[Yjs] Socket connected, initiating sync');
       setIsConnected(true);
-      syncState();
+      setTimeout(() => {
+        console.log('[Yjs] Calling syncState');
+        syncState();
+      }, 100);
     });
 
     socket.on('disconnect', () => {
