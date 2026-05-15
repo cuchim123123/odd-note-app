@@ -27,7 +27,7 @@ import { cn } from '../../../lib/utils';
 import { appendImageToContent } from '../utils/attachments';
 import { api } from '../../../lib/axios';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
-import { useCollaboration } from '../hooks/useCollaboration';
+import { useYjsCollaboration } from '../hooks/useYjsCollaboration';
 
 type ViewMode = 'grid' | 'list';
 
@@ -360,7 +360,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     });
   }, []);
 
-  const { collaborators, presenceParticipants, typingParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, sendTypingState } = useCollaboration({
+  const { collaborators, presenceParticipants, typingParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, sendTypingState, yDoc } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
@@ -1004,12 +1004,12 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             syncKey={note?.id ?? noteId}
             collaborative={Boolean(isCollaborativeNote)}
             remoteCursors={remoteCursors}
+            yDoc={yDoc}
             {...(canEdit ? {
               onChange: (newContent: string) => {
                 setContent(newContent);
                 // Broadcast to collaborators unless this change came from a remote update
                 if (!isRemoteUpdateRef.current && isCollaborativeNote) {
-                  sendContentUpdate(newContent, title);
                   notifyTypingActivity();
                 }
               },

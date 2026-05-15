@@ -3,11 +3,13 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import * as Y from 'yjs';
 import { Bold, Code, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Quote, Strikethrough, Underline as UnderlineIcon } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
 import { cn } from '../../../lib/utils';
+import { YjsExtension } from '../extensions/YjsExtension';
 
 type RemoteCursor = {
   userId: string;
@@ -25,13 +27,16 @@ type NoteEditorProps = {
   collaborative?: boolean;
   remoteCursors?: RemoteCursor[];
   onCursorMove?: (position: number) => void;
+  yDoc?: Y.Doc;
 };
 
-export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, remoteCursors = [], onCursorMove }: NoteEditorProps) {
+export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, remoteCursors = [], onCursorMove, yDoc }: NoteEditorProps) {
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const lastLocalCursorPositionRef = useRef<number | null>(null);
   const [remoteCursorAnchors, setRemoteCursorAnchors] = useState<Array<RemoteCursor & { top: number; left: number }>>([]);
+
+  const collaborationExtensions = useMemo(() => (yDoc ? [YjsExtension.configure({ yDoc })] : []), [yDoc]);
 
   const editor = useEditor({
     extensions: [
@@ -48,6 +53,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       Placeholder.configure({
         placeholder: 'Start writing your note here...',
       }),
+      ...collaborationExtensions,
     ],
     content,
     editable: !readOnly,

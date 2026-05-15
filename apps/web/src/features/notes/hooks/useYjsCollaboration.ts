@@ -1,8 +1,23 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import * as awarenessProtocol from 'y-protocols/awareness';
 import { io, type Socket } from 'socket.io-client';
-import { useAuthStore, type UserProfile } from '../../auth/stores/auth.store';
+import { useAuthStore } from '../../auth/stores/auth.store';
+
+export type Collaborator = {
+  userId: string;
+  displayName: string;
+  color: string;
+};
+
+export type TypingParticipant = {
+  userId: string;
+  displayName: string;
+  color: string;
+  updatedAt: number;
+};
+
+export type PresenceParticipant = Collaborator;
 
 export type RemoteCursorState = {
   userId: string;
@@ -12,116 +27,246 @@ export type RemoteCursorState = {
   selection?: { anchor: number; head: number };
 };
 
-export type UseYjsCollaborationOptions = {
-  noteId: string;
-  onUpdate?: (update: number[]) => void;
-  onAwarenessUpdate?: (states: RemoteCursorState[]) => void;
+type UseYjsCollaborationOptions = {
+  noteId: string | null;
+  enabled: boolean;
+  onRemoteContentUpdate?: (data: {
+    userId: string;
+    content: string;
+    title?: string;
+    isPinned?: boolean;
+    isProtected?: boolean;
+    timestamp: number;
+  }) => void;
+  onRemoteCursor?: (data: RemoteCursorState) => void;
 };
+
+function getWsUrl(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const envUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_WS_URL;
+  if (envUrl) {
+    try {
+      const url = new URL(envUrl);
+      if (url.protocol === 'ws:') url.protocol = 'http:';
+      if (url.protocol === 'wss:') url.protocol = 'https:';
+      return url.origin;
+    } catch {
+      return envUrl.startsWith('ws://') ? envUrl.replace(/^ws:\/\//, 'http://') : envUrl.replace(/^wss:\/\//, 'https://');
+    }
+  }
+
+  const apiBaseUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_URL;
+  if (apiBaseUrl) {
+    try {
+      return new URL(apiBaseUrl).origin;
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  return `${window.location.protocol === 'https:' ? 'https' : 'http'}://${window.location.hostname}:4000`;
+}
 
 export function useYjsCollaboration({
   noteId,
-  onUpdate,
-  onAwarenessUpdate,
+  enabled,
+  onRemoteContentUpdate,
+  onRemoteCursor,
 }: UseYjsCollaborationOptions) {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [presenceParticipants, setPresenceParticipants] = useState<PresenceParticipant[]>([]);
+  const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([]);
+  const [remoteCursors, setRemoteCursors] = useState<RemoteCursorState[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+
   const socketRef = useRef<Socket | null>(null);
-  const yDocRef = useRef<Y.Doc | null>(null);
-  const awarenessRef = useRef<awarenessProtocol.Awareness | null>(null);
-  const pendingSyncRef = useRef<boolean>(false);
-  const user = useAuthStore((state: { user: UserProfile | null }) => state.user);
+  const yDocRef = useRef<Y.Doc>(new Y.Doc());
+  const awarenessRef = useRef<awarenessProtocol.Awareness>(new awarenessProtocol.Awareness(yDocRef.current));
+  const applyingRemoteUpdateRef = useRef(false);
+  const onRemoteContentUpdateRef = useRef(onRemoteContentUpdate);
+  const onRemoteCursorRef = useRef(onRemoteCursor);
+
+  onRemoteContentUpdateRef.current = onRemoteContentUpdate;
+  onRemoteCursorRef.current = onRemoteCursor;
 
   useEffect(() => {
-    if (!noteId || !user) {
+    if (!enabled || !noteId || !accessToken || !user) {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      setCollaborators([]);
+      setPresenceParticipants([]);
+      setTypingParticipants([]);
+      setRemoteCursors([]);
+      setIsConnected(false);
       return;
     }
 
-    // Initialize Yjs document
-    const yDoc = new Y.Doc();
-    yDocRef.current = yDoc;
+    const socket = io(`${getWsUrl()}/collaboration`, {
+      auth: { token: accessToken },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    });
 
-    // Initialize awareness
-    const awareness = new awarenessProtocol.Awareness(yDoc);
-    awarenessRef.current = awareness;
-
-    // Create Socket.IO connection
-    const socket = io(`http://${window.location.hostname}:4000`, {
-      auth: {
-        token: localStorage.getItem('accessToken') || '',
-      },
-      query: {
-        token: localStorage.getItem('accessToken') || '',
-      },
-      path: '/collaboration',
-    }) as Socket;
     socketRef.current = socket;
 
-    socket.on('connect', () => {
-      // Request full document state from server
-      const sv = Y.encodeStateVector(yDoc);
+    const yDoc = yDocRef.current;
+
+    const syncState = () => {
+      socket.emit('note:join', { noteId });
       socket.emit('yjs:sync-step-1', {
         noteId,
-        stateVector: Array.from(sv),
+        stateVector: Array.from(Y.encodeStateVector(yDoc)),
       });
-      pendingSyncRef.current = false;
+    };
+
+    const handleRemoteUpdate = (update: Uint8Array) => {
+      applyingRemoteUpdateRef.current = true;
+      try {
+        Y.applyUpdate(yDoc, update);
+      } finally {
+        applyingRemoteUpdateRef.current = false;
+      }
+    };
+
+    const handleDocUpdate = (update: Uint8Array) => {
+      if (applyingRemoteUpdateRef.current) {
+        return;
+      }
+
+      socket.emit('yjs:update', {
+        noteId,
+        update: Array.from(update),
+      });
+    };
+
+    socket.on('connect', () => {
+      setIsConnected(true);
+      syncState();
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+      setCollaborators([]);
+      setPresenceParticipants([]);
+      setTypingParticipants([]);
+      setRemoteCursors([]);
+    });
+
+    socket.on('collaborators:list', (list: Collaborator[]) => {
+      setCollaborators(list);
+      setPresenceParticipants(list);
+    });
+
+    socket.on('presence:list', (list: PresenceParticipant[]) => {
+      setPresenceParticipants(list);
+    });
+
+    socket.on('typing:list', (list: TypingParticipant[]) => {
+      setTypingParticipants(list);
+    });
+
+    socket.on('collaborator:joined', (collaborator: Collaborator) => {
+      setCollaborators((current) => (current.some((entry) => entry.userId === collaborator.userId) ? current : [...current, collaborator]));
+    });
+
+    socket.on('collaborator:left', (data: { userId: string }) => {
+      setCollaborators((current) => current.filter((entry) => entry.userId !== data.userId));
+      setPresenceParticipants((current) => current.filter((entry) => entry.userId !== data.userId));
+      setTypingParticipants((current) => current.filter((entry) => entry.userId !== data.userId));
+      setRemoteCursors((current) => current.filter((entry) => entry.userId !== data.userId));
+    });
+
+    socket.on('note:updated', (data: {
+      userId: string;
+      content: string;
+      title?: string;
+      isPinned?: boolean;
+      isProtected?: boolean;
+      timestamp: number;
+    }) => {
+      onRemoteContentUpdateRef.current?.(data);
     });
 
     socket.on('yjs:sync-step-2', (data: { noteId: string; update: number[] }) => {
       if (data.noteId === noteId) {
-        // Apply server's document state
-        Y.applyUpdate(yDoc, new Uint8Array(data.update));
-        pendingSyncRef.current = false;
+        handleRemoteUpdate(new Uint8Array(data.update));
       }
     });
 
     socket.on('yjs:update', (data: { noteId: string; update: number[] }) => {
       if (data.noteId === noteId) {
-        // Apply remote update
-        Y.applyUpdate(yDoc, new Uint8Array(data.update));
+        handleRemoteUpdate(new Uint8Array(data.update));
       }
     });
 
     socket.on('yjs:awareness:update', (data: { noteId: string; states: RemoteCursorState[] }) => {
-      if (data.noteId === noteId && onAwarenessUpdate) {
-        onAwarenessUpdate(data.states);
+      if (data.noteId !== noteId) {
+        return;
       }
+
+      setRemoteCursors(data.states);
+      data.states.forEach((cursor) => onRemoteCursorRef.current?.(cursor));
     });
 
-    // Listen to local document changes
-    const updateHandler = (update: Uint8Array) => {
-      if (!pendingSyncRef.current) {
-        pendingSyncRef.current = true;
-        // Send update to server
-        socket.emit('yjs:update', {
-          noteId,
-          update: Array.from(update),
-        });
-        if (onUpdate) {
-          onUpdate(Array.from(update));
-        }
-      }
-    };
-
-    yDoc.on('update', updateHandler);
-
-    // Listen to awareness changes
-    const awarenessUpdateHandler = () => {
-      if (onAwarenessUpdate) {
-        const states = Array.from(awareness.getStates().values()) as RemoteCursorState[];
-        onAwarenessUpdate(states);
-      }
-    };
-
-    awareness.on('update', awarenessUpdateHandler);
+    yDoc.on('update', handleDocUpdate);
 
     return () => {
-      yDoc.off('update', updateHandler);
-      awareness.off('update', awarenessUpdateHandler);
+      yDoc.off('update', handleDocUpdate);
+      socket.emit('note:leave');
       socket.disconnect();
+      socketRef.current = null;
+      setIsConnected(false);
+      setCollaborators([]);
+      setPresenceParticipants([]);
+      setTypingParticipants([]);
+      setRemoteCursors([]);
     };
-  }, [noteId, user, onUpdate, onAwarenessUpdate]);
+  }, [accessToken, enabled, noteId, user]);
+
+  const sendContentUpdate = (content: string, title?: string, metadata?: { isPinned?: boolean; isProtected?: boolean }) => {
+    if (socketRef.current?.connected && noteId) {
+      socketRef.current.emit('note:update', { noteId, content, title, ...metadata });
+    }
+  };
+
+  const sendCursorPosition = (position: number) => {
+    if (socketRef.current?.connected && noteId) {
+      socketRef.current.emit('yjs:awareness', {
+        noteId,
+        awareness: {
+          userId: user?.id ?? '',
+          displayName: user?.displayName ?? 'Anonymous',
+          color: '#3b82f6',
+          position,
+        },
+      });
+    }
+  };
+
+  const sendTypingState = (isTyping: boolean) => {
+    if (socketRef.current?.connected && noteId) {
+      socketRef.current.emit('note:typing', { noteId, isTyping });
+    }
+  };
 
   return {
+    collaborators,
+    presenceParticipants,
+    typingParticipants,
+    isConnected,
+    remoteCursors,
     yDoc: yDocRef.current,
     awareness: awarenessRef.current,
-    socket: socketRef.current,
+    sendContentUpdate,
+    sendCursorPosition,
+    sendTypingState,
   };
 }
