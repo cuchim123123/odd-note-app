@@ -525,15 +525,8 @@ export class NotesService {
     snapshot?: CollaborationSnapshot | null,
     yDocContent?: string,
   ): Promise<NoteResponse> {
-    let effectiveNote = this.mergeNoteWithSnapshot(note, snapshot);
-    
-    // If Yjs content is available, prefer it over snapshot
-    if (yDocContent !== undefined) {
-      effectiveNote = {
-        ...effectiveNote,
-        content: yDocContent,
-      };
-    }
+    const effectiveNote = this.mergeNoteWithSnapshot(note, snapshot);
+    const effectiveContent = yDocContent !== undefined ? yDocContent : effectiveNote.content ?? '';
 
     const protection = await this.prisma.noteProtection.findUnique({
       where: { userId_noteId: { userId: effectiveNote.userId, noteId: effectiveNote.id } },
@@ -543,7 +536,7 @@ export class NotesService {
     return {
       id: effectiveNote.id,
       title: effectiveNote.title,
-      content: effectiveNote.content ?? '',
+      content: effectiveContent,
       isPinned: effectiveNote.isPinned,
       isProtected: Boolean(protection),
       isShared: effectiveNote.isShared || effectiveNote.shares.length > 0 || Boolean(sharedAccess),

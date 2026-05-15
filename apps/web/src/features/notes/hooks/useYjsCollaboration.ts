@@ -84,10 +84,10 @@ export function useYjsCollaboration({
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([]);
   const [remoteCursors, setRemoteCursors] = useState<RemoteCursorState[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [yDoc, setYDoc] = useState<Y.Doc | null>(null);
+  const [awareness, setAwareness] = useState<awarenessProtocol.Awareness | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
-  const yDocRef = useRef<Y.Doc>(new Y.Doc());
-  const awarenessRef = useRef<awarenessProtocol.Awareness>(new awarenessProtocol.Awareness(yDocRef.current));
   const applyingRemoteUpdateRef = useRef(false);
   const onRemoteContentUpdateRef = useRef(onRemoteContentUpdate);
   const onRemoteCursorRef = useRef(onRemoteCursor);
@@ -104,8 +104,15 @@ export function useYjsCollaboration({
       setTypingParticipants([]);
       setRemoteCursors([]);
       setIsConnected(false);
+      setYDoc(null);
+      setAwareness(null);
       return;
     }
+
+    const nextYDoc = new Y.Doc();
+    const nextAwareness = new awarenessProtocol.Awareness(nextYDoc);
+    setYDoc(nextYDoc);
+    setAwareness(nextAwareness);
 
     const socket = io(`${getWsUrl()}/collaboration`, {
       auth: { token: accessToken },
@@ -117,20 +124,18 @@ export function useYjsCollaboration({
 
     socketRef.current = socket;
 
-    const yDoc = yDocRef.current;
-
     const syncState = () => {
       socket.emit('note:join', { noteId });
       socket.emit('yjs:sync-step-1', {
         noteId,
-        stateVector: Array.from(Y.encodeStateVector(yDoc)),
+        stateVector: Array.from(Y.encodeStateVector(nextYDoc)),
       });
     };
 
     const handleRemoteUpdate = (update: Uint8Array) => {
       applyingRemoteUpdateRef.current = true;
       try {
-        Y.applyUpdate(yDoc, update);
+        Y.applyUpdate(nextYDoc, update);
       } finally {
         applyingRemoteUpdateRef.current = false;
       }
@@ -216,10 +221,20 @@ export function useYjsCollaboration({
       data.states.forEach((cursor) => onRemoteCursorRef.current?.(cursor));
     });
 
-    yDoc.on('update', handleDocUpdate);
+    socket.on('yjs:awareness:list', (data: { noteId: string; states: RemoteCursorState[] }) => {
+      if (data.noteId !== noteId) {
+        return;
+      }
+
+      setRemoteCursors(data.states);
+    });
+
+    nextYDoc.on('update', handleDocUpdate);
 
     return () => {
-      yDoc.off('update', handleDocUpdate);
+      nextYDoc.off('update', handleDocUpdate);
+      nextYDoc.destroy();
+      nextAwareness.destroy();
       socket.emit('note:leave');
       socket.disconnect();
       socketRef.current = null;
@@ -228,10 +243,12 @@ export function useYjsCollaboration({
       setPresenceParticipants([]);
       setTypingParticipants([]);
       setRemoteCursors([]);
+      setYDoc(null);
+      setAwareness(null);
     };
   }, [accessToken, enabled, noteId, user]);
 
-  const sendContentUpdate = (content: string, title?: string, metadata?: { isPinned?: boolean; isProtected?: boolean }) => {
+  const sendContentUpdate = (content?: string, title?: string, metadata?: { isPinned?: boolean; isProtected?: boolean }) => {
     if (socketRef.current?.connected && noteId) {
       socketRef.current.emit('note:update', { noteId, content, title, ...metadata });
     }
@@ -263,8 +280,8 @@ export function useYjsCollaboration({
     typingParticipants,
     isConnected,
     remoteCursors,
-    yDoc: yDocRef.current,
-    awareness: awarenessRef.current,
+    yDoc,
+    awareness,
     sendContentUpdate,
     sendCursorPosition,
     sendTypingState,

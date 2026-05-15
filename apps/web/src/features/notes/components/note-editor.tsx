@@ -27,7 +27,7 @@ type NoteEditorProps = {
   collaborative?: boolean;
   remoteCursors?: RemoteCursor[];
   onCursorMove?: (position: number) => void;
-  yDoc?: Y.Doc;
+  yDoc?: Y.Doc | undefined;
 };
 
 export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, remoteCursors = [], onCursorMove, yDoc }: NoteEditorProps) {

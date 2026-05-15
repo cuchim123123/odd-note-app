@@ -496,7 +496,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
         return;
       }
 
-      sendContentUpdate(content, title, nextState);
+      sendContentUpdate(undefined, title, nextState);
     },
     [content, isCollaborativeNote, sendContentUpdate, title],
   );
@@ -723,7 +723,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                     currentNote ? { ...currentNote, title: nextTitle, updatedAt } : currentNote,
                   );
                 }
-                sendContentUpdate(content, nextTitle);
+                sendContentUpdate(undefined, nextTitle);
                 notifyTypingActivity();
               }}
               className="h-auto border-border/60 bg-white px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
@@ -1004,7 +1004,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             syncKey={note?.id ?? noteId}
             collaborative={Boolean(isCollaborativeNote)}
             remoteCursors={remoteCursors}
-            yDoc={yDoc}
+            yDoc={yDoc ?? undefined}
             {...(canEdit ? {
               onChange: (newContent: string) => {
                 setContent(newContent);
