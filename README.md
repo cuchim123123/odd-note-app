@@ -214,12 +214,57 @@ pnpm exec prisma generate
 - On reconnect, queued changes replay in order
 - Conflict resolution: server version wins on sync
 
+### Realtime Collaboration with Yjs CRDT
+
+As of this version, the application now uses **Yjs** (a high-performance CRDT) for realtime note collaboration:
+
+#### What is CRDT?
+
+- **Conflict-free Replicated Data Type**: a data structure where all replicas can be updated independently and will eventually converge to the same state
+- **No merge conflicts**: Yjs automatically resolves concurrent edits without server coordination
+- **Network-resilient**: works offline; changes sync when connection is restored
+
+#### Yjs Integration in odd-note-app
+
+- **Server-side**: `apps/api/src/collaboration/collaboration.gateway.ts`
+  - Maintains a Y.Doc per note
+  - Receives Yjs update messages via Socket.IO
+  - Persists document state to Redis for durability
+  - Broadcasts updates to all connected clients
+
+- **Client-side**: `apps/web/src/features/notes/hooks/useYjsCollaboration.ts`
+  - Creates a Y.Doc for each note
+  - Binds to TipTap editor via `y-prosemirror`
+  - Syncs updates bidirectionally with the server
+  - Tracks awareness state (cursor positions, selection) for remote user indicators
+
+- **Data Flow**:
+  1. Local edits → Y.Doc applies update locally
+  2. Update is sent to server via `yjs:update` event
+  3. Server applies update to its Y.Doc and persists to Redis
+  4. Server broadcasts update to other connected clients
+  5. Remote clients receive update and apply to their Y.Doc
+  6. Editor reflects merged state without conflicts
+
+#### Persistence & Recovery
+
+- When a user joins a note, the server sends the current document state via `yjs:sync-step-2`
+- State is persisted to Redis and loaded when the note is accessed again
+- API responses (`getById`, `list`, etc.) return the latest Yjs-persisted content if available
+
+#### Migration from Snapshots
+
+- The previous snapshot-based system is still supported as a fallback
+- New notes use Yjs; Yjs content takes precedence if both snapshot and Yjs state exist
+- To migrate existing notes, set the initial note content to the Yjs doc when the first realtime edit occurs
+
 ### Performance
 
 - Autosave uses 650ms debounce to reduce API calls
 - Live search uses 300ms debounce
 - Notes are paginated; lazy-loaded on scroll
 - Images are stored on MinIO; URLs are served via nginx
+- Yjs updates are small binary diffs, reducing network overhead
 
 ### Security
 
@@ -227,6 +272,7 @@ pnpm exec prisma generate
 - Password-protected notes: per-note encryption key derived from password
 - Share permissions validated server-side
 - JWTs expire after 15min (refresh tokens last 7 days)
+- Yjs collaboration requires authenticated Socket.IO connection
 
 ## 📄 License
 
