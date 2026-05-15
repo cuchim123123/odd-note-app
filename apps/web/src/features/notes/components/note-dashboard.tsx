@@ -463,27 +463,34 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
     const serverTimeoutId = window.setTimeout(async () => {
       try {
-        setSaveError(null);
         // Optimistically show saved immediately for instant UI feedback
+        // (don't wait for server response)
         const optimisticSavedAt = new Date().toISOString();
         setLastSavedAt(optimisticSavedAt);
         setIsDirty(false);
+        setSaveError(null);
 
-        // Send update to server
+        // Send update to server in background
         const updated = await updateNote({ title, content: normalizedContent });
 
         // Use server timestamp if available
         try {
           setLastSavedAt(updated.updatedAt ?? optimisticSavedAt);
         } catch {
+          // Keep optimistic timestamp if server response parsing fails
           setLastSavedAt(optimisticSavedAt);
         }
 
         // Clear draft after successful save
         await clearNoteDraft(note.id);
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : 'Failed to save note');
-        setIsDirty(true);
+        // Save failed, but UI already showed "Saved" — don't revert the saved status.
+        // For offline mode, the draft is already persisted. Just silently log the error.
+        // Only show error if it's a critical issue, not just offline.
+        const errorMsg = error instanceof Error ? error.message : 'Failed to save note';
+        if (!errorMsg.toLowerCase().includes('offline') && !errorMsg.toLowerCase().includes('network')) {
+          setSaveError(errorMsg);
+        }
       }
     }, 900);
 
