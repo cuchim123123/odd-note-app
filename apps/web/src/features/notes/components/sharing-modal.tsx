@@ -1,17 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { X, AlertTriangle, Loader2 } from 'lucide-react';
-import { revokeShareAccess } from '@/lib/api/notes';
 
 type SharingModalProps = {
   isOpen: boolean;
@@ -59,24 +50,24 @@ export function SharingModal({
     },
   });
 
-  const revokeMutation = useMutation({
-    mutationFn: (shareId: string) => revokeShareAccess(shareId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['note', noteId] });
-    },
-    onError: (err: Error | null) => {
-      console.warn('Failed to revoke access:', err?.message);
-    },
-  });
+  if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Share Note</DialogTitle>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-96 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="font-semibold text-lg">Share Note</h2>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-        <div className="space-y-4">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Share Input Section */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Invite via Email</label>
@@ -89,18 +80,14 @@ export function SharingModal({
                 disabled={shareMutation.isPending}
                 className="flex-1"
               />
-              <Select
+              <select
                 value={permission}
-                onValueChange={(v) => setPermission(v as 'READ' | 'EDIT')}
+                onChange={(e) => setPermission(e.target.value as 'READ' | 'EDIT')}
+                className="px-3 py-2 border rounded-md text-sm bg-white"
               >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="READ">View</SelectItem>
-                  <SelectItem value="EDIT">Edit</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="READ">View</option>
+                <option value="EDIT">Edit</option>
+              </select>
             </div>
 
             {error && (
@@ -131,27 +118,17 @@ export function SharingModal({
           {shares.length > 0 && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Shared With</label>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2">
                 {shares.map((share) => (
                   <div
                     key={share.id}
-                    className="flex items-center justify-between rounded-lg border bg-gray-50 p-2 text-sm"
+                    className="rounded-lg border bg-gray-50 p-2 text-sm"
                   >
-                    <div className="flex-1">
-                      <div className="font-medium">{share.email}</div>
-                      <div className="text-xs text-gray-500">
-                        {share.permission === 'READ' ? 'Can view' : 'Can edit'} •{' '}
-                        {new Date(share.sharedAt).toLocaleDateString()}
-                      </div>
+                    <div className="font-medium">{share.email}</div>
+                    <div className="text-xs text-gray-500">
+                      {share.permission === 'READ' ? 'Can view' : 'Can edit'} •{' '}
+                      {new Date(share.sharedAt).toLocaleDateString()}
                     </div>
-                    <button
-                      onClick={() => revokeMutation.mutate(share.id)}
-                      disabled={revokeMutation.isPending}
-                      className="p-1 hover:text-red-600 transition-colors"
-                      title="Revoke access"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
                   </div>
                 ))}
               </div>
@@ -165,7 +142,7 @@ export function SharingModal({
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
