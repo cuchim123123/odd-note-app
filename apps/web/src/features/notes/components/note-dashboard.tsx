@@ -487,12 +487,30 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     const timeoutId = window.setTimeout(async () => {
       try {
         setSaveError(null);
-        const updated = await updateNote({ title, content: normalizedContent });
-        setLastSavedAt(updated.updatedAt);
+        // Optimistically show the note as saved immediately (align UI with
+        // collaborative flow). The mutation performs optimistic cache updates
+        // already; set `lastSavedAt` to now so the user sees instant feedback.
+        const optimisticSavedAt = new Date().toISOString();
+        setLastSavedAt(optimisticSavedAt);
         setIsDirty(false);
+
+        const updated = await updateNote({ title, content: normalizedContent });
+
+        // Prefer authoritative server timestamp when available, otherwise keep
+        // the optimistic timestamp we already showed.
+        try {
+          setLastSavedAt(updated.updatedAt ?? optimisticSavedAt);
+        } catch {
+          setLastSavedAt(optimisticSavedAt);
+        }
+
         await clearNoteDraft(note.id);
+        // clear any previous save error
+        setSaveError(null);
       } catch (error) {
         setSaveError(error instanceof Error ? error.message : 'Failed to save note');
+        // If save failed, mark as dirty so user sees pending changes
+        setIsDirty(true);
       }
     }, 900);
 
