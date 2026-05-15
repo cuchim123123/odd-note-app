@@ -34,7 +34,7 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile.dev
-    command: sh -lc "pnpm --filter @odd-note-app/api prisma:generate && pnpm --filter @odd-note-app/api dev"
+    command: sh -lc "pnpm --filter @odd-note-app/validation build && pnpm --filter @odd-note-app/api prisma:generate && pnpm --filter @odd-note-app/api dev"
     environment:
       CHOKIDAR_USEPOLLING: 'true'
       NODE_ENV: development
@@ -70,7 +70,7 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile.dev
-    command: sh -lc "pnpm --filter @odd-note-app/web dev --host 0.0.0.0 --strictPort --port 5174"
+    command: sh -lc "pnpm --filter @odd-note-app/validation build && pnpm --filter @odd-note-app/web dev --host 0.0.0.0 --strictPort --port 5174"
     environment:
       CHOKIDAR_USEPOLLING: 'true'
       VITE_API_URL: http://localhost:4000/api

@@ -9,7 +9,7 @@ export type UserProfile = {
   isEmailVerified: boolean;
 };
 
-interface AuthState {
+export interface AuthState {
   user: UserProfile | null;
   accessToken: string | null;
   refreshToken: string | null;

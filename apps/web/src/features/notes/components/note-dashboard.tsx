@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useNote,
@@ -22,7 +23,7 @@ import { NoteList } from './note-list';
 import { NoteEditor } from './note-editor';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { ChevronLeft, Grid2x2, List, Trash2, FileEdit, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock, Users, Share2, X } from 'lucide-react';
+import { ChevronLeft, Grid2x2, List, Trash2, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock, Users, Share2, X } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { appendImageToContent } from '../utils/attachments';
 import { api } from '../../../lib/axios';
@@ -36,7 +37,21 @@ export function NoteDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
 
+  const navigate = useNavigate();
+  const params = useParams();
+
+  // Keep selectedNoteId in sync with route param when present
+  useEffect(() => {
+    const routeNoteId = params.noteId ?? null;
+    if (routeNoteId && routeNoteId !== selectedNoteId) {
+      setSelectedNoteId(routeNoteId);
+      setMobileView('editor');
+    }
+  }, [params.noteId, selectedNoteId]);
+
   const handleSelectNote = (id: string) => {
+    // Navigate to per-note route; this keeps browser history and deep links working
+    navigate(`/notes/${id}`);
     setSelectedNoteId(id);
     setMobileView('editor');
   };
@@ -44,6 +59,8 @@ export function NoteDashboard() {
   const handleDeleteSelectedNote = () => {
     setSelectedNoteId(null);
     setMobileView('list');
+    // Remove route when note is deleted so URL doesn't point to a missing note
+    navigate('/');
   };
 
   return (
@@ -103,22 +120,17 @@ export function NoteDashboard() {
       </div>
 
       <div className="hidden min-h-0 flex-1 overflow-hidden rounded-xl border bg-card shadow-sm lg:flex">
-        <div className="w-full shrink-0 border-r lg:w-[22rem]">
-          <NoteList selectedNoteId={selectedNoteId} onSelectNote={handleSelectNote} viewMode={viewMode} />
-        </div>
-
-        <div className="relative flex-1 overflow-hidden bg-background">
-          {selectedNoteId ? (
+        {selectedNoteId ? (
+          // When a note is selected, show only the editor/detail view (full width)
+          <div className="relative flex-1 overflow-hidden bg-background">
             <NoteDetailView noteId={selectedNoteId} onDeleted={handleDeleteSelectedNote} />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center px-6 text-center text-muted-foreground">
-              <div className="mb-4 rounded-full bg-muted/30 p-6">
-                <FileEdit className="h-10 w-10 text-muted-foreground/50" />
-              </div>
-              <p className="max-w-sm">Select a note from the sidebar or create a new one.</p>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          // When no note is selected, show only the list (full width)
+          <div className="w-full">
+            <NoteList selectedNoteId={selectedNoteId} onSelectNote={handleSelectNote} viewMode={viewMode} />
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 lg:hidden">
@@ -264,9 +276,11 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const isSharedNote = noteAccessMode === 'shared';
   const canEditContent = !isSharedNote || sharedPermission === 'EDIT';
   const canManageShares = noteAccessMode === 'owner';
+  // Collaborative notes should let Yjs own the document body instead of HTML drafts/autosave.
+  const isCollaborativeNote = (isSharedNote && sharedPermission === 'EDIT') || (note?.isShared && canManageShares);
 
   useEffect(() => {
-    if (!note || !canEditContent) {
+    if (!note || !canEditContent || isCollaborativeNote) {
       return;
     }
 
@@ -301,12 +315,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     return () => {
       isCancelled = true;
     };
-  }, [canEditContent, note]);
+  }, [canEditContent, isCollaborativeNote, note]);
 
-  const canAutosave = !!note && !isLoading && canEditContent;
-
-  // Real-time collaboration: connect when this is a shared EDIT note
-  const isCollaborativeNote = (isSharedNote && sharedPermission === 'EDIT') || (note?.isShared && canManageShares);
+  const canAutosave = !!note && !isLoading && canEditContent && !isCollaborativeNote;
 
   const handleRemoteContentUpdate = useCallback(
     (data: { userId: string; content: string; title?: string; isPinned?: boolean; isProtected?: boolean }) => {
@@ -410,19 +421,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       setRemoteCursors([]);
     }
   }, [isCollaborativeNote]);
-
-  // Initialize Y.Doc with the loaded note content
-  useEffect(() => {
-    if (!yDoc || !note || !isCollaborativeNote) {
-      return;
-    }
-
-    const yText = yDoc.getText('prosemirror');
-    if (yText.length === 0 && note.content) {
-      // Only initialize if Y.Doc is empty and we have content from server
-      yText.insert(0, note.content);
-    }
-  }, [yDoc, note, isCollaborativeNote]);
 
   useEffect(() => {
     if (!canAutosave || !note) {
@@ -1023,6 +1021,15 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                 setContent(newContent);
                 // Broadcast to collaborators unless this change came from a remote update
                 if (!isRemoteUpdateRef.current && isCollaborativeNote) {
+                  // Send the HTML content to the collaboration endpoint so the server
+                  // doesn't observe an empty Y.Doc and persist it before the client
+                  // has had a chance to seed or receive the authoritative state.
+                  try {
+                    sendContentUpdate(newContent);
+                  } catch {
+                    // best-effort — don't block the editor if send fails
+                  }
+
                   notifyTypingActivity();
                 }
               },

@@ -24,6 +24,10 @@ export const router = createBrowserRouter([
         element: <NoteDashboard />,
       },
       {
+        path: 'notes/:noteId',
+        element: <NoteDashboard />,
+      },
+      {
         path: 'settings',
         element: <SettingsPage />,
       },

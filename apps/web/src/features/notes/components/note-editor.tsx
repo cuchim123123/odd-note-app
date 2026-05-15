@@ -34,6 +34,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const lastLocalCursorPositionRef = useRef<number | null>(null);
+  const seededCollaborativeContentRef = useRef<string | null>(null);
   const [remoteCursorAnchors, setRemoteCursorAnchors] = useState<Array<RemoteCursor & { top: number; left: number }>>([]);
 
   const collaborationExtensions = useMemo(() => (yDoc ? [YjsExtension.configure({ yDoc })] : []), [yDoc]);
@@ -98,6 +99,25 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     }
   }, [editor, readOnly]);
 
+  useEffect(() => {
+    if (!editor || !yDoc || !collaborative) {
+      return;
+    }
+
+    const fragment = yDoc.getXmlFragment('prosemirror');
+    if (fragment.length > 0) {
+      seededCollaborativeContentRef.current = null;
+      return;
+    }
+
+    if (!content || seededCollaborativeContentRef.current === content) {
+      return;
+    }
+
+    seededCollaborativeContentRef.current = content;
+    editor.commands.setContent(content, false);
+  }, [collaborative, content, editor, yDoc]);
+
   const recalculateRemoteCursorAnchors = useCallback(() => {
     if (!editorContainerRef.current || !editor) {
       setRemoteCursorAnchors([]);
@@ -141,6 +161,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
 
   useEffect(() => {
     lastLocalCursorPositionRef.current = null;
+    seededCollaborativeContentRef.current = null;
   }, [syncKey]);
 
   const lastSyncKeyRef = useRef<string | null>(null);
@@ -176,21 +197,14 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
 
     if (syncKeyChanged) {
       lastSyncKeyRef.current = syncKey ?? null;
-      editor.commands.setContent(content, false);
+      if (!collaborative) {
+        editor.commands.setContent(content, false);
+      }
       return;
     }
 
-    if (collaborative && content !== editor.getHTML()) {
-      const { from, to } = editor.state.selection;
+    if (!collaborative && content !== editor.getHTML()) {
       editor.commands.setContent(content, false);
-      const maxPos = editor.state.doc.content.size;
-      const safeFrom = Math.min(from, maxPos);
-      const safeTo = Math.min(to, maxPos);
-      try {
-        editor.commands.setTextSelection({ from: safeFrom, to: safeTo });
-      } catch {
-        // ignore if position is invalid after content change
-      }
     }
   }, [editor, content, syncKey, collaborative]);
 

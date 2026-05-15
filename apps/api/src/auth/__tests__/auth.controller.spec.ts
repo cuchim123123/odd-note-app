@@ -129,7 +129,7 @@ describe('AuthController', () => {
 
     authService.getCurrentUser.mockResolvedValue(expectedResult);
 
-    const result = await controller.me({ sub: 'user-1', type: 'access' });
+    const result = await controller.me('user-1');
 
     expect(authService.getCurrentUser).toHaveBeenCalledWith('user-1');
     expect(result).toEqual(expectedResult);

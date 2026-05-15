@@ -148,6 +148,10 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
 
   async handleConnection(client: Socket): Promise<void> {
     try {
+      client.onAny((event, ...args) => {
+        this.logger.log(`Socket ${client.id} event ${event} payload=${JSON.stringify(args[0] ?? null)}`);
+      });
+
       const token = this.extractToken(client);
       if (!token) {
         this.logger.warn(`Client ${client.id} connected without token — disconnecting`);

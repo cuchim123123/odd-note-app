@@ -8,7 +8,6 @@ import { PasswordResetService } from './password-reset.service';
 import type { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { AccessTokenGuard } from './access-token.guard';
 import { CurrentUser } from './current-user.decorator';
-import type { AccessTokenPayload } from './auth.types';
 
 @Controller('auth')
 export class AuthController {
@@ -37,24 +36,24 @@ export class AuthController {
 
   @UseGuards(AccessTokenGuard)
   @Get('me')
-  async me(@CurrentUser() user: AccessTokenPayload) {
-    return await this.authService.getCurrentUser(user.sub!);
+  async me(@CurrentUser() userId: string) {
+    return await this.authService.getCurrentUser(userId);
   }
 
   @UseGuards(AccessTokenGuard)
   @Patch('profile')
-  async updateProfile(@CurrentUser() user: AccessTokenPayload, @Body() input: { displayName: string }) {
-    return await this.authService.updateProfile(user.sub!, input);
+  async updateProfile(@CurrentUser() userId: string, @Body() input: { displayName: string }) {
+    return await this.authService.updateProfile(userId, input);
   }
 
   @Post('refresh')
   async refresh(@Body() input: RefreshTokenDto) {
-    return await this.authService.refresh(input.refreshToken);
+    return await this.authService.refresh(input.refreshToken!);
   }
 
   @Post('logout')
   async logout(@Body() input: RefreshTokenDto) {
-    await this.authService.logout(input.refreshToken);
+    await this.authService.logout(input.refreshToken!);
     return { success: true };
   }
 

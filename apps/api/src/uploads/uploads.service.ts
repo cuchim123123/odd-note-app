@@ -3,6 +3,10 @@ import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand, Get
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 @Injectable()
 export class UploadsService {
   private readonly logger = new Logger(UploadsService.name);
@@ -40,11 +44,14 @@ export class UploadsService {
       this.logger.log(`Bucket '${this.bucket}' already exists`);
     } catch (err) {
       this.logger.log(`Bucket '${this.bucket}' not found or MinIO not ready; attempting to create...`);
+      this.logger.debug(`HeadBucket error: ${getErrorMessage(err)}`);
       try {
         await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
         this.logger.log(`Bucket '${this.bucket}' created`);
       } catch (createErr) {
-        this.logger.error(`Failed to create bucket '${this.bucket}'. MinIO might not be fully initialized yet.`);
+        this.logger.error(
+          `Failed to create bucket '${this.bucket}'. MinIO might not be fully initialized yet. Error: ${getErrorMessage(createErr)}`,
+        );
         // Don't throw the error, allow the app to start. MinIO uploads might fail until it's ready.
       }
     }
