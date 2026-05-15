@@ -411,6 +411,19 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     }
   }, [isCollaborativeNote]);
 
+  // Initialize Y.Doc with the loaded note content
+  useEffect(() => {
+    if (!yDoc || !note || !isCollaborativeNote) {
+      return;
+    }
+
+    const yText = yDoc.getText('prosemirror');
+    if (yText.length === 0 && note.content) {
+      // Only initialize if Y.Doc is empty and we have content from server
+      yText.insert(0, note.content);
+    }
+  }, [yDoc, note, isCollaborativeNote]);
+
   useEffect(() => {
     if (!canAutosave || !note) {
       return;

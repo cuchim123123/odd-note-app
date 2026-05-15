@@ -55,21 +55,21 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       }),
       ...collaborationExtensions,
     ],
-    content,
+    ...(yDoc ? {} : { content }),
     editable: !readOnly,
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor: ed }) => {
       if (onChange) {
-        onChange(editor.getHTML());
+        onChange(ed.getHTML());
       }
 
-      const selectionPosition = editor.state.selection.from;
+      const selectionPosition = ed.state.selection.from;
       if (!readOnly && collaborative && onCursorMove && lastLocalCursorPositionRef.current !== selectionPosition) {
         lastLocalCursorPositionRef.current = selectionPosition;
         onCursorMove(selectionPosition);
       }
     },
-    onSelectionUpdate: ({ editor }) => {
-      const selectionPosition = editor.state.selection.from;
+    onSelectionUpdate: ({ editor: ed }) => {
+      const selectionPosition = ed.state.selection.from;
       if (!readOnly && collaborative && onCursorMove && lastLocalCursorPositionRef.current !== selectionPosition) {
         lastLocalCursorPositionRef.current = selectionPosition;
         onCursorMove(selectionPosition);
