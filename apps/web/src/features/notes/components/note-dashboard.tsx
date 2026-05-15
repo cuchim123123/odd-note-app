@@ -433,40 +433,8 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     }
   }, [isCollaborativeNote]);
 
-  useEffect(() => {
-    if (!canAutosave || !note) {
-      return;
-    }
-
-    const hasChanges =
-      title !== note.title ||
-      normalizeNoteHtml(content) !== normalizeNoteHtml(note.content || '');
-    setIsDirty(hasChanges);
-  }, [canAutosave, content, note, title]);
-
-  useEffect(() => {
-    if (!canAutosave || !note) {
-      return;
-    }
-
-    if (isHydratingFromServerRef.current) {
-      return;
-    }
-
-    const hasChanges =
-      title !== note.title ||
-      normalizeNoteHtml(content) !== normalizeNoteHtml(note.content || '');
-    if (!hasChanges) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void saveNoteDraft(note.id, title, normalizeNoteHtml(content));
-    }, 500);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [canAutosave, content, note, title]);
-
+  // Unified autosave: detects changes and saves both locally (draft) and remotely (server)
+  // Updates dirty flag and lastSavedAt for consistent UI feedback.
   useEffect(() => {
     if (!canAutosave || !note) {
       return;
@@ -480,41 +448,49 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     const hasChanges =
       title !== note.title ||
       normalizedContent !== normalizeNoteHtml(note.content || '');
+
     if (!hasChanges) {
+      setIsDirty(false);
       return;
     }
 
-    const timeoutId = window.setTimeout(async () => {
+    setIsDirty(true);
+
+    // Save draft locally after 500ms, then save to server after 900ms
+    const draftTimeoutId = window.setTimeout(() => {
+      void saveNoteDraft(note.id, title, normalizedContent);
+    }, 500);
+
+    const serverTimeoutId = window.setTimeout(async () => {
       try {
         setSaveError(null);
-        // Optimistically show the note as saved immediately (align UI with
-        // collaborative flow). The mutation performs optimistic cache updates
-        // already; set `lastSavedAt` to now so the user sees instant feedback.
+        // Optimistically show saved immediately for instant UI feedback
         const optimisticSavedAt = new Date().toISOString();
         setLastSavedAt(optimisticSavedAt);
         setIsDirty(false);
 
+        // Send update to server
         const updated = await updateNote({ title, content: normalizedContent });
 
-        // Prefer authoritative server timestamp when available, otherwise keep
-        // the optimistic timestamp we already showed.
+        // Use server timestamp if available
         try {
           setLastSavedAt(updated.updatedAt ?? optimisticSavedAt);
         } catch {
           setLastSavedAt(optimisticSavedAt);
         }
 
+        // Clear draft after successful save
         await clearNoteDraft(note.id);
-        // clear any previous save error
-        setSaveError(null);
       } catch (error) {
         setSaveError(error instanceof Error ? error.message : 'Failed to save note');
-        // If save failed, mark as dirty so user sees pending changes
         setIsDirty(true);
       }
     }, 900);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      window.clearTimeout(draftTimeoutId);
+      window.clearTimeout(serverTimeoutId);
+    };
   }, [canAutosave, content, note, title, updateNote]);
 
   const saveStatus = useMemo(() => {
