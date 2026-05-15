@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import * as Y from 'yjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../common/mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
@@ -81,6 +82,12 @@ type CollaborationSnapshot = {
   updatedAt: string;
 };
 
+type YDocState = {
+  stateVector: number[];
+  updates: Array<number[]>;
+  timestamp: number;
+};
+
 @Injectable()
 export class NotesService {
   constructor(
@@ -97,7 +104,11 @@ export class NotesService {
     });
 
     return await Promise.all(
-      notes.map(async (note: NoteWithShares) => this.toResponse(note, undefined, await this.readCollaborationSnapshot(note.id))),
+      notes.map(async (note: NoteWithShares) => {
+        const yDocContent = await this.readYDocContent(note.id);
+        const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(note.id);
+        return this.toResponse(note, undefined, snapshot, yDocContent ?? undefined);
+      }),
     );
   }
 
@@ -113,7 +124,11 @@ export class NotesService {
     });
 
     return await Promise.all(
-      sharedNotes.map(async (share: ShareRecordWithRelations) => this.toSharedResponse(share, await this.readCollaborationSnapshot(share.note.id))),
+      sharedNotes.map(async (share: ShareRecordWithRelations) => {
+        const yDocContent = await this.readYDocContent(share.note.id);
+        const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(share.note.id);
+        return this.toSharedResponse(share, snapshot, yDocContent ?? undefined);
+      }),
     );
   }
 
@@ -135,10 +150,14 @@ export class NotesService {
       include: { owner: { select: { id: true, email: true, displayName: true } } },
     });
 
+    const yDocContent = await this.readYDocContent(noteId);
+    const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(noteId);
+
     return await this.toResponse(
       note as NoteWithShares,
       sharedAccess ? { permission: sharedAccess.permission, owner: sharedAccess.owner, createdAt: sharedAccess.createdAt } : undefined,
-      await this.readCollaborationSnapshot(noteId),
+      snapshot,
+      yDocContent ?? undefined,
     );
   }
 
@@ -154,7 +173,9 @@ export class NotesService {
     });
 
     const noteWithShares = note as NoteWithShares;
-    return await this.toResponse(noteWithShares, undefined, await this.readCollaborationSnapshot(note.id));
+    const yDocContent = await this.readYDocContent(note.id);
+    const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(note.id);
+    return await this.toResponse(noteWithShares, undefined, snapshot, yDocContent ?? undefined);
   }
 
   async update(
@@ -199,7 +220,9 @@ export class NotesService {
 
     const noteWithShares = note as NoteWithShares;
     await this.persistCollaborationSnapshot(noteWithShares);
-    return await this.toResponse(noteWithShares, undefined, await this.readCollaborationSnapshot(note.id));
+    const yDocContent = await this.readYDocContent(note.id);
+    const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(note.id);
+    return await this.toResponse(noteWithShares, undefined, snapshot, yDocContent ?? undefined);
   }
 
   async delete(userId: string, noteId: string): Promise<void> {
@@ -213,7 +236,10 @@ export class NotesService {
       this.prisma.note.delete({ where: { id: noteId } }),
     ]);
 
-    await this.clearCollaborationSnapshot(noteId);
+    await Promise.all([
+      this.clearCollaborationSnapshot(noteId),
+      this.clearYDocState(noteId),
+    ]);
   }
 
   async listShares(userId: string, noteId: string): Promise<NoteShareResponse[]> {
@@ -497,8 +523,18 @@ export class NotesService {
     note: NoteWithShares,
     sharedAccess?: { permission: SharePermission; owner: SharedByProfile; createdAt: Date },
     snapshot?: CollaborationSnapshot | null,
+    yDocContent?: string,
   ): Promise<NoteResponse> {
-    const effectiveNote = this.mergeNoteWithSnapshot(note, snapshot);
+    let effectiveNote = this.mergeNoteWithSnapshot(note, snapshot);
+    
+    // If Yjs content is available, prefer it over snapshot
+    if (yDocContent !== undefined) {
+      effectiveNote = {
+        ...effectiveNote,
+        content: yDocContent,
+      };
+    }
+
     const protection = await this.prisma.noteProtection.findUnique({
       where: { userId_noteId: { userId: effectiveNote.userId, noteId: effectiveNote.id } },
       select: { id: true },
@@ -521,12 +557,12 @@ export class NotesService {
     };
   }
 
-  private async toSharedResponse(share: ShareRecordWithRelations, snapshot?: CollaborationSnapshot | null): Promise<SharedNoteResponse> {
+  private async toSharedResponse(share: ShareRecordWithRelations, snapshot?: CollaborationSnapshot | null, yDocContent?: string): Promise<SharedNoteResponse> {
     const note = await this.toResponse(share.note, {
       permission: share.permission,
       owner: share.owner,
       createdAt: share.createdAt,
-    }, snapshot);
+    }, snapshot, yDocContent);
 
     return {
       ...note,
@@ -587,5 +623,55 @@ export class NotesService {
 
   private async clearCollaborationSnapshot(noteId: string): Promise<void> {
     await this.redis.getClient().del(this.collaborationSnapshotKey(noteId));
+  }
+
+  // ============ Yjs State Helpers ============
+
+  private yDocKey(noteId: string): string {
+    return `collab:ydoc:${noteId}`;
+  }
+
+  private async readYDocState(noteId: string): Promise<YDocState | null> {
+    try {
+      const value = await this.redis.getClient().get(this.yDocKey(noteId));
+      if (!value) {
+        return null;
+      }
+
+      return JSON.parse(value) as YDocState;
+    } catch {
+      return null;
+    }
+  }
+
+  private async readYDocContent(noteId: string): Promise<string | null> {
+    try {
+      const yDocState = await this.readYDocState(noteId);
+      if (!yDocState) {
+        return null;
+      }
+
+      // Reconstruct Y.Doc from persisted state
+      const yDoc = new Y.Doc();
+      if (yDocState.updates && yDocState.updates.length > 0) {
+        for (const update of yDocState.updates) {
+          Y.applyUpdate(yDoc, new Uint8Array(update));
+        }
+      }
+
+      // Extract text content
+      const yText = yDoc.getText('content');
+      return yText.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  private async clearYDocState(noteId: string): Promise<void> {
+    try {
+      await this.redis.getClient().del(this.yDocKey(noteId));
+    } catch {
+      // Silently fail on cleanup
+    }
   }
 }
