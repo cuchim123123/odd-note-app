@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import * as Y from 'yjs';
 import * as awarenessProtocol from 'y-protocols/awareness';
-import { io, Socket } from 'socket.io-client';
-import { useAuthStore } from '../../../stores/auth.store';
+import { io, type Socket } from 'socket.io-client';
+import { useAuthStore, type UserProfile } from '../../auth/stores/auth.store';
 
 export type RemoteCursorState = {
   userId: string;
@@ -27,7 +27,7 @@ export function useYjsCollaboration({
   const yDocRef = useRef<Y.Doc | null>(null);
   const awarenessRef = useRef<awarenessProtocol.Awareness | null>(null);
   const pendingSyncRef = useRef<boolean>(false);
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state: { user: UserProfile | null }) => state.user);
 
   useEffect(() => {
     if (!noteId || !user) {
@@ -43,18 +43,15 @@ export function useYjsCollaboration({
     awarenessRef.current = awareness;
 
     // Create Socket.IO connection
-    const socket = io(
-      process.env.VITE_API_URL || `http://${window.location.hostname}:4000`,
-      {
-        auth: {
-          token: localStorage.getItem('accessToken') || '',
-        },
-        query: {
-          token: localStorage.getItem('accessToken') || '',
-        },
-        namespace: '/collaboration',
-      }
-    );
+    const socket = io(`http://${window.location.hostname}:4000`, {
+      auth: {
+        token: localStorage.getItem('accessToken') || '',
+      },
+      query: {
+        token: localStorage.getItem('accessToken') || '',
+      },
+      path: '/collaboration',
+    }) as Socket;
     socketRef.current = socket;
 
     socket.on('connect', () => {

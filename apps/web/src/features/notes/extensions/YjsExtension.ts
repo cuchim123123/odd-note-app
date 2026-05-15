@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core';
 import * as Y from 'yjs';
-import { yXmlFragmentToProseMirrorRootNode, proseMirrorToYXmlFragment } from 'y-prosemirror';
+import { yXmlFragmentToProseMirrorRootNode, prosemirrorToYXmlFragment } from 'y-prosemirror';
 
 declare global {
   interface Window {
@@ -43,9 +43,7 @@ export const YjsExtension = Extension.create<YjsExtensionOptions>({
     // Initialize with existing content if available
     const editor = this.editor;
     try {
-      const pmNode = yXmlFragmentToProseMirrorRootNode(yDoc, yXmlFragment, {
-        mapping: this.options.mapping,
-      });
+      const pmNode = yXmlFragmentToProseMirrorRootNode(yXmlFragment, editor.schema);
 
       if (pmNode && pmNode.content.size > 0) {
         // Document has content from Yjs, use it
@@ -66,12 +64,7 @@ export const YjsExtension = Extension.create<YjsExtensionOptions>({
     const editor = this.editor;
 
     try {
-      proseMirrorToYXmlFragment(
-        editor.state.doc,
-        yXmlFragment,
-        this.options.mapping,
-        yDoc.clientID
-      );
+      prosemirrorToYXmlFragment(editor.state.doc, yXmlFragment);
     } catch (error) {
       console.warn('YjsExtension: Failed to sync content to Y.Doc', error);
     }
