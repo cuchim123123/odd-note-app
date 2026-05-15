@@ -349,7 +349,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const canAutosave = !!note && !isLoading && canEditContent && !isCollaborativeNote;
 
   const handleRemoteContentUpdate = useCallback(
-    (data: { userId: string; content: string; title?: string; isPinned?: boolean; isProtected?: boolean }) => {
+    (data: { userId: string; content: string; title?: string; isPinned?: boolean; isProtected?: boolean; timestamp?: number | string }) => {
       isRemoteUpdateRef.current = true;
       if (data.title !== undefined) {
         setTitle(data.title);
@@ -374,6 +374,16 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       }
 
       setContent(data.content);
+      // Update saved-at timestamp when a remote update arrives so the UI
+      // reflects the correct last-saved time (fixes frozen "Saved [time]").
+      try {
+        const ts = data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString();
+        setLastSavedAt(ts);
+        setIsDirty(false);
+        setSaveError(null);
+      } catch {
+        // ignore timestamp parse errors
+      }
       // Let the flag reset after the next render cycle so the onChange handler
       // doesn't re-broadcast this change.
       requestAnimationFrame(() => {
