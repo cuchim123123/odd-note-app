@@ -49,6 +49,8 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [remoteCursors, setRemoteCursors] = useState<Array<{ userId: string; displayName: string; color: string; position: number }>>([]);
   const isRemoteUpdateRef = useRef(false);
+  const draftTimeoutRef = useRef<NodeJS.Timeout>();
+  const serverTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Initialize from note
   useEffect(() => {
@@ -104,11 +106,10 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
   const canEditContent = !isSharedNote || sharedPermission === 'EDIT';
   const canManageShares = !isSharedNote;
   const isCollaborativeNote = (isSharedNote && sharedPermission === 'EDIT') || (note?.isShared && canManageShares);
-  const canAutosave = !!note && !isLoading && canEditContent && !isCollaborativeNote;
 
-  // UNIFIED AUTOSAVE
+  // AGGRESSIVE AUTOSAVE: Always save immediately to IndexedDB, then to server
   useEffect(() => {
-    if (!canAutosave || !note) return;
+    if (!note || isLoading || !canEditContent) return;
 
     const normalized = normalizeNoteHtml(content);
     const changed = title !== note.title || normalized !== normalizeNoteHtml(note.content || '');
@@ -118,35 +119,59 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
       return;
     }
 
+    // Set dirty immediately
     setIsDirty(true);
     setSaveError(null);
 
-    const draftId = window.setTimeout(() => {
-      void saveNoteDraft(note.id, title, normalized);
-    }, 500);
+    // SAVE DRAFT TO INDEXEDDB IMMEDIATELY (no delay!)
+    void saveNoteDraft(note.id, title, normalized).catch(() => {
+      console.warn('Draft save failed');
+    });
 
-    const serverId = window.setTimeout(async () => {
-      const optTime = new Date().toISOString();
-      setLastSavedAt(optTime);
-      setIsDirty(false);
+    // Clear previous timeouts
+    if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
 
-      try {
-        const upd = await updateNote({ title, content: normalized });
-        setLastSavedAt(upd.updatedAt || optTime);
-        await clearNoteDraft(note.id);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Failed';
-        if (!msg.toLowerCase().includes('offline') && !msg.toLowerCase().includes('network')) {
-          setSaveError(msg);
+    if (isCollaborativeNote) {
+      // For collaborative notes: send via Yjs
+      serverTimeoutRef.current = setTimeout(() => {
+        try {
+          sendContentUpdate(normalized);
+        } catch {
+          // Handle error silently
         }
-      }
-    }, 900);
+      }, 300);
+    } else {
+      // For solo notes: save to server immediately with optimistic UI
+      serverTimeoutRef.current = setTimeout(async () => {
+        const optTime = new Date().toISOString();
+        setLastSavedAt(optTime);
+        setIsDirty(false);
+
+        try {
+          const upd = await updateNote({ title, content: normalized });
+          setLastSavedAt(upd.updatedAt || optTime);
+          // Only clear draft if server save succeeds
+          await clearNoteDraft(note.id).catch(() => {
+            console.warn('Failed to clear draft');
+          });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'Failed';
+          // Only show error if it's not a network error (those are expected when offline)
+          if (!msg.toLowerCase().includes('offline') && !msg.toLowerCase().includes('network') && !msg.toLowerCase().includes('connect')) {
+            setSaveError(msg);
+          }
+          // Keep draft in IndexedDB on any error - user can recover on reload
+          console.warn('Server save failed, draft preserved:', msg);
+        }
+      }, 300);
+    }
 
     return () => {
-      window.clearTimeout(draftId);
-      window.clearTimeout(serverId);
+      if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+      if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
     };
-  }, [canAutosave, content, note, title, updateNote]);
+  }, [content, note, title, updateNote, isCollaborativeNote, isLoading, canEditContent]);
 
   const handleRemoteContentUpdate = useCallback((d: { userId: string; content: string; title?: string; isPinned?: boolean; isProtected?: boolean; timestamp?: string | number }) => {
     isRemoteUpdateRef.current = true;
@@ -178,7 +203,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
     });
   }, []);
 
-  const { collaborators, presenceParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, yDoc } = useYjsCollaboration({
+  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, yDoc } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
@@ -232,7 +257,6 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
         saveError={saveError}
         isCollaborativeNote={isCollaborativeNote}
         isWsConnected={isWsConnected}
-        collaborators={collaborators}
         presenceParticipants={presenceParticipants}
         canEditContent={canEditContent}
         canManageShares={canManageShares}
