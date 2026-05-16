@@ -49,7 +49,7 @@ const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (
 
 const now = () => new Date().toISOString();
 
-const cloneNote = (note: Note): Note => ({ ...note, labels: [...(note.labels || [])] });
+
 
 
 
