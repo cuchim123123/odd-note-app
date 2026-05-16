@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import type { Doc as YDoc } from 'yjs';
 import {
   useNote,
   useUpdateNote,
@@ -23,6 +24,7 @@ import { useNoteProtectionStore } from '../stores/note-protection.store';
 import { useYjsCollaboration } from '../hooks/useYjsCollaboration';
 import { ProtectedNoteRoute } from './protected-note-route';
 import { useAuthStore } from '../../auth/stores/auth.store';
+import type { NoteShareRecord } from '../api/notes.api';
 
 function normalizeNoteHtml(value: string | undefined): string {
   const html = (value ?? '').trim();
@@ -71,6 +73,11 @@ function safeTimestamp(value: string | undefined): number {
   if (!value) return 0;
   const timestamp = new Date(value).getTime();
   return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function getYDocDebugId(yDoc?: YDoc | null): string {
+  const debugDoc = yDoc as YDoc & { guid?: string | number; clientID?: string | number };
+  return String(debugDoc?.guid ?? debugDoc?.clientID ?? 'unknown');
 }
 
 export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
@@ -341,7 +348,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
   const onUnauthorized = () => navigate('/notes');
 
   return (
-    <ProtectedNoteRoute note={note as any} isLoading={isLoading} currentUserId={currentUser?.id ?? null} onUnauthorized={onUnauthorized}>
+    <ProtectedNoteRoute note={note as ProtectedNote | null} isLoading={isLoading} onUnauthorized={onUnauthorized}>
       <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
       <NoteToolbar
         note={note}
@@ -406,7 +413,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
         <SharingModal
           isOpen={shareModalOpen}
           noteId={noteId}
-          shares={shares as any}
+          shares={(shares ?? []) as NoteShareRecord[]}
           onShare={async (email, permission) => {
             await createShareMutation.mutateAsync({ recipientEmail: email, permission });
             setShareModalOpen(false);
@@ -418,7 +425,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
       <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white p-4 sm:p-8">
         <div className="mx-auto max-w-4xl">
           <NoteEditor
-            key={yDoc ? `y-${(yDoc as any).guid}` : `no-y-${noteId ?? 'none'}`}
+            key={yDoc ? `y-${getYDocDebugId(yDoc)}` : `no-y-${noteId ?? 'none'}`}
             content={content}
             readOnly={!canEditContent}
             onInsertImage={() => imageInputRef.current?.click()}

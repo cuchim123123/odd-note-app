@@ -380,9 +380,10 @@ export function useYjsCollaboration({
 
     // Attach update listener to emit local updates to the socket
     try {
+      const debugDoc = nextYDoc as Y.Doc & { guid?: string | number; clientID?: string | number };
       // eslint-disable-next-line no-console
-      console.log('[Yjs] Attaching update listener to Y.Doc', (nextYDoc as any)?.guid ?? (nextYDoc as any)?.clientID);
-    } catch (e) {
+      console.log('[Yjs] Attaching update listener to Y.Doc', debugDoc.guid ?? debugDoc.clientID);
+    } catch {
       // ignore
     }
     nextYDoc.on('update', handleDocUpdate);
@@ -393,15 +394,16 @@ export function useYjsCollaboration({
       // Remove our update listener and destroy local awareness, but do NOT destroy the shared Y.Doc
       // because other hook instances or components may still rely on the same document.
       try {
+        const debugDoc = nextYDoc as Y.Doc & { guid?: string | number; clientID?: string | number };
         // eslint-disable-next-line no-console
-        console.log('[Yjs] Removing update listener from Y.Doc', (nextYDoc as any)?.guid ?? (nextYDoc as any)?.clientID);
-      } catch (e) {
+        console.log('[Yjs] Removing update listener from Y.Doc', debugDoc.guid ?? debugDoc.clientID);
+      } catch {
         // ignore
       }
       nextYDoc.off('update', handleDocUpdate);
       try {
         nextAwareness.destroy();
-      } catch (e) {
+      } catch {
         // ignore
       }
 

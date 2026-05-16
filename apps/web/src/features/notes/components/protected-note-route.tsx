@@ -16,7 +16,6 @@ export type ProtectedNote = Note & {
 type ProtectedNoteRouteProps = {
   note: ProtectedNote | null;
   isLoading: boolean;
-  currentUserId: string | null;
   onUnauthorized: () => void;
   children: ReactNode;
 };
@@ -31,7 +30,6 @@ type ProtectedNoteRouteProps = {
 export function ProtectedNoteRoute({
   note,
   isLoading,
-  currentUserId,
   onUnauthorized,
   children,
 }: ProtectedNoteRouteProps) {

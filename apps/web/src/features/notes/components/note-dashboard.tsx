@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import type { Doc as YDoc } from 'yjs';
 import {
   useNote,
   useNoteShares,
@@ -37,6 +38,11 @@ function normalizeNoteHtml(value: string | undefined): string {
   if (!html) return '';
   if (/^(<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+$/i.test(html)) return '';
   return html;
+}
+
+function getYDocDebugId(yDoc?: YDoc | null): string {
+  const debugDoc = yDoc as YDoc & { guid?: string | number; clientID?: string | number };
+  return String(debugDoc?.guid ?? debugDoc?.clientID ?? 'unknown');
 }
 
 export function NoteDashboard() {
@@ -657,7 +663,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             </div>
           )}
           <NoteEditor
-            key={yDoc ? `y-${(yDoc as any).guid}` : `no-y-${noteId ?? 'none'}`}
+            key={yDoc ? `y-${getYDocDebugId(yDoc)}` : `no-y-${noteId ?? 'none'}`}
             content={content}
             readOnly={!canEditContent}
             onInsertImage={() => imageInputRef.current?.click()}
