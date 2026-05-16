@@ -40,14 +40,6 @@ type YDocState = {
   updates: Array<number[]>;
 };
 
-type AwarenessState = {
-  userId: string;
-  displayName: string;
-  color: string;
-  position: number;
-  selection?: { anchor: number; head: number };
-};
-
 const TYPING_STALE_AFTER_MS = 5000;
 
 const COLLABORATOR_COLORS = [
@@ -74,7 +66,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
 
   // Yjs document store: maps noteId -> Y.Doc
   private yDocs = new Map<string, Y.Doc>();
-  private yDocAwareness = new Map<string, Map<string, AwarenessState>>();
   private yDocCleanupTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
@@ -184,7 +175,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   async handleDisconnect(client: Socket): Promise<void> {
     const entry = await this.getSocketRoom(client.id);
     if (entry) {
-      await this.removeAwareness(entry.noteId, client.id);
       await this.removeParticipant(entry.noteId, client.id);
       await this.removeTyping(entry.noteId, entry.user.userId);
       client.to(entry.noteId).emit('collaborator:left', { userId: entry.user.userId });
@@ -210,7 +200,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       const prevEntry = await this.getSocketRoom(client.id);
       if (prevEntry) {
         void client.leave(prevEntry.noteId);
-        await this.removeAwareness(prevEntry.noteId, client.id);
         await this.removeParticipant(prevEntry.noteId, client.id);
         await this.removeTyping(prevEntry.noteId, prevEntry.user.userId);
         client.to(prevEntry.noteId).emit('collaborator:left', { userId: prevEntry.user.userId });
@@ -241,10 +230,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       client.emit('collaborators:list', collaborators);
       client.emit('presence:list', collaborators);
       client.emit('typing:list', await this.getTypingInRoom(noteId));
-      client.emit('yjs:awareness:list', {
-        noteId,
-        states: await this.getAwarenessStates(noteId, client.id),
-      });
       await this.broadcastPresence(noteId);
 
       this.logger.log(`User ${userId} joined note ${noteId}`);
@@ -299,24 +284,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       isPinned: data.isPinned,
       isProtected: data.isProtected,
       timestamp: Date.now(),
-    });
-  }
-
-  @SubscribeMessage('note:cursor')
-  async handleCursorUpdate(
-    @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
-    @MessageBody() data: { noteId: string; position: number },
-  ): Promise<void> {
-    const entry = await this.getSocketRoom(client.id);
-    if (!entry || entry.noteId !== data.noteId) {
-      return;
-    }
-
-    client.to(data.noteId).emit('note:cursor', {
-      userId: client.data.userId,
-      displayName: client.data.displayName,
-      position: data.position,
-      color: entry.user.color,
     });
   }
 
@@ -426,30 +393,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     this.logger.log(`[Yjs] persisted yDoc after yjs:update note=${data.noteId}`);
   }
 
-  @SubscribeMessage('yjs:awareness')
-  async handleYjsAwareness(
-    @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
-    @MessageBody() data: { noteId: string; awareness: AwarenessState },
-  ): Promise<void> {
-    const entry = await this.getSocketRoom(client.id);
-    if (!entry || entry.noteId !== data.noteId) {
-      return;
-    }
-
-    await this.setAwarenessState(data.noteId, client.id, {
-      ...data.awareness,
-      userId: client.data.userId,
-      displayName: client.data.displayName,
-      color: entry.user.color,
-    });
-
-    // Broadcast awareness to other clients
-    client.to(data.noteId).emit('yjs:awareness:update', {
-      noteId: data.noteId,
-      states: await this.getAwarenessStates(data.noteId, client.id),
-    });
-  }
-
   private extractToken(client: Socket): string | null {
     // Try auth.token first, then query param
     const authToken = client.handshake.auth?.token as string | undefined;
@@ -515,65 +458,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     } catch (error) {
       this.markRedisUnavailable(error);
     }
-  }
-
-  private awarenessKey(noteId: string): string {
-    return `collab:note:${noteId}:awareness`;
-  }
-
-  private async setAwarenessState(noteId: string, socketId: string, awareness: AwarenessState): Promise<void> {
-    const current = this.yDocAwareness.get(noteId) ?? new Map<string, AwarenessState>();
-    current.set(socketId, awareness);
-    this.yDocAwareness.set(noteId, current);
-
-    if (!this.redisEnabled) {
-      return;
-    }
-
-    try {
-      await this.redis.getClient().set(this.awarenessKey(noteId), JSON.stringify(Array.from(current.entries())));
-    } catch (error) {
-      this.markRedisUnavailable(error);
-    }
-  }
-
-  private async removeAwareness(noteId: string, socketId: string): Promise<void> {
-    const current = this.yDocAwareness.get(noteId);
-    if (!current) {
-      return;
-    }
-
-    current.delete(socketId);
-    if (current.size === 0) {
-      this.yDocAwareness.delete(noteId);
-    } else {
-      this.yDocAwareness.set(noteId, current);
-    }
-
-    if (!this.redisEnabled) {
-      return;
-    }
-
-    try {
-      if (current.size === 0) {
-        await this.redis.getClient().del(this.awarenessKey(noteId));
-      } else {
-        await this.redis.getClient().set(this.awarenessKey(noteId), JSON.stringify(Array.from(current.entries())));
-      }
-    } catch (error) {
-      this.markRedisUnavailable(error);
-    }
-  }
-
-  private async getAwarenessStates(noteId: string, excludeSocketId?: string): Promise<AwarenessState[]> {
-    const current = this.yDocAwareness.get(noteId);
-    if (!current || current.size === 0) {
-      return [];
-    }
-
-    return Array.from(current.entries())
-      .filter(([socketId]) => socketId !== excludeSocketId)
-      .map(([, state]) => state);
   }
 
   private async addParticipant(noteId: string, socketId: string, user: CollaboratorInfo): Promise<void> {
@@ -787,7 +671,6 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       if (yDoc) {
         yDoc.destroy();
         this.yDocs.delete(noteId);
-        this.yDocAwareness.delete(noteId);
         this.yDocCleanupTimers.delete(noteId);
         this.logger.log(`Unloaded Yjs document for note ${noteId} due to inactivity`);
       }

@@ -289,17 +289,11 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
     requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
   }, [isCollaborativeNote, noteId, note, queryClient]);
 
-  // remote cursor management removed; CollaborationCursor handles presence/cursors
-
-  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc, awareness, localUser } = useYjsCollaboration({
+  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
   });
-
-  useEffect(() => {
-    // cleanup handled by collaboration hook/awareness
-  }, [isCollaborativeNote]);
 
   if (isLoading || !note) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading…</div>;
 
@@ -420,8 +414,6 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
             syncKey={note?.id ?? noteId}
             collaborative={Boolean(isCollaborativeNote)}
             yDoc={yDoc ?? undefined}
-            awareness={awareness}
-            localUser={localUser}
             {...(canEditContent ? {
               onChange: (c: string) => {
                 setContent(c);

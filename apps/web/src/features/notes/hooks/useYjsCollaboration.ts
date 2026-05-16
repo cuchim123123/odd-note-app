@@ -1,23 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import * as Y from 'yjs';
-import * as awarenessProtocol from 'y-protocols/awareness';
 import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../../auth/stores/auth.store';
-
-// Wrapper provider that adapts Awareness instance to CollaborationCursor's expected interface
-class AwarenessProvider {
-  constructor(private awareness: awarenessProtocol.Awareness) {}
-
-  setLocalStateField(field: string, value: unknown): void {
-    const currentState = this.awareness.getLocalState() || {};
-    this.awareness.setLocalState({ ...currentState, [field]: value });
-  }
-
-  getAwareness(): awarenessProtocol.Awareness {
-    return this.awareness;
-  }
-}
 
 // Shared Y.Doc instances keyed by noteId to ensure one stable Y.Doc per note
 const sharedYDocs = new Map<string, Y.Doc>();
@@ -37,14 +22,6 @@ export type TypingParticipant = {
 
 export type PresenceParticipant = Collaborator;
 
-export type RemoteCursorState = {
-  userId: string;
-  displayName: string;
-  color: string;
-  position: number;
-  selection?: { anchor: number; head: number };
-};
-
 type UseYjsCollaborationOptions = {
   noteId: string | null;
   enabled: boolean;
@@ -56,7 +33,6 @@ type UseYjsCollaborationOptions = {
     isProtected?: boolean;
     timestamp: number;
   }) => void;
-  onRemoteCursor?: (data: RemoteCursorState) => void;
 };
 
 function getWsUrl(): string {
@@ -116,7 +92,6 @@ export function useYjsCollaboration({
   noteId,
   enabled,
   onRemoteContentUpdate,
-  onRemoteCursor,
 }: UseYjsCollaborationOptions) {
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
@@ -127,7 +102,6 @@ export function useYjsCollaboration({
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [yDoc, setYDoc] = useState<Y.Doc | null>(null);
-  const [awareness, setAwareness] = useState<awarenessProtocol.Awareness | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteUpdateRef = useRef(false);
@@ -135,10 +109,8 @@ export function useYjsCollaboration({
   const refreshAttemptedRef = useRef(false);
   const syncedSocketIdRef = useRef<string | null>(null);
   const onRemoteContentUpdateRef = useRef(onRemoteContentUpdate);
-  const onRemoteCursorRef = useRef(onRemoteCursor);
 
   onRemoteContentUpdateRef.current = onRemoteContentUpdate;
-  onRemoteCursorRef.current = onRemoteCursor;
 
   useEffect(() => {
     if (!enabled || !noteId || !accessToken || !user) {
@@ -150,7 +122,6 @@ export function useYjsCollaboration({
       setTypingParticipants([]);
       setIsConnected(false);
       setYDoc(null);
-      setAwareness(null);
       return;
     }
 
@@ -164,9 +135,7 @@ export function useYjsCollaboration({
       if (noteId) sharedYDocs.set(noteId, nextYDoc);
     }
 
-    const nextAwareness = new awarenessProtocol.Awareness(nextYDoc);
     setYDoc(nextYDoc);
-    setAwareness(nextAwareness);
 
     if (accessToken && refreshToken && isJwtExpired(accessToken) && !refreshInFlightRef.current) {
       refreshInFlightRef.current = true;
@@ -340,7 +309,6 @@ export function useYjsCollaboration({
       setCollaborators((current) => current.filter((entry) => entry.userId !== data.userId));
       setPresenceParticipants((current) => current.filter((entry) => entry.userId !== data.userId));
       setTypingParticipants((current) => current.filter((entry) => entry.userId !== data.userId));
-      // Remote cursors managed by awareness/CollaborationCursor extension
     });
 
     socket.on('note:updated', (data: {
@@ -368,83 +336,6 @@ export function useYjsCollaboration({
       }
     });
 
-    socket.on('yjs:awareness:update', (data: { noteId: string; awareness: RemoteCursorState }) => {
-      if (data.noteId !== noteId || !data.awareness) {
-        return;
-      }
-
-      // Update the awareness instance with remote user's cursor/presence data
-      try {
-        const remoteUserId = data.awareness.userId || 'unknown';
-        console.warn('[Yjs] received yjs:awareness:update for user', remoteUserId);
-
-        // Create a unique client ID for this remote user based on their userId
-        const remoteClientId = Math.abs(remoteUserId.charCodeAt(0) * 31 + (remoteUserId.charCodeAt(1) || 0));
-
-        // Manually add the remote user's state to the awareness states
-        const awarenessStates = (nextAwareness as unknown as { states: Map<number, Record<string, unknown>> }).states;
-        if (awarenessStates) {
-          awarenessStates.set(remoteClientId, {
-            user: {
-              name: data.awareness.displayName,
-              color: data.awareness.color,
-              id: data.awareness.userId,
-            },
-            cursor: {
-              anchor: data.awareness.position,
-              head: data.awareness.position,
-            },
-          });
-
-          // Trigger awareness update event so CollaborationCursor picks it up
-          const awarenessInstance = nextAwareness as unknown as { emit: (event: string, changes: Array<{ key: number }>, source: string) => void };
-          awarenessInstance.emit('change', [{ key: remoteClientId }], 'remote');
-        }
-      } catch (err) {
-        console.error('[Yjs] Error processing awareness:update', err);
-      }
-    });
-
-    socket.on('yjs:awareness:list', (data: { noteId: string; states: RemoteCursorState[] }) => {
-      if (data.noteId !== noteId || !data.states?.length) {
-        return;
-      }
-
-      // Sync all remote user states into awareness
-      try {
-        console.warn('[Yjs] received yjs:awareness:list with', data.states.length, 'states');
-        const awarenessStates = (nextAwareness as unknown as { states: Map<number, Record<string, unknown>> }).states;
-        if (awarenessStates) {
-          const changedKeys: Array<{ key: number }> = [];
-          data.states.forEach((remoteState) => {
-            if (!remoteState?.userId || remoteState.userId === user?.id) {
-              return; // Skip self
-            }
-
-            const remoteClientId = Math.abs(remoteState.userId.charCodeAt(0) * 31 + (remoteState.userId.charCodeAt(1) || 0));
-            awarenessStates.set(remoteClientId, {
-              user: {
-                name: remoteState.displayName,
-                color: remoteState.color,
-                id: remoteState.userId,
-              },
-              cursor: {
-                anchor: remoteState.position,
-                head: remoteState.position,
-              },
-            });
-            changedKeys.push({ key: remoteClientId });
-          });
-
-          // Trigger awareness change event
-          const awarenessInstance = nextAwareness as unknown as { emit: (event: string, changes: Array<{ key: number }>, source: string) => void };
-          awarenessInstance.emit('change', changedKeys, 'remote');
-        }
-      } catch (err) {
-        console.error('[Yjs] Error processing awareness:list', err);
-      }
-    });
-
     // Attach update listener to emit local updates to the socket
     try {
       const debugDoc = nextYDoc as Y.Doc & { guid?: string | number; clientID?: string | number };
@@ -455,28 +346,10 @@ export function useYjsCollaboration({
     }
     nextYDoc.on('update', handleDocUpdate);
 
-    // Forward local awareness updates to the server so other sockets get notified
-    const awarenessUpdateHandler = () => {
-      try {
-        const localState = nextAwareness.getLocalState();
-        if (socketRef.current?.connected && noteId) {
-          socketRef.current.emit('yjs:awareness', { noteId, awareness: localState });
-        }
-      } catch {
-        // ignore
-      }
-    };
-
-    try {
-      nextAwareness.on('update', awarenessUpdateHandler);
-    } catch {
-      // ignore
-    }
-
     socket.connect();
 
     return () => {
-      // Remove our update listener and destroy local awareness, but do NOT destroy the shared Y.Doc
+      // Remove our update listener but do NOT destroy the shared Y.Doc
       // because other hook instances or components may still rely on the same document.
       try {
         const debugDoc = nextYDoc as Y.Doc & { guid?: string | number; clientID?: string | number };
@@ -486,17 +359,6 @@ export function useYjsCollaboration({
         // ignore
       }
       nextYDoc.off('update', handleDocUpdate);
-      try {
-        nextAwareness.off('update', awarenessUpdateHandler);
-      } catch {
-        // ignore
-      }
-      try {
-        nextAwareness.destroy();
-      } catch {
-        // ignore
-      }
-
       socket.emit('note:leave');
       socket.disconnect();
       syncedSocketIdRef.current = null;
@@ -506,40 +368,12 @@ export function useYjsCollaboration({
       setPresenceParticipants([]);
       setTypingParticipants([]);
       setYDoc(null);
-      setAwareness(null);
     };
-  }, [accessToken, enabled, noteId, user]);
+  }, [accessToken, enabled, noteId, refreshToken, user]);
 
   const sendContentUpdate = (content?: string, title?: string, metadata?: { isPinned?: boolean; isProtected?: boolean }) => {
     if (socketRef.current?.connected && noteId) {
       socketRef.current.emit('note:update', { noteId, content, title, ...metadata });
-    }
-  };
-
-  const sendCursorPosition = (position: number) => {
-    // Update local awareness state; the hook forwards awareness updates to the server.
-    try {
-      if (awareness) {
-        awareness.setLocalStateField('cursor', {
-          userId: user?.id ?? '',
-          displayName: user?.displayName ?? 'Anonymous',
-          color: '#3b82f6',
-          position,
-        });
-      } else if (socketRef.current?.connected && noteId) {
-        // Fallback: emit awareness directly if awareness instance is not available
-        socketRef.current.emit('yjs:awareness', {
-          noteId,
-          awareness: {
-            userId: user?.id ?? '',
-            displayName: user?.displayName ?? 'Anonymous',
-            color: '#3b82f6',
-            position,
-          },
-        });
-      }
-    } catch {
-      // ignore
     }
   };
 
@@ -549,23 +383,13 @@ export function useYjsCollaboration({
     }
   };
 
-  const awarenessProvider = awareness ? new AwarenessProvider(awareness) : null;
-
   return {
     collaborators,
     presenceParticipants,
     typingParticipants,
     isConnected,
     yDoc,
-    awareness: awarenessProvider,
     sendContentUpdate,
-    sendCursorPosition,
     sendTypingState,
-    // Local user metadata for CollaborationCursor
-    localUser: {
-      userId: user?.id ?? '',
-      displayName: user?.displayName ?? 'Anonymous',
-      color: '#3b82f6',
-    },
   };
 }

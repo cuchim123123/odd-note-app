@@ -195,7 +195,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  
   const isRemoteUpdateRef = useRef(false);
 
   // Initialize from note data
@@ -233,10 +232,11 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     let isCancelled = false;
     const load = async () => {
       try {
-        const draft = await getNoteDraft(note.id);
+        const noteIdValue = note.id!;
+        const draft = await getNoteDraft(noteIdValue);
         if (!draft || isCancelled) return;
         const draftEmpty = !draft.title.trim() && !draft.content.trim();
-        const noteEmpty = !note.title.trim() && !note.content?.trim();
+        const noteEmpty = !(note.title ?? '').trim() && !(note.content ?? '').trim();
         if (draftEmpty && !noteEmpty) return;
         const draftTime = new Date(draft.updatedAt).getTime();
         const noteTime = new Date(note.updatedAt || '').getTime();
@@ -263,9 +263,10 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   // Unified autosave
   useEffect(() => {
     if (!canAutosave || !note) return;
+    const noteIdValue = note.id!;
 
     const normalizedContent = normalizeNoteHtml(content);
-    const hasChanges = title !== note.title || normalizedContent !== normalizeNoteHtml(note.content || '');
+    const hasChanges = title !== (note.title ?? '') || normalizedContent !== normalizeNoteHtml(note.content || '');
 
     if (!hasChanges) {
       setIsDirty(false);
@@ -276,7 +277,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     setSaveError(null);
 
     const draftTimeoutId = window.setTimeout(() => {
-      void saveNoteDraft(note.id, title, normalizedContent);
+      void saveNoteDraft(noteIdValue, title, normalizedContent);
     }, 500);
 
     const serverTimeoutId = window.setTimeout(async () => {
@@ -288,7 +289,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       try {
         const updated = await updateNote({ title, content: normalizedContent });
         setLastSavedAt(updated.updatedAt || optimisticTime);
-        await clearNoteDraft(note.id);
+        await clearNoteDraft(noteIdValue);
       } catch (error) {
         // Keep optimistic "Saved" status on error; draft already persisted
         const msg = error instanceof Error ? error.message : 'Failed to save';
@@ -308,14 +309,16 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     isRemoteUpdateRef.current = true;
     if (data.title !== undefined) setTitle(data.title);
     if (data.isProtected !== undefined) setServerProtectionStatus(data.isProtected);
-    if (data.isPinned !== undefined && noteId && note) {
+    if (typeof data.isPinned === 'boolean' && noteId && note) {
       const updatedAt = new Date().toISOString();
-      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
-        ns.map((n) => n.id === noteId ? { ...n, isPinned: data.isPinned ?? n.isPinned, updatedAt } : n),
+      const nextIsPinned = data.isPinned === true;
+      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns) =>
+        (ns ?? []).map((n) => {
+          if (n.id !== noteId) return n;
+          return { ...(n as Note), isPinned: nextIsPinned, updatedAt } as Note;
+        }),
       );
-      queryClient.setQueryData<Note>(NOTES_KEYS.detail(noteId), (n) =>
-        n ? { ...n, isPinned: data.isPinned ?? n.isPinned, updatedAt } : n,
-      );
+      queryClient.setQueryData<Note>(NOTES_KEYS.detail(noteId), (n) => (n ? ({ ...(n as Note), isPinned: nextIsPinned, updatedAt } as Note) : n));
     }
     setContent(data.content);
     const ts = data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString();
@@ -325,7 +328,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
   }, [noteId, note, queryClient]);
 
-  const { collaborators, presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc, awareness, localUser } = useYjsCollaboration({
+  const { collaborators, presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
@@ -336,10 +339,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     ? (isWsConnected ? presenceCount > 0 ? `Watching · ${presenceCount}` : 'Realtime · Connected' : 'Realtime · Offline')
     : 'Realtime · Off';
   const realtimeTone = isCollaborativeNote && isWsConnected ? 'text-emerald-600' : 'text-muted-foreground';
-
-  useEffect(() => {
-    // remote presence managed by awareness/prosemirror decorations
-  }, [isCollaborativeNote]);
 
   const saveStatus = useMemo(() => {
     if (saveError) return { icon: AlertTriangle, label: saveError, tone: 'text-destructive' as const };
@@ -434,7 +433,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                   queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
                     ns.map((n) => n.id === note.id ? { ...n, title: e.target.value, updatedAt } : n),
                   );
-                  queryClient.setQueryData(NOTES_KEYS.detail(note.id), (n) =>
+                  queryClient.setQueryData(NOTES_KEYS.detail(note.id!), (n) =>
                     n ? { ...n, title: e.target.value, updatedAt } : n,
                   );
                 }
@@ -468,7 +467,9 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             <Button size="sm" variant="ghost" onClick={async () => {
               try {
                 const updated = await updateNote({ isPinned: !note.isPinned });
-                broadcastNoteState({ isPinned: updated.isPinned });
+                if (typeof updated.isPinned === 'boolean') {
+                  broadcastNoteState({ isPinned: updated.isPinned });
+                }
               } catch { /* ignore */ }
             }} disabled={isSaving || !canEditContent || isSharedNote}><Pin className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirmOpen(true)} disabled={deleteMutation.isPending || !canEditContent || isSharedNote}><Trash2 className="w-4 h-4" /></Button>
@@ -660,8 +661,6 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             syncKey={note?.id ?? noteId}
             collaborative={Boolean(isCollaborativeNote)}
             yDoc={yDoc ?? undefined}
-            awareness={awareness}
-            localUser={localUser}
             {...(canEditContent ? {
               onChange: (c: string) => {
                 setContent(c);
