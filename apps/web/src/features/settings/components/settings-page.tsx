@@ -38,7 +38,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (labels.length === 0) {
-      syncLabels(getSortedNotes().flatMap((note) => note.labels));
+      syncLabels(getSortedNotes().flatMap((note) => note.labels || []));
     }
   }, [labels.length, syncLabels]);
 

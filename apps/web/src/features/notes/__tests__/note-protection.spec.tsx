@@ -18,7 +18,7 @@ describe('Note protection behavior', () => {
     const user = userEvent.setup();
     const note = notesApi.getSortedNotes()[0]!;
 
-    notesApi.updateNote(note.id, { isProtected: true });
+    notesApi.updateNote(note.id || '', { isProtected: true });
 
     vi.spyOn(notesApi, 'getNoteProtectionStatus').mockResolvedValue({ isProtected: true });
     vi.spyOn(notesApi, 'verifyNotePassword').mockImplementation(async (_noteId, password) => {
@@ -27,7 +27,7 @@ describe('Note protection behavior', () => {
 
     renderWithQueryClient(<NoteDashboard />);
 
-    await user.click(await screen.findByText(note.title));
+    await user.click(await screen.findByText(note.title || ''));
 
     expect(await screen.findByText('This note is protected')).toBeInTheDocument();
 

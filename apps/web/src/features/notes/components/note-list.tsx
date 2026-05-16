@@ -69,17 +69,17 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
       setSelectedLabel(null);
     });
     const newNote = await createNoteMutation.mutateAsync({ title: 'Untitled Note', content: '' });
-    onSelectNote(newNote.id);
+    onSelectNote(newNote.id || '');
   };
 
   const matchesNote = (note: DisplayNote) => {
     if (!debouncedSearch) {
-      return selectedLabel ? note.labels.includes(selectedLabel) : true;
+      return selectedLabel ? (note.labels || []).includes(selectedLabel) : true;
     }
 
     const searchableText = `${note.title} ${stripHtml(note.content)}`.toLowerCase();
     const matchesSearch = searchableText.includes(debouncedSearch);
-    const matchesLabel = selectedLabel ? note.labels.includes(selectedLabel) : true;
+    const matchesLabel = selectedLabel ? (note.labels || []).includes(selectedLabel) : true;
     return matchesSearch && matchesLabel;
   };
 
@@ -93,7 +93,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
           return Number(right.isPinned) - Number(left.isPinned);
         }
 
-        return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+        return new Date(right.updatedAt || 0).getTime() - new Date(left.updatedAt || 0).getTime();
       });
   }, [debouncedSearch, notes, selectedLabel]);
 
@@ -107,7 +107,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
 
   useEffect(() => {
     if ((notes?.length ?? 0) > 0 && labels.length === 0) {
-      syncLabels((notes ?? []).flatMap((note) => note.labels));
+      syncLabels((notes ?? []).flatMap((note) => note.labels || []));
     }
   }, [labels.length, notes, syncLabels]);
 
@@ -185,7 +185,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                     key={note.id}
                     note={note}
                     isSelected={isSelected}
-                    onSelect={() => onSelectNote(note.id)}
+                    onSelect={() => onSelectNote(note.id || '')}
                     isGridView={isGridView}
                   />
                 );
@@ -200,7 +200,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                 </div>
 
                 <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
-                  {filteredSharedNotes.map((note) => {
+                  {filteredSharedNotes.map((note: SharedNoteItem) => {
                     const isSelected = selectedNoteId === note.id;
 
                     return (
@@ -208,7 +208,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                         key={`shared-${note.id}`}
                         note={note}
                         isSelected={isSelected}
-                        onSelect={() => onSelectNote(note.id)}
+                        onSelect={() => onSelectNote(note.id || '')}
                         isGridView={isGridView}
                       />
                     );
@@ -224,7 +224,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
 }
 
 const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView }: { note: DisplayNote; isSelected: boolean; onSelect: () => void; isGridView: boolean }) {
-  const update = useUpdateNote(note.id);
+  const update = useUpdateNote(note.id || '');
   const isSharedAccess = 'accessMode' in note && note.accessMode === 'shared';
   const noteColor = useNotePreferencesStore((state) => state.noteColor);
   const colorClass = noteColorClasses[noteColor] || '';
@@ -321,7 +321,7 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
           ) : null}
 
           <div className="flex max-w-full flex-wrap items-center gap-2">
-            {note.labels.map((label: string) => (
+            {(note.labels || []).map((label: string) => (
               <span key={label} className="max-w-full truncate rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
                 {label}
               </span>
@@ -329,8 +329,8 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
           </div>
 
           <div className={cn('flex items-center justify-between pt-1 text-xs text-muted-foreground', isGridView && 'pt-2')}>
-            <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
-            <span>{new Date(note.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span>{new Date(note.updatedAt || 0).toLocaleDateString()}</span>
+            <span>{new Date(note.updatedAt || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
         </div>
       </div>

@@ -11,7 +11,7 @@ describe('Notes API — in-memory mock behavior', () => {
       const created = createNote({ title: 'My Note', content: '<p>content</p>' });
       const allNotes = getSortedNotes();
       
-      expect(allNotes.some((n) => n.id === created.id)).toBe(true);
+      expect(allNotes.some((n) => n.id === (created.id || ''))).toBe(true);
       expect(allNotes.some((n) => n.title === 'My Note')).toBe(true);
     });
 
@@ -26,7 +26,7 @@ describe('Notes API — in-memory mock behavior', () => {
   describe('retrieving a note by ID', () => {
     it('should return the exact note when it exists', () => {
       const created = createNote({ title: 'Findable', content: 'data' });
-      const fetched = getNoteById(created.id);
+      const fetched = getNoteById(created.id || '');
       
       expect(fetched.id).toBe(created.id);
       expect(fetched.title).toBe('Findable');
@@ -40,22 +40,22 @@ describe('Notes API — in-memory mock behavior', () => {
   describe('updating a note', () => {
     it('should change the requested fields', () => {
       const created = createNote({ title: 'Original', content: 'old content' });
-      const updated = updateNote(created.id, { title: 'Changed' });
+      const updated = updateNote(created.id || '', { title: 'Changed' });
       
       expect(updated.title).toBe('Changed');
     });
 
     it('should preserve fields that are not updated', () => {
       const created = createNote({ title: 'Start', content: 'keep this' });
-      const updated = updateNote(created.id, { title: 'End' });
+      const updated = updateNote(created.id || '', { title: 'End' });
       
       expect(updated.content).toBe('keep this');
     });
 
     it('should be reflected in future retrievals', () => {
       const created = createNote({ title: 'Before', content: '' });
-      updateNote(created.id, { title: 'After' });
-      const fetched = getNoteById(created.id);
+      updateNote(created.id || '', { title: 'After' });
+      const fetched = getNoteById(created.id || '');
       
       expect(fetched.title).toBe('After');
     });
@@ -64,17 +64,17 @@ describe('Notes API — in-memory mock behavior', () => {
   describe('deleting a note', () => {
     it('should remove it from the notes list', () => {
       const created = createNote({ title: 'Disposable', content: '' });
-      deleteNote(created.id);
+      deleteNote(created.id || '');
       const allNotes = getSortedNotes();
       
-      expect(allNotes.some((n) => n.id === created.id)).toBe(false);
+      expect(allNotes.some((n) => n.id === (created.id || ''))).toBe(false);
     });
 
     it('should cause subsequent retrieval to fail', () => {
       const created = createNote({ title: 'Temporary', content: '' });
-      deleteNote(created.id);
+      deleteNote(created.id || '');
       
-      expect(() => getNoteById(created.id)).toThrow('Note not found');
+      expect(() => getNoteById(created.id || '')).toThrow('Note not found');
     });
   });
 });

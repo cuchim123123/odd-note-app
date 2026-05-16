@@ -23,7 +23,7 @@ describe('Label management store', () => {
 
     expect(useLabelManagementStore.getState().labels).toContain('team');
     expect(useLabelManagementStore.getState().labels).not.toContain('work');
-    expect(getNoteById(created.id).labels).toContain('team');
+    expect(getNoteById(created.id || '').labels).toContain('team');
   });
 
   it('deletes labels without removing them from notes', () => {
@@ -33,6 +33,6 @@ describe('Label management store', () => {
     useLabelManagementStore.getState().deleteLabel('archive');
 
     expect(useLabelManagementStore.getState().labels).not.toContain('archive');
-    expect(getNoteById(created.id).labels).toContain('archive');
+    expect(getNoteById(created.id || '').labels).toContain('archive');
   });
 });
