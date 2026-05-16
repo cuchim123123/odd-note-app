@@ -4,6 +4,8 @@ import {
   useNote,
   useUpdateNote,
   useDeleteNote,
+  useNoteShares,
+  useCreateNoteShare,
   getNoteProtectionStatus,
   getNoteDraft,
   saveNoteDraft,
@@ -29,8 +31,10 @@ function normalizeNoteHtml(value: string | undefined): string {
 export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
   const queryClient = useQueryClient();
   const { data: note, isLoading } = useNote(noteId);
+  const { data: shares = [] } = useNoteShares(noteId);
   const updateMutation = useUpdateNote(noteId);
   const { mutateAsync: updateNote, isPending: isSaving } = updateMutation;
+  const createShareMutation = useCreateNoteShare(noteId);
   const deleteMutation = useDeleteNote(noteId);
 
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -308,7 +312,13 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
       {canManageShares && shareModalOpen && (
         <SharingModal
+          isOpen={shareModalOpen}
           noteId={noteId}
+          shares={shares}
+          onShare={async (email, permission) => {
+            await createShareMutation.mutateAsync({ recipientEmail: email, permission });
+            setShareModalOpen(false);
+          }}
           onClose={() => setShareModalOpen(false)}
         />
       )}
