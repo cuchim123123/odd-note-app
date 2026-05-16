@@ -111,7 +111,6 @@ export function useYjsCollaboration({
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [presenceParticipants, setPresenceParticipants] = useState<PresenceParticipant[]>([]);
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([]);
-  const [remoteCursors, setRemoteCursors] = useState<RemoteCursorState[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [yDoc, setYDoc] = useState<Y.Doc | null>(null);
   const [awareness, setAwareness] = useState<awarenessProtocol.Awareness | null>(null);
@@ -135,7 +134,6 @@ export function useYjsCollaboration({
       setCollaborators([]);
       setPresenceParticipants([]);
       setTypingParticipants([]);
-      setRemoteCursors([]);
       setIsConnected(false);
       setYDoc(null);
       setAwareness(null);
@@ -297,7 +295,6 @@ export function useYjsCollaboration({
       setCollaborators([]);
       setPresenceParticipants([]);
       setTypingParticipants([]);
-      setRemoteCursors([]);
     });
 
     socket.on('collaborators:list', (list: Collaborator[]) => {
@@ -329,7 +326,7 @@ export function useYjsCollaboration({
       setCollaborators((current) => current.filter((entry) => entry.userId !== data.userId));
       setPresenceParticipants((current) => current.filter((entry) => entry.userId !== data.userId));
       setTypingParticipants((current) => current.filter((entry) => entry.userId !== data.userId));
-      setRemoteCursors((current) => current.filter((entry) => entry.userId !== data.userId));
+      // Remote cursors managed by awareness/CollaborationCursor extension
     });
 
     socket.on('note:updated', (data: {
@@ -362,10 +359,8 @@ export function useYjsCollaboration({
         return;
       }
 
-      // Filter out self cursor - only show remote user cursors
-      const remoteCursorStates = data.states.filter((cursor) => cursor.userId !== user?.id);
-      setRemoteCursors(remoteCursorStates);
-      remoteCursorStates.forEach((cursor) => onRemoteCursorRef.current?.(cursor));
+      // Remote cursors are now handled by the CollaborationCursor extension via awareness
+      // No need to manage state here
     });
 
     socket.on('yjs:awareness:list', (data: { noteId: string; states: RemoteCursorState[] }) => {
@@ -373,9 +368,8 @@ export function useYjsCollaboration({
         return;
       }
 
-      // Filter out self cursor - only show remote user cursors
-      const remoteCursorStates = data.states.filter((cursor) => cursor.userId !== user?.id);
-      setRemoteCursors(remoteCursorStates);
+      // Remote cursors are now handled by the CollaborationCursor extension via awareness
+      // No need to manage state here
     });
 
     // Attach update listener to emit local updates to the socket
@@ -387,6 +381,24 @@ export function useYjsCollaboration({
       // ignore
     }
     nextYDoc.on('update', handleDocUpdate);
+
+    // Forward local awareness updates to the server so other sockets get notified
+    const awarenessUpdateHandler = () => {
+      try {
+        const localState = nextAwareness.getLocalState();
+        if (socketRef.current?.connected && noteId) {
+          socketRef.current.emit('yjs:awareness', { noteId, awareness: localState });
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    try {
+      nextAwareness.on('update', awarenessUpdateHandler);
+    } catch {
+      // ignore
+    }
 
     socket.connect();
 
@@ -402,6 +414,11 @@ export function useYjsCollaboration({
       }
       nextYDoc.off('update', handleDocUpdate);
       try {
+        nextAwareness.off('update', awarenessUpdateHandler);
+      } catch {
+        // ignore
+      }
+      try {
         nextAwareness.destroy();
       } catch {
         // ignore
@@ -415,7 +432,6 @@ export function useYjsCollaboration({
       setCollaborators([]);
       setPresenceParticipants([]);
       setTypingParticipants([]);
-      setRemoteCursors([]);
       setYDoc(null);
       setAwareness(null);
     };
@@ -428,16 +444,29 @@ export function useYjsCollaboration({
   };
 
   const sendCursorPosition = (position: number) => {
-    if (socketRef.current?.connected && noteId) {
-      socketRef.current.emit('yjs:awareness', {
-        noteId,
-        awareness: {
+    // Update local awareness state; the hook forwards awareness updates to the server.
+    try {
+      if (awareness) {
+        awareness.setLocalStateField('cursor', {
           userId: user?.id ?? '',
           displayName: user?.displayName ?? 'Anonymous',
           color: '#3b82f6',
           position,
-        },
-      });
+        });
+      } else if (socketRef.current?.connected && noteId) {
+        // Fallback: emit awareness directly if awareness instance is not available
+        socketRef.current.emit('yjs:awareness', {
+          noteId,
+          awareness: {
+            userId: user?.id ?? '',
+            displayName: user?.displayName ?? 'Anonymous',
+            color: '#3b82f6',
+            position,
+          },
+        });
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -452,11 +481,16 @@ export function useYjsCollaboration({
     presenceParticipants,
     typingParticipants,
     isConnected,
-    remoteCursors,
     yDoc,
     awareness,
     sendContentUpdate,
     sendCursorPosition,
     sendTypingState,
+    // Local user metadata for CollaborationCursor
+    localUser: {
+      userId: user?.id ?? '',
+      displayName: user?.displayName ?? 'Anonymous',
+      color: '#3b82f6',
+    },
   };
 }

@@ -4,19 +4,14 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import Collaboration from '@tiptap/extension-collaboration';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as Y from 'yjs';
+import * as awarenessProtocol from 'y-protocols/awareness';
+import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import { Bold, Code, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Quote, Strikethrough, Underline as UnderlineIcon } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
 import { cn } from '../../../lib/utils';
-
-type RemoteCursor = {
-  userId: string;
-  displayName: string;
-  color: string;
-  position: number;
-};
 
 type NoteEditorProps = {
   content?: string | undefined;
@@ -25,37 +20,48 @@ type NoteEditorProps = {
   onInsertImage?: () => void;
   syncKey?: string | null;
   collaborative?: boolean;
-  remoteCursors?: RemoteCursor[];
-  onCursorMove?: (position: number) => void;
+  awareness?: awarenessProtocol.Awareness | null;
+  localUser?: { userId: string; displayName: string; color: string } | null;
   yDoc?: Y.Doc | undefined;
 };
 
-export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, remoteCursors = [], onCursorMove, yDoc }: NoteEditorProps) {
+export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, awareness = null, localUser = null, yDoc }: NoteEditorProps) {
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
-  const lastLocalCursorPositionRef = useRef<number | null>(null);
   const lastFragmentLengthRef = useRef<number | null>(null);
-  const [remoteCursorAnchors, setRemoteCursorAnchors] = useState<Array<RemoteCursor & { top: number; left: number }>>([]);
 
   const starterKit = useMemo(
     () => StarterKit.configure(collaborative && Boolean(yDoc) ? { history: false } : {}),
     [collaborative, yDoc],
   );
   const collaborationExtensions = useMemo(() => (yDoc
-    ? [
-        Collaboration.configure({
-          document: yDoc,
-          field: 'prosemirror',
-        }),
-      ]
-    : []), [yDoc]);
+    ? (() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const exts: any[] = [
+          Collaboration.configure({
+            document: yDoc,
+            field: 'prosemirror',
+          }),
+        ];
 
-  const emitCursorPosition = useCallback((position: number) => {
-    if (!readOnly && collaborative && onCursorMove && lastLocalCursorPositionRef.current !== position) {
-      lastLocalCursorPositionRef.current = position;
-      onCursorMove(position);
-    }
-  }, [collaborative, onCursorMove, readOnly]);
+        if (awareness && localUser) {
+          exts.push(CollaborationCursor.configure({
+            provider: awareness,
+            user: {
+              name: localUser.displayName,
+              color: localUser.color,
+              id: localUser.userId,
+            },
+          }));
+        }
+
+        return exts;
+      })()
+    : []), [yDoc, awareness, localUser]);
+
+  // Cursor rendering and presence are handled by the CollaborationCursor extension
+  // backed by the Yjs `awareness` instance. No manual cursor overlays or position
+  // reconciliation are necessary.
 
   const editor = useEditor({
     extensions: [
@@ -102,11 +108,6 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
         });
         lastFragmentLengthRef.current = fragmentLength;
       }
-
-      emitCursorPosition(ed.state.selection.from);
-    },
-    onSelectionUpdate: ({ editor: ed }) => {
-      emitCursorPosition(ed.state.selection.from);
     },
     editorProps: {
       attributes: {
@@ -131,49 +132,18 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     }
   }, [editor, readOnly]);
 
-  const recalculateRemoteCursorAnchors = useCallback(() => {
-    if (!editorContainerRef.current || !editor) {
-      setRemoteCursorAnchors([]);
-      return;
-    }
-
-    const containerRect = editorContainerRef.current.getBoundingClientRect();
-    const nextAnchors = remoteCursors
-      .filter((cursor) => Number.isFinite(cursor.position))
-      .map((cursor) => {
-        const position = Math.max(1, Math.min(cursor.position, editor.state.doc.content.size));
-        const coords = editor.view.coordsAtPos(position);
-
-        return {
-          ...cursor,
-          top: coords.top - containerRect.top,
-          left: coords.left - containerRect.left,
-        };
-      });
-
-    setRemoteCursorAnchors(nextAnchors);
-  }, [editor, remoteCursors]);
+  // Old manual cursor overlay code removed. CollaborationCursor now renders
+  // cursor decorations inside the editor using the Yjs awareness provider.
 
   useEffect(() => {
-    recalculateRemoteCursorAnchors();
-  }, [recalculateRemoteCursorAnchors, content, remoteCursors, noteFontSize, readOnly]);
+    // nothing to do; CollaborationCursor handles decoration/layout updates
+  }, [content, noteFontSize, readOnly]);
 
   useEffect(() => {
-    const handleViewportChange = () => {
-      recalculateRemoteCursorAnchors();
-    };
-
-    window.addEventListener('resize', handleViewportChange);
-    window.addEventListener('scroll', handleViewportChange, true);
-
-    return () => {
-      window.removeEventListener('resize', handleViewportChange);
-      window.removeEventListener('scroll', handleViewportChange, true);
-    };
-  }, [recalculateRemoteCursorAnchors]);
+    // No manual overlay listeners required for CollaborationCursor
+  }, []);
 
   useEffect(() => {
-    lastLocalCursorPositionRef.current = null;
     lastFragmentLengthRef.current = null;
   }, [syncKey]);
 
@@ -261,26 +231,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
         editor={editor}
         className={cn('prose focus:outline-none max-w-none px-4 py-4 sm:px-5', 'min-h-[240px] sm:min-h-[320px]')}
       />
-      <div className="pointer-events-none absolute inset-0 overflow-visible">
-        {remoteCursorAnchors.map((cursor) => (
-          <div
-            key={cursor.userId}
-            className="absolute z-20"
-            style={{ left: cursor.left, top: cursor.top }}
-          >
-            <span
-              className="absolute left-0 top-0 h-5 border-l-2"
-              style={{ borderColor: cursor.color }}
-            />
-            <span
-              className="absolute left-2 -top-6 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
-              style={{ backgroundColor: cursor.color }}
-            >
-              {cursor.displayName}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* CollaborationCursor renders remote cursors inside the editor; no overlay needed */}
     </div>
   );
 }

@@ -195,7 +195,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [remoteCursors, setRemoteCursors] = useState<Array<{ userId: string; displayName: string; color: string; position: number }>>([]);
+  
   const isRemoteUpdateRef = useRef(false);
 
   // Initialize from note data
@@ -325,20 +325,10 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
     requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
   }, [noteId, note, queryClient]);
 
-  const handleRemoteCursor = useCallback((data: { userId: string; displayName: string; position: number; color: string }) => {
-    setRemoteCursors((c) => {
-      const filtered = c.filter((x) => x.userId !== data.userId);
-      const existing = c.find((x) => x.userId === data.userId);
-      if (existing && existing.position === data.position && existing.displayName === data.displayName && existing.color === data.color) return c;
-      return [...filtered, data];
-    });
-  }, []);
-
-  const { collaborators, presenceParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, yDoc } = useYjsCollaboration({
+  const { collaborators, presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc, awareness, localUser } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
-    onRemoteCursor: handleRemoteCursor,
   });
 
   const presenceCount = collaborators.length > 0 ? collaborators.length : presenceParticipants.length;
@@ -348,7 +338,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   const realtimeTone = isCollaborativeNote && isWsConnected ? 'text-emerald-600' : 'text-muted-foreground';
 
   useEffect(() => {
-    if (!isCollaborativeNote) setRemoteCursors([]);
+    // remote presence managed by awareness/prosemirror decorations
   }, [isCollaborativeNote]);
 
   const saveStatus = useMemo(() => {
@@ -669,14 +659,12 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             onInsertImage={() => imageInputRef.current?.click()}
             syncKey={note?.id ?? noteId}
             collaborative={Boolean(isCollaborativeNote)}
-            remoteCursors={remoteCursors}
             yDoc={yDoc ?? undefined}
+            awareness={awareness}
+            localUser={localUser}
             {...(canEditContent ? {
               onChange: (c: string) => {
                 setContent(c);
-              },
-              onCursorMove: (pos: number) => {
-                if (isCollaborativeNote) sendCursorPosition(pos);
               },
             } : {})}
           />

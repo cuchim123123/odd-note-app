@@ -105,7 +105,6 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
   const [serverProtectionStatus, setServerProtectionStatus] = useState<boolean | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [remoteCursors, setRemoteCursors] = useState<Array<{ userId: string; displayName: string; color: string; position: number }>>([]);
   const isRemoteUpdateRef = useRef(false);
   const draftTimeoutRef = useRef<NodeJS.Timeout>();
   const serverTimeoutRef = useRef<NodeJS.Timeout>();
@@ -290,24 +289,16 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
     requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
   }, [isCollaborativeNote, noteId, note, queryClient]);
 
-  const handleRemoteCursor = useCallback((d: { userId: string; displayName: string; position: number; color: string }) => {
-    setRemoteCursors((c) => {
-      const filt = c.filter((x) => x.userId !== d.userId);
-      const ex = c.find((x) => x.userId === d.userId);
-      if (ex && ex.position === d.position && ex.displayName === d.displayName && ex.color === d.color) return c;
-      return [...filt, d];
-    });
-  }, []);
+  // remote cursor management removed; CollaborationCursor handles presence/cursors
 
-  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, sendCursorPosition, yDoc } = useYjsCollaboration({
+  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc, awareness, localUser } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
-    onRemoteCursor: handleRemoteCursor,
   });
 
   useEffect(() => {
-    if (!isCollaborativeNote) setRemoteCursors([]);
+    // cleanup handled by collaboration hook/awareness
   }, [isCollaborativeNote]);
 
   if (isLoading || !note) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading…</div>;
@@ -428,15 +419,13 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
             onInsertImage={() => imageInputRef.current?.click()}
             syncKey={note?.id ?? noteId}
             collaborative={Boolean(isCollaborativeNote)}
-            remoteCursors={remoteCursors}
             yDoc={yDoc ?? undefined}
+            awareness={awareness}
+            localUser={localUser}
             {...(canEditContent ? {
               onChange: (c: string) => {
                 setContent(c);
                 writeLocalDraft(note.id!, title, c);
-              },
-              onCursorMove: (pos: number) => {
-                if (isCollaborativeNote) sendCursorPosition(pos);
               },
             } : {})}
           />

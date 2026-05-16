@@ -12,7 +12,7 @@ type SharingModalProps = {
   shares: Array<{
     id: string;
     recipientEmail: string;
-    recipientDisplayName?: string;
+    recipientDisplayName?: string | undefined;
     permission: 'READ' | 'EDIT';
     createdAt: string;
     updatedAt: string;
