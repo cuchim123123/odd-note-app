@@ -149,7 +149,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         // IndexedDB persistence
         initDb: async () => {
           return new Promise((resolve, reject) => {
-            const request = indexedDB.open('odd-note-app', 3);
+            const request = indexedDB.open('odd-note-app', 4);
 
             request.onerror = () => {
               console.error('IndexedDB open failed:', request.error);
@@ -191,7 +191,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
 
           try {
             const db = await new Promise<IDBDatabase>((resolve, reject) => {
-              const request = indexedDB.open('odd-note-app', 3);
+              const request = indexedDB.open('odd-note-app', 4);
               request.onsuccess = () => resolve(request.result);
               request.onerror = () => reject(request.error);
             });
@@ -226,7 +226,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
 
           try {
             const db = await new Promise<IDBDatabase>((resolve, reject) => {
-              const request = indexedDB.open('odd-note-app', 3);
+              const request = indexedDB.open('odd-note-app', 4);
               request.onsuccess = () => resolve(request.result);
               request.onerror = () => reject(request.error);
             });

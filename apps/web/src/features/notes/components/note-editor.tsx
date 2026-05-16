@@ -3,13 +3,13 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import Collaboration from '@tiptap/extension-collaboration';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { Bold, Code, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Quote, Strikethrough, Underline as UnderlineIcon } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
 import { cn } from '../../../lib/utils';
-import { YjsExtension } from '../extensions/YjsExtension';
 
 type RemoteCursor = {
   userId: string;
@@ -34,14 +34,33 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const lastLocalCursorPositionRef = useRef<number | null>(null);
-  const seededCollaborativeContentRef = useRef<string | null>(null);
+  const collaborativeSeededForSessionRef = useRef(false);
+  const lastFragmentLengthRef = useRef<number | null>(null);
   const [remoteCursorAnchors, setRemoteCursorAnchors] = useState<Array<RemoteCursor & { top: number; left: number }>>([]);
 
-  const collaborationExtensions = useMemo(() => (yDoc ? [YjsExtension.configure({ yDoc })] : []), [yDoc]);
+  const starterKit = useMemo(
+    () => StarterKit.configure(collaborative && Boolean(yDoc) ? { history: false } : {}),
+    [collaborative, yDoc],
+  );
+  const collaborationExtensions = useMemo(() => (yDoc
+    ? [
+        Collaboration.configure({
+          document: yDoc,
+          field: 'prosemirror',
+        }),
+      ]
+    : []), [yDoc]);
+
+  const emitCursorPosition = useCallback((position: number) => {
+    if (!readOnly && collaborative && onCursorMove && lastLocalCursorPositionRef.current !== position) {
+      lastLocalCursorPositionRef.current = position;
+      onCursorMove(position);
+    }
+  }, [collaborative, onCursorMove, readOnly]);
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      starterKit,
       Underline,
       Link.configure({
         openOnClick: false,
@@ -58,23 +77,37 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     ],
     ...(yDoc ? {} : { content }),
     editable: !readOnly,
+    onCreate: ({ editor: ed }) => {
+      const extensionNames = ed.extensionManager.extensions.map((extension) => extension.name);
+      const pluginKeys = ed.state.plugins.map((plugin) => String((plugin as { key?: string }).key ?? ''));
+      console.log('[NoteEditor] created', {
+        collaborative,
+        hasYDoc: Boolean(yDoc),
+        syncKey,
+        fragmentLength: yDoc?.getXmlFragment('prosemirror').length ?? null,
+        extensionNames,
+        pluginKeys,
+      });
+    },
     onUpdate: ({ editor: ed }) => {
       if (onChange) {
         onChange(ed.getHTML());
       }
 
-      const selectionPosition = ed.state.selection.from;
-      if (!readOnly && collaborative && onCursorMove && lastLocalCursorPositionRef.current !== selectionPosition) {
-        lastLocalCursorPositionRef.current = selectionPosition;
-        onCursorMove(selectionPosition);
+      if (collaborative && yDoc) {
+        const fragmentLength = yDoc.getXmlFragment('prosemirror').length;
+        console.log('[NoteEditor] onUpdate fragment length', {
+          previous: lastFragmentLengthRef.current,
+          current: fragmentLength,
+          syncKey,
+        });
+        lastFragmentLengthRef.current = fragmentLength;
       }
+
+      emitCursorPosition(ed.state.selection.from);
     },
     onSelectionUpdate: ({ editor: ed }) => {
-      const selectionPosition = ed.state.selection.from;
-      if (!readOnly && collaborative && onCursorMove && lastLocalCursorPositionRef.current !== selectionPosition) {
-        lastLocalCursorPositionRef.current = selectionPosition;
-        onCursorMove(selectionPosition);
-      }
+      emitCursorPosition(ed.state.selection.from);
     },
     editorProps: {
       attributes: {
@@ -104,18 +137,39 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       return;
     }
 
+    if (collaborativeSeededForSessionRef.current) {
+      return;
+    }
+
     const fragment = yDoc.getXmlFragment('prosemirror');
+    console.log('[NoteEditor] collaborative seed check', {
+      syncKey,
+      fragmentLength: fragment.length,
+      contentLength: content.length,
+      seeded: collaborativeSeededForSessionRef.current,
+    });
     if (fragment.length > 0) {
-      seededCollaborativeContentRef.current = null;
+      collaborativeSeededForSessionRef.current = true;
       return;
     }
 
-    if (!content || seededCollaborativeContentRef.current === content) {
+    if (!content) {
       return;
     }
 
-    seededCollaborativeContentRef.current = content;
+    collaborativeSeededForSessionRef.current = true;
     editor.commands.setContent(content, false);
+    const fragmentLengthAfter = yDoc.getXmlFragment('prosemirror').length;
+    console.log('[NoteEditor] collaborative seed applied', {
+      syncKey,
+      fragmentLengthAfter,
+    });
+    if (fragmentLengthAfter === 0 && content) {
+      console.warn('[NoteEditor] collaborative seed did not mutate Y.Doc', {
+        syncKey,
+        contentLength: content.length,
+      });
+    }
   }, [collaborative, content, editor, yDoc]);
 
   const recalculateRemoteCursorAnchors = useCallback(() => {
@@ -161,7 +215,8 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
 
   useEffect(() => {
     lastLocalCursorPositionRef.current = null;
-    seededCollaborativeContentRef.current = null;
+    collaborativeSeededForSessionRef.current = false;
+    lastFragmentLengthRef.current = null;
   }, [syncKey]);
 
   const lastSyncKeyRef = useRef<string | null>(null);

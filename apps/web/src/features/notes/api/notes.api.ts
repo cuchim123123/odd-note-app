@@ -54,7 +54,7 @@ const cloneNote = (note: Note): Note => ({ ...note, labels: [...note.labels] });
 const normalizeLabel = (label: string) => label.trim();
 
 const NOTES_DB_NAME = 'odd-note-app';
-const NOTES_DB_VERSION = 3;
+const NOTES_DB_VERSION = 4;
 const NOTES_STORE_NAME = 'notes';
 
 const openNotesDb = async (): Promise<IDBDatabase> => {
@@ -72,6 +72,9 @@ const openNotesDb = async (): Promise<IDBDatabase> => {
       }
       if (!db.objectStoreNames.contains('metadata')) {
         db.createObjectStore('metadata', { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains('drafts')) {
+        db.createObjectStore('drafts', { keyPath: 'id' });
       }
     };
 
@@ -467,7 +470,22 @@ export async function removeNotePassword(noteId: string, password: string): Prom
 
 export async function getNoteDraft(noteId: string): Promise<NoteDraft | null> {
   if (!backendNotesAvailable()) {
-    return mockNoteDrafts[noteId] ?? null;
+    try {
+      const db = await openNotesDb();
+      const tx = db.transaction('drafts', 'readonly');
+      const store = tx.objectStore('drafts');
+
+      const draft = await new Promise<NoteDraft | null>((resolve, reject) => {
+        const request = store.get(noteId);
+        request.onsuccess = () => resolve(request.result ?? null);
+        request.onerror = () => reject(request.error);
+      });
+
+      db.close();
+      return draft ?? null;
+    } catch {
+      return mockNoteDrafts[noteId] ?? null;
+    }
   }
 
   const response = await api.get<NoteDraft | null>(`/notes/${noteId}/draft`);
@@ -477,8 +495,23 @@ export async function getNoteDraft(noteId: string): Promise<NoteDraft | null> {
 export async function saveNoteDraft(noteId: string, title: string, content: string): Promise<{ saved: true; updatedAt: string }> {
   if (!backendNotesAvailable()) {
     const updatedAt = now();
-    mockNoteDrafts[noteId] = { title, content, updatedAt };
-    return { saved: true, updatedAt };
+    try {
+      const db = await openNotesDb();
+      const tx = db.transaction('drafts', 'readwrite');
+      const store = tx.objectStore('drafts');
+
+      await new Promise<void>((resolve, reject) => {
+        const request = store.put({ id: noteId, title, content, updatedAt });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+
+      db.close();
+      return { saved: true, updatedAt };
+    } catch {
+      mockNoteDrafts[noteId] = { title, content, updatedAt };
+      return { saved: true, updatedAt };
+    }
   }
 
   const response = await api.post<{ saved: true; updatedAt: string }>(`/notes/${noteId}/draft`, { title, content });
@@ -487,8 +520,23 @@ export async function saveNoteDraft(noteId: string, title: string, content: stri
 
 export async function clearNoteDraft(noteId: string): Promise<{ cleared: true }> {
   if (!backendNotesAvailable()) {
-    delete mockNoteDrafts[noteId];
-    return { cleared: true };
+    try {
+      const db = await openNotesDb();
+      const tx = db.transaction('drafts', 'readwrite');
+      const store = tx.objectStore('drafts');
+
+      await new Promise<void>((resolve, reject) => {
+        const request = store.delete(noteId);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+
+      db.close();
+      return { cleared: true };
+    } catch {
+      delete mockNoteDrafts[noteId];
+      return { cleared: true };
+    }
   }
 
   const response = await api.delete<{ cleared: true }>(`/notes/${noteId}/draft`);

@@ -5,6 +5,9 @@ import * as awarenessProtocol from 'y-protocols/awareness';
 import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../../auth/stores/auth.store';
 
+// Shared Y.Doc instances keyed by noteId to ensure one stable Y.Doc per note
+const sharedYDocs = new Map<string, Y.Doc>();
+
 export type Collaborator = {
   userId: string;
   displayName: string;
@@ -117,6 +120,7 @@ export function useYjsCollaboration({
   const applyingRemoteUpdateRef = useRef(false);
   const refreshInFlightRef = useRef(false);
   const refreshAttemptedRef = useRef(false);
+  const syncedSocketIdRef = useRef<string | null>(null);
   const onRemoteContentUpdateRef = useRef(onRemoteContentUpdate);
   const onRemoteCursorRef = useRef(onRemoteCursor);
 
@@ -138,7 +142,16 @@ export function useYjsCollaboration({
       return;
     }
 
-    const nextYDoc = new Y.Doc();
+    // Use a shared Y.Doc per noteId so multiple hook instances/remounts share the same document.
+    // This prevents creating multiple distinct Y.Docs for the same note which breaks rendering bindings.
+    let nextYDoc: Y.Doc;
+    if (noteId && sharedYDocs.has(noteId)) {
+      nextYDoc = sharedYDocs.get(noteId)!;
+    } else {
+      nextYDoc = new Y.Doc();
+      if (noteId) sharedYDocs.set(noteId, nextYDoc);
+    }
+
     const nextAwareness = new awarenessProtocol.Awareness(nextYDoc);
     setYDoc(nextYDoc);
     setAwareness(nextAwareness);
@@ -172,14 +185,15 @@ export function useYjsCollaboration({
       return;
     }
 
-    const syncState = () => {
-      if (socketRef.current?.connected) {
+    const syncState = (socket: Socket) => {
+      if (socket.connected) {
         console.log('[Yjs] Emitting note:join for', noteId);
-        socketRef.current.emit('note:join', { noteId });
+        socket.emit('note:join', { noteId });
         setTimeout(() => {
-          if (socketRef.current?.connected) {
+          if (socket.connected) {
+            console.log('[Yjs] sync-step-1 fragment length before send', nextYDoc.getXmlFragment('prosemirror').length);
             console.log('[Yjs] Emitting yjs:sync-step-1 for', noteId);
-            socketRef.current.emit('yjs:sync-step-1', {
+            socket.emit('yjs:sync-step-1', {
               noteId,
               stateVector: Array.from(Y.encodeStateVector(nextYDoc)),
             });
@@ -191,7 +205,9 @@ export function useYjsCollaboration({
     const handleRemoteUpdate = (update: Uint8Array) => {
       applyingRemoteUpdateRef.current = true;
       try {
+        console.log('[Yjs] applying remote update', update.length, 'fragment length before apply', nextYDoc.getXmlFragment('prosemirror').length);
         Y.applyUpdate(nextYDoc, update);
+        console.log('[Yjs] applied remote update', update.length, 'fragment length after apply', nextYDoc.getXmlFragment('prosemirror').length);
       } finally {
         applyingRemoteUpdateRef.current = false;
       }
@@ -203,6 +219,8 @@ export function useYjsCollaboration({
       }
 
       if (socketRef.current?.connected) {
+        console.log('[Yjs] local update', update.length, 'fragment length', nextYDoc.getXmlFragment('prosemirror').length);
+        console.log('[Yjs] emitting yjs:update', noteId, update.length);
         socketRef.current.emit('yjs:update', {
           noteId,
           update: Array.from(update),
@@ -222,11 +240,17 @@ export function useYjsCollaboration({
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      const currentSocketId = socket.id ?? null;
+      if (currentSocketId && syncedSocketIdRef.current === currentSocketId) {
+        return;
+      }
+      syncedSocketIdRef.current = currentSocketId;
+
       console.log('[Yjs] Socket connected, initiating sync');
       setIsConnected(true);
       setTimeout(() => {
         console.log('[Yjs] Calling syncState');
-        syncState();
+        syncState(socket);
       }, 100);
     });
 
@@ -268,6 +292,7 @@ export function useYjsCollaboration({
     });
 
     socket.on('disconnect', () => {
+      syncedSocketIdRef.current = null;
       setIsConnected(false);
       setCollaborators([]);
       setPresenceParticipants([]);
@@ -320,12 +345,14 @@ export function useYjsCollaboration({
 
     socket.on('yjs:sync-step-2', (data: { noteId: string; update: number[] }) => {
       if (data.noteId === noteId) {
+        console.log('[Yjs] received yjs:sync-step-2', data.update.length);
         handleRemoteUpdate(new Uint8Array(data.update));
       }
     });
 
     socket.on('yjs:update', (data: { noteId: string; update: number[] }) => {
       if (data.noteId === noteId) {
+        console.log('[Yjs] received yjs:update', data.update.length, 'fragment length before apply', nextYDoc.getXmlFragment('prosemirror').length);
         handleRemoteUpdate(new Uint8Array(data.update));
       }
     });
@@ -351,16 +378,36 @@ export function useYjsCollaboration({
       setRemoteCursors(remoteCursorStates);
     });
 
+    // Attach update listener to emit local updates to the socket
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[Yjs] Attaching update listener to Y.Doc', (nextYDoc as any)?.guid ?? (nextYDoc as any)?.clientID);
+    } catch (e) {
+      // ignore
+    }
     nextYDoc.on('update', handleDocUpdate);
 
     socket.connect();
 
     return () => {
+      // Remove our update listener and destroy local awareness, but do NOT destroy the shared Y.Doc
+      // because other hook instances or components may still rely on the same document.
+      try {
+        // eslint-disable-next-line no-console
+        console.log('[Yjs] Removing update listener from Y.Doc', (nextYDoc as any)?.guid ?? (nextYDoc as any)?.clientID);
+      } catch (e) {
+        // ignore
+      }
       nextYDoc.off('update', handleDocUpdate);
-      nextYDoc.destroy();
-      nextAwareness.destroy();
+      try {
+        nextAwareness.destroy();
+      } catch (e) {
+        // ignore
+      }
+
       socket.emit('note:leave');
       socket.disconnect();
+      syncedSocketIdRef.current = null;
       socketRef.current = null;
       setIsConnected(false);
       setCollaborators([]);

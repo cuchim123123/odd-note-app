@@ -382,6 +382,8 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       return;
     }
 
+    this.logger.log(`[Yjs] recv yjs:sync-step-3 note=${data.noteId} from=${client.data.userId} bytes=${data.update?.length ?? 0}`);
+
     const yDoc = await this.getOrCreateYDoc(data.noteId);
     Y.applyUpdate(yDoc, new Uint8Array(data.update));
 
@@ -390,9 +392,11 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       noteId: data.noteId,
       update: data.update,
     });
+    this.logger.log(`[Yjs] broadcast yjs:update note=${data.noteId} from=${client.data.userId} bytes=${data.update?.length ?? 0}`);
 
     // Persist to Redis
     await this.persistYDoc(data.noteId, yDoc);
+    this.logger.log(`[Yjs] persisted yDoc after sync-step-3 note=${data.noteId}`);
   }
 
   @SubscribeMessage('yjs:update')
@@ -405,6 +409,8 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       return;
     }
 
+    this.logger.log(`[Yjs] recv yjs:update note=${data.noteId} from=${client.data.userId} bytes=${data.update?.length ?? 0}`);
+
     const yDoc = await this.getOrCreateYDoc(data.noteId);
     Y.applyUpdate(yDoc, new Uint8Array(data.update));
 
@@ -413,9 +419,11 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       noteId: data.noteId,
       update: data.update,
     });
+    this.logger.log(`[Yjs] broadcast yjs:update note=${data.noteId} from=${client.data.userId} bytes=${data.update?.length ?? 0}`);
 
     // Persist to Redis
     await this.persistYDoc(data.noteId, yDoc);
+    this.logger.log(`[Yjs] persisted yDoc after yjs:update note=${data.noteId}`);
   }
 
   @SubscribeMessage('yjs:awareness')
