@@ -13,6 +13,11 @@ import { Button } from '../../../components/ui/button';
 import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
 import { cn } from '../../../lib/utils';
 
+type AwarenessProvider = {
+  setLocalStateField(field: string, value: unknown): void;
+  getAwareness(): awarenessProtocol.Awareness;
+};
+
 type NoteEditorProps = {
   content?: string | undefined;
   onChange?: (content: string) => void;
@@ -20,7 +25,7 @@ type NoteEditorProps = {
   onInsertImage?: () => void;
   syncKey?: string | null;
   collaborative?: boolean;
-  awareness?: awarenessProtocol.Awareness | null;
+  awareness?: AwarenessProvider | null;
   localUser?: { userId: string; displayName: string; color: string } | null;
   yDoc?: Y.Doc | undefined;
 };

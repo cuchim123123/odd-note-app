@@ -5,6 +5,20 @@ import * as awarenessProtocol from 'y-protocols/awareness';
 import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../../auth/stores/auth.store';
 
+// Wrapper provider that adapts Awareness instance to CollaborationCursor's expected interface
+class AwarenessProvider {
+  constructor(private awareness: awarenessProtocol.Awareness) {}
+
+  setLocalStateField(field: string, value: unknown): void {
+    const currentState = this.awareness.getLocalState() || {};
+    this.awareness.setLocalState({ ...currentState, [field]: value });
+  }
+
+  getAwareness(): awarenessProtocol.Awareness {
+    return this.awareness;
+  }
+}
+
 // Shared Y.Doc instances keyed by noteId to ensure one stable Y.Doc per note
 const sharedYDocs = new Map<string, Y.Doc>();
 
@@ -476,13 +490,15 @@ export function useYjsCollaboration({
     }
   };
 
+  const awarenessProvider = awareness ? new AwarenessProvider(awareness) : null;
+
   return {
     collaborators,
     presenceParticipants,
     typingParticipants,
     isConnected,
     yDoc,
-    awareness,
+    awareness: awarenessProvider,
     sendContentUpdate,
     sendCursorPosition,
     sendTypingState,
