@@ -277,11 +277,15 @@ export function useYjsCollaboration({
 
     socket.on('collaborators:list', (list: Collaborator[]) => {
       setCollaborators(list);
-      setPresenceParticipants(list);
+      // Filter out self from presence participants
+      const otherParticipants = list.filter((p) => p.userId !== user?.id);
+      setPresenceParticipants(otherParticipants);
     });
 
     socket.on('presence:list', (list: PresenceParticipant[]) => {
-      setPresenceParticipants(list);
+      // Filter out self from presence participants
+      const otherParticipants = list.filter((p) => p.userId !== user?.id);
+      setPresenceParticipants(otherParticipants);
     });
 
     socket.on('typing:list', (list: TypingParticipant[]) => {
@@ -290,6 +294,10 @@ export function useYjsCollaboration({
 
     socket.on('collaborator:joined', (collaborator: Collaborator) => {
       setCollaborators((current) => (current.some((entry) => entry.userId === collaborator.userId) ? current : [...current, collaborator]));
+      // Add to presence participants if not self and not already present
+      if (collaborator.userId !== user?.id) {
+        setPresenceParticipants((current) => (current.some((entry) => entry.userId === collaborator.userId) ? current : [...current, collaborator]));
+      }
     });
 
     socket.on('collaborator:left', (data: { userId: string }) => {
