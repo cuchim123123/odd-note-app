@@ -476,7 +476,7 @@ export const useUpdateNote = (id: string) => {
         ),
       );
 
-      queryClient.setQueryData<Note>(NOTES_KEYS.detail(id), (currentNote) =>
+      queryClient.setQueryData<NoteDetailItem>(NOTES_KEYS.detail(id), (currentNote: NoteDetailItem | undefined) =>
         currentNote
           ? ({
               ...currentNote,
@@ -486,7 +486,7 @@ export const useUpdateNote = (id: string) => {
               isProtected: input.isProtected ?? currentNote.isProtected,
               labels: input.labels ?? currentNote.labels,
               updatedAt: now(),
-            } as Note)
+            } as NoteDetailItem)
           : currentNote,
       );
 

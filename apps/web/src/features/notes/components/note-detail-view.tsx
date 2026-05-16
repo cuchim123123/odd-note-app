@@ -63,7 +63,8 @@ function NoteDetailContent({
   const navigate = useNavigate();
   
   // Robust permission checks
-  const isOwnedNote = note.accessMode === 'owner' || (!note.accessMode && !note.isShared);
+  // Robust permission checks: Owners don't have a sharedPermission field, recipients do.
+  const isOwnedNote = note.accessMode === 'owner' || (!note.accessMode && !note.sharedPermission);
   const isSharedNote = Boolean(note?.isShared || (note && 'accessMode' in note && note.accessMode === 'shared'));
   const sharedPermission = (note && 'sharedPermission' in note) ? (note as NoteDetailItem).sharedPermission : undefined;
   
@@ -337,22 +338,10 @@ function NoteDetailContent({
     if (!note || title === note.title || !title.trim()) return;
     
     try {
-      const updated = await updateNote({ title });
+      await updateNote({ title });
       
-      // Update local query cache
-      const ut = updated.updatedAt || new Date().toISOString();
-      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
-        ns.map((n) => n.id === note.id ? { ...n, title, updatedAt: ut } : n),
-      );
-      queryClient.setQueryData(NOTES_KEYS.detail(note.id!), (n) =>
-        n ? { ...n, title, updatedAt: ut } : n,
-      );
-
       // Broadcast to other participants in realtime
       broadcast({ title });
-      
-      // Clear local draft if it matches the server now (partially)
-      // Actually clearNoteDraft is for the whole note, we'll keep it simple
     } catch (e) {
       console.error('Failed to save title', e);
     }
