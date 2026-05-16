@@ -34,8 +34,32 @@ function getYDocDebugId(yDoc?: YDoc | null): string {
 }
 
 export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
-  const queryClient = useQueryClient();
   const { data: note, isLoading } = useNote(noteId);
+
+  if (isLoading || !note) {
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading…</div>;
+  }
+
+  return (
+    <NoteDetailContent 
+      key={note.id}
+      note={note} 
+      noteId={noteId} 
+      onDeleted={onDeleted} 
+    />
+  );
+}
+
+function NoteDetailContent({ 
+  note, 
+  noteId, 
+  onDeleted 
+}: { 
+  note: NoteDetailItem; 
+  noteId: string; 
+  onDeleted: () => void 
+}) {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   
   // Robust permission checks
@@ -59,14 +83,15 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
   const markUnlocked = useNoteProtectionStore((state) => state.markUnlocked);
   const markLocked = useNoteProtectionStore((state) => state.markLocked);
 
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  // INITIALIZE STATE DIRECTLY FROM NOTE
+  const [title, setTitle] = useState(note.title || '');
+  const [content, setContent] = useState(note.content || '');
   const [isDirty, setIsDirty] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(note.updatedAt || null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
   const [protectionMode, setProtectionMode] = useState<'idle' | 'protect' | 'remove'>('idle');
-  const [serverProtectionStatus, setServerProtectionStatus] = useState<boolean | null>(null);
+  const [serverProtectionStatus, setServerProtectionStatus] = useState<boolean | null>(note.isProtected ?? null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [labelManagementOpen, setLabelManagementOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -74,27 +99,10 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
   const draftTimeoutRef = useRef<NodeJS.Timeout>();
   const serverTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // 1. Reset state completely when switching to a DIFFERENT note
-  useEffect(() => {
-    if (!note) return;
-    
-    // Completely reset local state for the new note
-    setTitle(note.title || '');
-    setContent(note.content || '');
-    setIsDirty(false);
-    setLastSavedAt(note.updatedAt || null);
-    setSaveError(null);
-    setServerProtectionStatus(note.isProtected ?? null);
-    
-    // Clear any pending timeouts from the previous note
-    if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
-    if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
-  }, [note?.id]);
-
-  // 2. Sync server updates for the CURRENT note (e.g. from other tabs)
+  // Sync server updates for the CURRENT note (e.g. from other tabs)
   // Only sync if we are NOT dirty and NOT currently applying a remote update
   useEffect(() => {
-    if (!note || isDirty || isRemoteUpdateRef.current) return;
+    if (isDirty || isRemoteUpdateRef.current) return;
     
     // Sync title/content if they changed on server while we were idle
     if (note.title !== title) setTitle(note.title || '');
@@ -102,7 +110,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
       setContent(note.content || '');
     }
     setLastSavedAt(note.updatedAt || null);
-  }, [note?.title, note?.content, note?.updatedAt]);
+  }, [note.title, note.content, note.updatedAt]);
 
   // Sync protection status
   useEffect(() => {
@@ -160,10 +168,10 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   // AGGRESSIVE AUTOSAVE: Always save immediately to IndexedDB, then to server
   useEffect(() => {
-    if (!note || isLoading || !canEditContent) return;
+    if (!canEditContent) return;
 
     const normalized = normalizeNoteHtml(content);
-    const changed = title !== (note.title || '') || normalized !== normalizeNoteHtml(note.content || '');
+    const changed = normalized !== normalizeNoteHtml(note.content || '');
 
     if (!changed) {
       setIsDirty(false);
@@ -201,7 +209,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
         setIsSavingLocal(true);
 
         try {
-          const upd = await updateNote({ content: normalized });
+          const upd = await updateNote({ title, content: normalized });
           setLastSavedAt(upd.updatedAt || optTime);
           setIsDirty(false);
           // Only clear draft if server save succeeds
@@ -227,7 +235,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
       if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
     };
-  }, [content, note, title, updateNote, isCollaborativeNote, isLoading, canEditContent]);
+  }, [content, note, title, updateNote, isCollaborativeNote, canEditContent]);
 
   useEffect(() => {
     if (!note || !canEditContent) return;
@@ -247,13 +255,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   const handleRemoteContentUpdate = useCallback((d: { userId: string; content: string; title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined; timestamp?: string | number }) => {
     isRemoteUpdateRef.current = true;
-    if (d.title !== undefined && d.title !== title) {
-      // Only update title if it's not empty (unless the note title is actually empty)
-      // This prevents initial empty broadcasts from clearing the title
-      if (d.title || !note?.title) {
-        setTitle(d.title);
-      }
-    }
+    if (d.title !== undefined) setTitle(d.title);
     if (d.isProtected !== undefined) setServerProtectionStatus(d.isProtected);
     if (d.labels !== undefined && noteId) {
       const ut = new Date().toISOString();
@@ -293,7 +295,6 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
     },
   });
 
-  if (isLoading || !note) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading…</div>;
 
   const isProtected = serverProtectionStatus ?? note.isProtected;
   if (isProtected && !isUnlocked) {
@@ -360,7 +361,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
   const onUnauthorized = () => navigate('/notes');
 
   return (
-    <ProtectedNoteRoute note={note as ProtectedNote | null} isLoading={isLoading} onUnauthorized={onUnauthorized}>
+    <ProtectedNoteRoute note={note as ProtectedNote | null} isLoading={false} onUnauthorized={onUnauthorized}>
       <div className="flex h-full flex-col overflow-hidden rounded-3xl border bg-card shadow-[0_24px_80px_rgba(15,23,42,0.12)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
       <NoteToolbar
         note={note}
