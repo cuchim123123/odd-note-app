@@ -402,7 +402,7 @@ export function useYjsCollaboration({
     };
   }, [accessToken, enabled, noteId, refreshToken, user]);
 
-  const sendContentUpdate = (content?: string | undefined, title?: string | undefined, metadata?: { isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined }) => {
+  const sendContentUpdate = (content?: string | undefined, title?: string | undefined, metadata?: { title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined }) => {
     if (socketRef.current?.connected && noteId) {
       socketRef.current.emit('note:update', { noteId, content, title, ...metadata });
     }

@@ -502,25 +502,12 @@ export const useUpdateNote = (id: string) => {
       }
     },
     onSuccess: (updatedNote, input) => {
-      const mergeNote = (current: Note | undefined): Note => {
-        if (!current) return updatedNote;
-        const merged: Note = {
-          ...current,
-          ...updatedNote,
-          // Preserve current content/protection if not explicitly in the input
-          content: input.content !== undefined ? (updatedNote.content ?? current.content ?? '') : (current.content ?? ''),
-          isProtected: input.isProtected !== undefined ? !!input.isProtected : (current.isProtected ?? !!updatedNote.isProtected),
-        };
-        return merged;
-      };
-
+      const normalizedNote = input.isProtected === undefined ? updatedNote : { ...updatedNote, isProtected: input.isProtected };
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
-        currentNotes.map((note) => (note.id === id ? mergeNote(note) : note)),
+        currentNotes.map((note) => (note.id === id ? normalizedNote : note)),
       );
-      queryClient.setQueryData<Note>(NOTES_KEYS.detail(id), (current) => mergeNote(current));
-      
-      const finalNote = mergeNote(queryClient.getQueryData<Note>(NOTES_KEYS.detail(id)));
-      void upsertNoteInDb(finalNote);
+      queryClient.setQueryData(NOTES_KEYS.detail(id), normalizedNote);
+      void upsertNoteInDb(normalizedNote);
     },
   });
 };

@@ -93,32 +93,16 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   // 2. Sync server updates for the CURRENT note (e.g. from other tabs)
   // Only sync if we are NOT dirty and NOT currently applying a remote update
-  const lastNoteIdRef = useRef<string | null>(null);
-
   useEffect(() => {
-    if (!note) return;
-
-    const isNewNote = lastNoteIdRef.current !== noteId;
+    if (!note || isDirty || isRemoteUpdateRef.current) return;
     
-    if (isNewNote) {
-      // Initial load of a new note
-      setTitle(note.title || '');
+    // Sync title/content if they changed on server while we were idle
+    if (note.title !== title) setTitle(note.title || '');
+    if (normalizeNoteHtml(note.content) !== normalizeNoteHtml(content)) {
       setContent(note.content || '');
-      setIsDirty(false);
-      lastNoteIdRef.current = noteId;
-    } else {
-      // Server update for the same note (e.g. from another tab or remote participant)
-      // Only sync to local state if we are NOT currently editing (isDirty) 
-      // or applying a Yjs remote update (isRemoteUpdateRef).
-      if (!isDirty && !isRemoteUpdateRef.current) {
-        if (note.title !== title) setTitle(note.title || '');
-        if (normalizeNoteHtml(note.content) !== normalizeNoteHtml(content)) {
-          setContent(note.content || '');
-        }
-      }
     }
     setLastSavedAt(note.updatedAt || null);
-  }, [note?.id, note?.title, note?.content, note?.updatedAt, isDirty, noteId]);
+  }, [note?.title, note?.content, note?.updatedAt]);
 
   // Sync protection status
   useEffect(() => {
@@ -176,10 +160,10 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   // AGGRESSIVE AUTOSAVE: Always save immediately to IndexedDB, then to server
   useEffect(() => {
-    if (!note || isLoading || !canEditContent || saveError || isRemoteUpdateRef.current) return;
+    if (!note || isLoading || !canEditContent) return;
 
     const normalized = normalizeNoteHtml(content);
-    const changed = title !== note.title || normalized !== normalizeNoteHtml(note.content || '');
+    const changed = normalized !== normalizeNoteHtml(note.content || '');
 
     if (!changed) {
       setIsDirty(false);
@@ -203,19 +187,10 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
     if (isCollaborativeNote) {
       // Collaborative content is synced via Yjs updates from the editor.
-      // However, the title and other metadata still need to be synced via the socket 
-      // AND persisted to the database.
-      serverTimeoutRef.current = setTimeout(async () => {
-        sendContentUpdate(undefined, title);
-        
-        try {
-          // Save title to database for persistence
-          await updateNote({ title });
-          setLastSavedAt(new Date().toISOString());
-          setIsDirty(false);
-        } catch (e) {
-          console.warn('Failed to persist title in collaborative mode:', e);
-        }
+      // Do not send full-content `note:update` payloads here because that can
+      // reset selection/cursor positions on all clients.
+      serverTimeoutRef.current = setTimeout(() => {
+        setLastSavedAt(new Date().toISOString());
       }, 300);
     } else {
       // For solo notes: save to server immediately with optimistic UI
@@ -324,7 +299,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
     );
   }
 
-  const broadcast = (s: { isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined } = {}) => {
+  const broadcast = (s: { title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined } = {}) => {
     if (!isCollaborativeNote) return;
     sendContentUpdate(undefined, title, s);
   };
@@ -348,8 +323,32 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
-    setIsDirty(true);
-    setSaveError(null);
+    writeLocalDraft(note.id!, newTitle, content);
+  };
+
+  const handleSaveTitle = async () => {
+    if (!note || title === note.title || !title.trim()) return;
+    
+    try {
+      const updated = await updateNote({ title });
+      
+      // Update local query cache
+      const ut = updated.updatedAt || new Date().toISOString();
+      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
+        ns.map((n) => n.id === note.id ? { ...n, title, updatedAt: ut } : n),
+      );
+      queryClient.setQueryData(NOTES_KEYS.detail(note.id!), (n) =>
+        n ? { ...n, title, updatedAt: ut } : n,
+      );
+
+      // Broadcast to other participants in realtime
+      broadcast({ title });
+      
+      // Clear local draft if it matches the server now (partially)
+      // Actually clearNoteDraft is for the whole note, we'll keep it simple
+    } catch (e) {
+      console.error('Failed to save title', e);
+    }
   };
 
   const onUnauthorized = () => navigate('/notes');
@@ -385,6 +384,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
         isSharedNote={isSharedNote}
         onToggleLabel={handleToggleLabel}
         onOpenLabelManagement={() => setLabelManagementOpen(true)}
+        onSaveTitle={handleSaveTitle}
       />
 
       {deleteConfirmOpen && (
@@ -452,7 +452,6 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
             {...(canEditContent ? {
               onChange: (c: string) => {
                 setContent(c);
-                setSaveError(null);
                 writeLocalDraft(note.id!, title, c);
               },
             } : {})}

@@ -28,6 +28,7 @@ export function NoteToolbar({
   isSharedNote,
   onToggleLabel,
   onOpenLabelManagement,
+  onSaveTitle,
 }: {
   note: Note;
   title: string;
@@ -49,11 +50,14 @@ export function NoteToolbar({
   isSharedNote: boolean;
   onToggleLabel: (label: string) => void;
   onOpenLabelManagement: () => void;
+  onSaveTitle: () => void;
 }) {
+  const isTitleDirty = title !== note.title;
+
   const saveStatus: SaveStatus = (() => {
     if (!canEditContent) return { icon: Lock, label: 'Read Only', tone: 'text-muted-foreground' as const };
     if (saveError) return { icon: AlertTriangle, label: saveError, tone: 'text-destructive' as const };
-    if (isSaving) return { icon: Loader2, label: 'Autosaving…', tone: 'text-muted-foreground' as const };
+    if (isSaving) return { icon: Loader2, label: 'Saving…', tone: 'text-muted-foreground' as const };
     if (isDirty) return { icon: Loader2, label: 'Pending…', tone: 'text-muted-foreground' as const };
     return { icon: Check, label: lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved', tone: 'text-emerald-600' as const };
   })();
@@ -68,13 +72,26 @@ export function NoteToolbar({
     <div className="border-b bg-muted/50 px-4 py-4 sm:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1 space-y-2">
-          <Input
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-            className="h-auto border-border/60 bg-card px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
-            placeholder="Title…"
-            readOnly={!canEditContent}
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+              className="h-auto border-border/60 bg-card px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
+              placeholder="Title…"
+              readOnly={!canEditContent}
+            />
+            {isTitleDirty && (
+              <Button 
+                size="sm" 
+                onClick={onSaveTitle} 
+                disabled={isSaving || !title.trim()}
+                className="rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+              >
+                <Check className="mr-1.5 h-4 w-4" />
+                Save Title
+              </Button>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <IconStatus className={cn('h-3.5 w-3.5', saveStatus.tone, isSaving && 'animate-spin')} />
             <span className={cn('font-medium', saveStatus.tone)}>{saveStatus.label}</span>
