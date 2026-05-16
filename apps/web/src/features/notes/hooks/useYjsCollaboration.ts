@@ -327,8 +327,10 @@ export function useYjsCollaboration({
         return;
       }
 
-      setRemoteCursors(data.states);
-      data.states.forEach((cursor) => onRemoteCursorRef.current?.(cursor));
+      // Filter out self cursor - only show remote user cursors
+      const remoteCursorStates = data.states.filter((cursor) => cursor.userId !== user?.id);
+      setRemoteCursors(remoteCursorStates);
+      remoteCursorStates.forEach((cursor) => onRemoteCursorRef.current?.(cursor));
     });
 
     socket.on('yjs:awareness:list', (data: { noteId: string; states: RemoteCursorState[] }) => {
@@ -336,7 +338,9 @@ export function useYjsCollaboration({
         return;
       }
 
-      setRemoteCursors(data.states);
+      // Filter out self cursor - only show remote user cursors
+      const remoteCursorStates = data.states.filter((cursor) => cursor.userId !== user?.id);
+      setRemoteCursors(remoteCursorStates);
     });
 
     nextYDoc.on('update', handleDocUpdate);
