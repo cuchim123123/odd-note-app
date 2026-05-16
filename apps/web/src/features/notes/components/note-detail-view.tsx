@@ -22,9 +22,7 @@ import { SharingModal } from './sharing-modal';
 import { Button } from '../../../components/ui/button';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
 import { useYjsCollaboration } from '../hooks/useYjsCollaboration';
-import { ProtectedNoteRoute } from './protected-note-route';
-import { useAuthStore } from '../../auth/stores/auth.store';
-import type { NoteShareRecord } from '../api/notes.api';
+import { ProtectedNoteRoute, type ProtectedNote } from './protected-note-route';
 
 function normalizeNoteHtml(value: string | undefined): string {
   const html = (value ?? '').trim();
@@ -84,7 +82,6 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
   const queryClient = useQueryClient();
   const { data: note, isLoading } = useNote(noteId);
   const navigate = useNavigate();
-  const currentUser = useAuthStore((s) => s.user);
   // Only fetch shares if this note is owned by the current user
   const isOwnedNote = !note?.accessMode || note.accessMode === 'owner';
   const { data: shares = [] } = useNoteShares(isOwnedNote ? noteId : null);
@@ -413,7 +410,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
         <SharingModal
           isOpen={shareModalOpen}
           noteId={noteId}
-          shares={(shares ?? []) as NoteShareRecord[]}
+          shares={shares ?? []}
           onShare={async (email, permission) => {
             await createShareMutation.mutateAsync({ recipientEmail: email, permission });
             setShareModalOpen(false);
@@ -426,7 +423,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
         <div className="mx-auto max-w-4xl">
           <NoteEditor
             key={yDoc ? `y-${getYDocDebugId(yDoc)}` : `no-y-${noteId ?? 'none'}`}
-            content={content}
+            content={isCollaborativeNote ? undefined : content}
             readOnly={!canEditContent}
             onInsertImage={() => imageInputRef.current?.click()}
             syncKey={note?.id ?? noteId}

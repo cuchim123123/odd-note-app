@@ -19,7 +19,7 @@ type RemoteCursor = {
 };
 
 type NoteEditorProps = {
-  content?: string;
+  content?: string | undefined;
   onChange?: (content: string) => void;
   readOnly?: boolean;
   onInsertImage?: () => void;
@@ -34,7 +34,6 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const lastLocalCursorPositionRef = useRef<number | null>(null);
-  const collaborativeSeededForSessionRef = useRef(false);
   const lastFragmentLengthRef = useRef<number | null>(null);
   const [remoteCursorAnchors, setRemoteCursorAnchors] = useState<Array<RemoteCursor & { top: number; left: number }>>([]);
 
@@ -80,7 +79,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     onCreate: ({ editor: ed }) => {
       const extensionNames = ed.extensionManager.extensions.map((extension) => extension.name);
       const pluginKeys = ed.state.plugins.map((plugin) => String((plugin as { key?: string }).key ?? ''));
-      console.log('[NoteEditor] created', {
+      console.warn('[NoteEditor] created', {
         collaborative,
         hasYDoc: Boolean(yDoc),
         syncKey,
@@ -96,7 +95,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
 
       if (collaborative && yDoc) {
         const fragmentLength = yDoc.getXmlFragment('prosemirror').length;
-        console.log('[NoteEditor] onUpdate fragment length', {
+        console.warn('[NoteEditor] onUpdate fragment length', {
           previous: lastFragmentLengthRef.current,
           current: fragmentLength,
           syncKey,
@@ -131,46 +130,6 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       editor.setEditable(!readOnly);
     }
   }, [editor, readOnly]);
-
-  useEffect(() => {
-    if (!editor || !yDoc || !collaborative) {
-      return;
-    }
-
-    if (collaborativeSeededForSessionRef.current) {
-      return;
-    }
-
-    const fragment = yDoc.getXmlFragment('prosemirror');
-    console.log('[NoteEditor] collaborative seed check', {
-      syncKey,
-      fragmentLength: fragment.length,
-      contentLength: content.length,
-      seeded: collaborativeSeededForSessionRef.current,
-    });
-    if (fragment.length > 0) {
-      collaborativeSeededForSessionRef.current = true;
-      return;
-    }
-
-    if (!content) {
-      return;
-    }
-
-    collaborativeSeededForSessionRef.current = true;
-    editor.commands.setContent(content, false);
-    const fragmentLengthAfter = yDoc.getXmlFragment('prosemirror').length;
-    console.log('[NoteEditor] collaborative seed applied', {
-      syncKey,
-      fragmentLengthAfter,
-    });
-    if (fragmentLengthAfter === 0 && content) {
-      console.warn('[NoteEditor] collaborative seed did not mutate Y.Doc', {
-        syncKey,
-        contentLength: content.length,
-      });
-    }
-  }, [collaborative, content, editor, yDoc]);
 
   const recalculateRemoteCursorAnchors = useCallback(() => {
     if (!editorContainerRef.current || !editor) {
@@ -215,11 +174,8 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
 
   useEffect(() => {
     lastLocalCursorPositionRef.current = null;
-    collaborativeSeededForSessionRef.current = false;
     lastFragmentLengthRef.current = null;
   }, [syncKey]);
-
-  const lastSyncKeyRef = useRef<string | null>(null);
 
   const isActive = (name: string) => Boolean(editor?.isActive?.(name));
 
@@ -247,16 +203,6 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
 
   useEffect(() => {
     if (!editor) return;
-
-    const syncKeyChanged = syncKey !== undefined && lastSyncKeyRef.current !== syncKey;
-
-    if (syncKeyChanged) {
-      lastSyncKeyRef.current = syncKey ?? null;
-      if (!collaborative) {
-        editor.commands.setContent(content, false);
-      }
-      return;
-    }
 
     if (!collaborative && content !== editor.getHTML()) {
       editor.commands.setContent(content, false);
