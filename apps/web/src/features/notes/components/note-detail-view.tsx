@@ -163,7 +163,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
     if (!note || isLoading || !canEditContent) return;
 
     const normalized = normalizeNoteHtml(content);
-    const changed = normalized !== normalizeNoteHtml(note.content || '');
+    const changed = title !== (note.title || '') || normalized !== normalizeNoteHtml(note.content || '');
 
     if (!changed) {
       setIsDirty(false);
@@ -201,7 +201,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
         setIsSavingLocal(true);
 
         try {
-          const upd = await updateNote({ title, content: normalized });
+          const upd = await updateNote({ content: normalized });
           setLastSavedAt(upd.updatedAt || optTime);
           setIsDirty(false);
           // Only clear draft if server save succeeds
@@ -247,7 +247,13 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   const handleRemoteContentUpdate = useCallback((d: { userId: string; content: string; title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined; timestamp?: string | number }) => {
     isRemoteUpdateRef.current = true;
-    if (d.title !== undefined) setTitle(d.title);
+    if (d.title !== undefined && d.title !== title) {
+      // Only update title if it's not empty (unless the note title is actually empty)
+      // This prevents initial empty broadcasts from clearing the title
+      if (d.title || !note?.title) {
+        setTitle(d.title);
+      }
+    }
     if (d.isProtected !== undefined) setServerProtectionStatus(d.isProtected);
     if (d.labels !== undefined && noteId) {
       const ut = new Date().toISOString();
