@@ -23,7 +23,7 @@ export const createNoteSchema = z.object({
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 
 export const updateNoteSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required').max(255).optional(),
+  title: z.string().trim().max(255).optional(),
   content: z.string().optional(),
   isPinned: z.boolean().optional(),
   isShared: z.boolean().optional(),

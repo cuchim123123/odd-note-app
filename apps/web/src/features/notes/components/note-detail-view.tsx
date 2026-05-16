@@ -93,16 +93,32 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   // 2. Sync server updates for the CURRENT note (e.g. from other tabs)
   // Only sync if we are NOT dirty and NOT currently applying a remote update
+  const lastNoteIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!note || isDirty || isRemoteUpdateRef.current) return;
+    if (!note) return;
+
+    const isNewNote = lastNoteIdRef.current !== noteId;
     
-    // Sync title/content if they changed on server while we were idle
-    if (note.title !== title) setTitle(note.title || '');
-    if (normalizeNoteHtml(note.content) !== normalizeNoteHtml(content)) {
+    if (isNewNote) {
+      // Initial load of a new note
+      setTitle(note.title || '');
       setContent(note.content || '');
+      setIsDirty(false);
+      lastNoteIdRef.current = noteId;
+    } else {
+      // Server update for the same note (e.g. from another tab or remote participant)
+      // Only sync to local state if we are NOT currently editing (isDirty) 
+      // or applying a Yjs remote update (isRemoteUpdateRef).
+      if (!isDirty && !isRemoteUpdateRef.current) {
+        if (note.title !== title) setTitle(note.title || '');
+        if (normalizeNoteHtml(note.content) !== normalizeNoteHtml(content)) {
+          setContent(note.content || '');
+        }
+      }
     }
     setLastSavedAt(note.updatedAt || null);
-  }, [note?.title, note?.content, note?.updatedAt]);
+  }, [note?.id, note?.title, note?.content, note?.updatedAt, isDirty, noteId]);
 
   // Sync protection status
   useEffect(() => {
@@ -160,7 +176,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   // AGGRESSIVE AUTOSAVE: Always save immediately to IndexedDB, then to server
   useEffect(() => {
-    if (!note || isLoading || !canEditContent) return;
+    if (!note || isLoading || !canEditContent || saveError || isRemoteUpdateRef.current) return;
 
     const normalized = normalizeNoteHtml(content);
     const changed = title !== note.title || normalized !== normalizeNoteHtml(note.content || '');
@@ -187,10 +203,19 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
     if (isCollaborativeNote) {
       // Collaborative content is synced via Yjs updates from the editor.
-      // Do not send full-content `note:update` payloads here because that can
-      // reset selection/cursor positions on all clients.
-      serverTimeoutRef.current = setTimeout(() => {
-        setLastSavedAt(new Date().toISOString());
+      // However, the title and other metadata still need to be synced via the socket 
+      // AND persisted to the database.
+      serverTimeoutRef.current = setTimeout(async () => {
+        sendContentUpdate(undefined, title);
+        
+        try {
+          // Save title to database for persistence
+          await updateNote({ title });
+          setLastSavedAt(new Date().toISOString());
+          setIsDirty(false);
+        } catch (e) {
+          console.warn('Failed to persist title in collaborative mode:', e);
+        }
       }, 300);
     } else {
       // For solo notes: save to server immediately with optimistic UI
@@ -323,17 +348,8 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
-    writeLocalDraft(note.id!, newTitle, content);
-    if (note) {
-      const ut = new Date().toISOString();
-      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
-        ns.map((n) => n.id === note.id ? { ...n, title: newTitle, updatedAt: ut } : n),
-      );
-      queryClient.setQueryData(NOTES_KEYS.detail(note.id!), (n) =>
-        n ? { ...n, title: newTitle, updatedAt: ut } : n,
-      );
-    }
-    sendContentUpdate(undefined, newTitle);
+    setIsDirty(true);
+    setSaveError(null);
   };
 
   const onUnauthorized = () => navigate('/notes');
@@ -436,6 +452,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
             {...(canEditContent ? {
               onChange: (c: string) => {
                 setContent(c);
+                setSaveError(null);
                 writeLocalDraft(note.id!, title, c);
               },
             } : {})}
