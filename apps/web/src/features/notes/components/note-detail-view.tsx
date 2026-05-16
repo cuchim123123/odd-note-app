@@ -63,7 +63,7 @@ function NoteDetailContent({
   const navigate = useNavigate();
   
   // Robust permission checks
-  const isOwnedNote = Boolean(note && (!note.accessMode || note.accessMode === 'owner'));
+  const isOwnedNote = note.accessMode === 'owner' || (!note.accessMode && !note.isShared);
   const isSharedNote = Boolean(note?.isShared || (note && 'accessMode' in note && note.accessMode === 'shared'));
   const sharedPermission = (note && 'sharedPermission' in note) ? (note as NoteDetailItem).sharedPermission : undefined;
   
@@ -400,7 +400,24 @@ function NoteDetailContent({
             <h3 className="font-semibold text-destructive">Delete?</h3>
             <p className="mt-1 text-sm text-muted-foreground">Cannot undo.</p>
             <div className="mt-4 flex gap-2">
-              <Button type="button" variant="destructive" onClick={async () => { sendDelete(); await deleteMutation.mutateAsync(); setDeleteConfirmOpen(false); onDeleted(); }} disabled={deleteMutation.isPending}>Delete</Button>
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={async () => { 
+                  try {
+                    await deleteMutation.mutateAsync(); 
+                    if (isOwnedNote) sendDelete(); 
+                    setDeleteConfirmOpen(false); 
+                    onDeleted(); 
+                  } catch (e) {
+                    console.error('Failed to delete note', e);
+                    setDeleteConfirmOpen(false);
+                  }
+                }} 
+                disabled={deleteMutation.isPending}
+              >
+                Delete
+              </Button>
               <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
             </div>
           </div>

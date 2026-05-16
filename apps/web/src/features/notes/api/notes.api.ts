@@ -501,13 +501,16 @@ export const useUpdateNote = (id: string) => {
         queryClient.setQueryData(NOTES_KEYS.detail(id), context.previousNote);
       }
     },
-    onSuccess: (updatedNote, input) => {
-      const normalizedNote = input.isProtected === undefined ? updatedNote : { ...updatedNote, isProtected: input.isProtected };
+    onSuccess: (updatedNote) => {
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
-        currentNotes.map((note) => (note.id === id ? normalizedNote : note)),
+        currentNotes.map((note) =>
+          note.id === id ? { ...note, ...updatedNote } : note
+        ),
       );
-      queryClient.setQueryData(NOTES_KEYS.detail(id), normalizedNote);
-      void upsertNoteInDb(normalizedNote);
+      queryClient.setQueryData(NOTES_KEYS.detail(id), (current: NoteDetailItem | undefined) =>
+        current ? { ...current, ...updatedNote } : updatedNote
+      );
+      void upsertNoteInDb(updatedNote);
     },
   });
 };
