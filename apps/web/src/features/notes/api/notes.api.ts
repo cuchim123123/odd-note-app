@@ -4,7 +4,7 @@ import { useAuthStore } from '../../auth/stores/auth.store';
 import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
 import type { Note, CreateNoteInput, UpdateNoteInput, CreateNoteShareInput, UpdateNoteShareInput } from '@odd-note-app/validation';
 
-type SharePermission = 'READ' | 'EDIT';
+export type SharePermission = 'READ' | 'EDIT';
 
 export type SharedByProfile = {
   id: string;
@@ -101,6 +101,8 @@ import {
   createNoteShareInApi,
   updateNoteShareInApi,
   deleteNoteShareInApi,
+  renameLabelInApi,
+  deleteLabelInApi,
 } from './notes.client';
 
 import {
@@ -665,6 +667,41 @@ export const useDeleteNoteShare = (noteId: string) => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shared });
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.detail(noteId) });
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+    },
+  });
+};
+
+export const useRenameLabel = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
+      if (!backendNotesAvailable()) {
+        renameLabelInNotes(oldName, newName);
+        return { updatedCount: 0 };
+      }
+
+      return await renameLabelInApi(oldName, newName);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+    },
+  });
+};
+
+export const useDeleteLabel = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (labelName: string) => {
+      if (!backendNotesAvailable()) {
+        return { updatedCount: 0 };
+      }
+
+      return await deleteLabelInApi(labelName);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
     },
   });

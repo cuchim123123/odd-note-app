@@ -326,6 +326,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       client.emit('yjs:sync-step-2', {
         noteId: data.noteId,
         update: Array.from(update),
+        stateVector: Array.from(Y.encodeStateVector(yDoc)),
       });
     } catch (error) {
       this.logger.error(`Error handling yjs:sync-step-1: ${String(error)}`, error as Error);

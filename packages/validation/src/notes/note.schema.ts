@@ -32,3 +32,10 @@ export const updateNoteSchema = z.object({
 });
 
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
+
+export const renameLabelSchema = z.object({
+  oldName: z.string().trim().min(1, 'Current label name is required'),
+  newName: z.string().trim().min(1, 'New label name is required'),
+});
+
+export type RenameLabelInput = z.infer<typeof renameLabelSchema>;

@@ -493,6 +493,44 @@ export class NotesService {
     return { cleared: true };
   }
 
+  async renameLabel(userId: string, oldName: string, newName: string): Promise<{ updatedCount: number }> {
+    const oldLabel = oldName.trim();
+    const newLabel = newName.trim();
+
+    if (!oldLabel || !newLabel) {
+      throw new BadRequestException('Label names cannot be empty');
+    }
+
+    if (oldLabel === newLabel) {
+      return { updatedCount: 0 };
+    }
+
+    // High-performance atomic update for PostgreSQL string arrays
+    const result = await this.prisma.$executeRaw`
+      UPDATE "Note" 
+      SET labels = array_replace(labels, ${oldLabel}, ${newLabel}) 
+      WHERE "userId" = ${userId} AND ${oldLabel} = ANY(labels)
+    `;
+
+    return { updatedCount: Number(result) };
+  }
+
+  async deleteLabel(userId: string, labelName: string): Promise<{ updatedCount: number }> {
+    const label = labelName.trim();
+    if (!label) {
+      throw new BadRequestException('Label name cannot be empty');
+    }
+
+    // High-performance atomic removal for PostgreSQL string arrays
+    const result = await this.prisma.$executeRaw`
+      UPDATE "Note" 
+      SET labels = array_remove(labels, ${label}) 
+      WHERE "userId" = ${userId} AND ${label} = ANY(labels)
+    `;
+
+    return { updatedCount: Number(result) };
+  }
+
   private getDraftKey(userId: string, noteId: string): string {
     return `note:draft:${userId}:${noteId}`;
   }

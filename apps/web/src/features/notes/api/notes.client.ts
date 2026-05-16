@@ -20,7 +20,7 @@ export async function createNoteInApi(input: CreateNoteInput): Promise<Note> {
 export async function updateNoteInApi(id: string, input: UpdateNoteInput & { isProtected?: boolean }): Promise<Note> {
   const { isProtected, ...payload } = input;
   const response = await api.patch<Note>(`/notes/${id}`, payload);
-  return { ...response.data, isProtected: isProtected ?? response.data.isProtected };
+  return { ...response.data, isProtected: isProtected ?? response.data.isProtected } as Note;
 }
 
 export async function deleteNoteInApi(id: string): Promise<void> {
@@ -49,4 +49,14 @@ export async function updateNoteShareInApi(noteId: string, shareId: string, inpu
 
 export async function deleteNoteShareInApi(noteId: string, shareId: string): Promise<void> {
   await api.delete(`/notes/${noteId}/shares/${shareId}`);
+}
+
+export async function renameLabelInApi(oldName: string, newName: string): Promise<{ updatedCount: number }> {
+  const response = await api.post<{ updatedCount: number }>('/notes/labels/rename', { oldName, newName });
+  return response.data;
+}
+
+export async function deleteLabelInApi(labelName: string): Promise<{ updatedCount: number }> {
+  const response = await api.delete<{ updatedCount: number }>(`/notes/labels/${labelName}`);
+  return response.data;
 }

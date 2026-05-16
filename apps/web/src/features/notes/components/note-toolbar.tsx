@@ -1,8 +1,9 @@
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Trash2, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock, Share2 } from 'lucide-react';
+import { Trash2, Check, Loader2, AlertTriangle, Pin, ImagePlus, Lock, Share2, Tag, X } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { Note } from '@odd-note-app/validation';
+import { LabelSelector } from './label-selector';
 
 type SaveStatus = { icon: typeof Check; label: string; tone: 'text-destructive' | 'text-muted-foreground' | 'text-emerald-600' };
 
@@ -16,7 +17,6 @@ export function NoteToolbar({
   saveError,
   isCollaborativeNote,
   isWsConnected,
-
   presenceParticipants,
   canEditContent,
   canManageShares,
@@ -26,6 +26,8 @@ export function NoteToolbar({
   onPin,
   onDelete,
   isSharedNote,
+  onToggleLabel,
+  onOpenLabelManagement,
 }: {
   note: Note;
   title: string;
@@ -45,16 +47,20 @@ export function NoteToolbar({
   onPin: () => void;
   onDelete: () => void;
   isSharedNote: boolean;
+  onToggleLabel: (label: string) => void;
+  onOpenLabelManagement: () => void;
 }) {
   const saveStatus: SaveStatus = (() => {
+    if (!canEditContent) return { icon: Lock, label: 'Read Only', tone: 'text-muted-foreground' as const };
     if (saveError) return { icon: AlertTriangle, label: saveError, tone: 'text-destructive' as const };
     if (isSaving) return { icon: Loader2, label: 'Autosaving…', tone: 'text-muted-foreground' as const };
     if (isDirty) return { icon: Loader2, label: 'Pending…', tone: 'text-muted-foreground' as const };
     return { icon: Check, label: lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved', tone: 'text-emerald-600' as const };
   })();
 
-  const realtimeLabel = isCollaborativeNote ? (isWsConnected ? presenceParticipants.length > 0 ? `Watching · ${presenceParticipants.length}` : 'Connected' : 'Offline') : 'Off';
+  const realtimeLabel = isCollaborativeNote ? (isWsConnected ? (presenceParticipants.length > 0 ? `Watching · ${presenceParticipants.length}` : 'Connected') : 'Offline') : (isSharedNote ? 'View Only' : 'Off');
   const realtimeTone = isCollaborativeNote && isWsConnected ? 'text-emerald-600' : 'text-muted-foreground';
+
 
   const IconStatus = saveStatus.icon;
 
@@ -76,6 +82,28 @@ export function NoteToolbar({
               <span className={cn('h-1.5 w-1.5 rounded-full', isCollaborativeNote && isWsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/40')} />
               Realtime · {realtimeLabel}
             </span>
+            
+            {/* Active Labels List */}
+            {note.labels && note.labels.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 ml-2 border-l pl-3 border-border/60">
+                {note.labels.map((label) => (
+                  <span 
+                    key={label} 
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary dark:bg-primary/20"
+                  >
+                    <Tag className="h-2.5 w-2.5" />
+                    {label}
+                    <button 
+                      onClick={() => onToggleLabel(label)}
+                      className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5 transition-colors"
+                      disabled={!canEditContent}
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             {note.isPinned && <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 shadow-sm"><Pin className="h-3 w-3" />Pinned</span>}
@@ -85,6 +113,13 @@ export function NoteToolbar({
         </div>
 
         <div className="flex items-center gap-2 self-start">
+          <LabelSelector 
+            selectedLabels={note.labels || []} 
+            onToggleLabel={onToggleLabel}
+            onOpenManagement={onOpenLabelManagement}
+            disabled={!canEditContent}
+          />
+          <div className="w-px h-6 bg-border/60 mx-1" />
           {canManageShares && <Button type="button" size="sm" variant="outline" onClick={onOpenSharing}><Share2 className="mr-2 h-4 w-4" />Share</Button>}
           <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" />
           <Button size="sm" variant="ghost" onClick={() => imageInputRef.current?.click()} disabled={isSaving || !canEditContent}><ImagePlus className="w-4 h-4" /></Button>

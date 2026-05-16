@@ -37,9 +37,10 @@ type UseYjsCollaborationOptions = {
   onRemoteContentUpdate?: (data: {
     userId: string;
     content: string;
-    title?: string;
-    isPinned?: boolean;
-    isProtected?: boolean;
+    title?: string | undefined;
+    isPinned?: boolean | undefined;
+    isProtected?: boolean | undefined;
+    labels?: string[] | undefined;
     timestamp: number;
   }) => void;
 };
@@ -150,7 +151,7 @@ export function useYjsCollaboration({
       refreshInFlightRef.current = true;
       void (async () => {
         try {
-          console.log('[Yjs] Access token is expired; refreshing before socket connect');
+          console.warn('[Yjs] Access token is expired; refreshing before socket connect');
           const response = await axios.post(
             `${getWsUrl()}/auth/refresh`,
             { refreshToken },
@@ -177,12 +178,12 @@ export function useYjsCollaboration({
 
     const syncState = (socket: Socket) => {
       if (socket.connected) {
-        console.log('[Yjs] Emitting note:join for', noteId);
+        console.warn('[Yjs] Emitting note:join for', noteId);
         socket.emit(NOTE_COLLABORATION_EVENTS.join, { noteId });
         setTimeout(() => {
           if (socket.connected) {
-            console.log('[Yjs] sync-step-1 fragment length before send', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
-            console.log('[Yjs] Emitting yjs:sync-step-1 for', noteId);
+            console.warn('[Yjs] sync-step-1 fragment length before send', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
+            console.warn('[Yjs] Emitting yjs:sync-step-1 for', noteId);
             socket.emit(NOTE_COLLABORATION_EVENTS.syncStep1, {
               noteId,
               stateVector: Array.from(Y.encodeStateVector(nextYDoc)),
@@ -195,9 +196,9 @@ export function useYjsCollaboration({
     const handleRemoteUpdate = (update: Uint8Array) => {
       applyingRemoteUpdateRef.current = true;
       try {
-        console.log('[Yjs] applying remote update', update.length, 'fragment length before apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
+        console.warn('[Yjs] applying remote update', update.length, 'fragment length before apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
         Y.applyUpdate(nextYDoc, update);
-        console.log('[Yjs] applied remote update', update.length, 'fragment length after apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
+        console.warn('[Yjs] applied remote update', update.length, 'fragment length after apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
       } finally {
         applyingRemoteUpdateRef.current = false;
       }
@@ -209,8 +210,8 @@ export function useYjsCollaboration({
       }
 
       if (socketRef.current?.connected) {
-        console.log('[Yjs] local update', update.length, 'fragment length', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
-        console.log('[Yjs] emitting yjs:update', noteId, update.length);
+        console.warn('[Yjs] local update', update.length, 'fragment length', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
+        console.warn('[Yjs] emitting yjs:update', noteId, update.length);
         socketRef.current.emit(NOTE_COLLABORATION_EVENTS.yjsUpdate, {
           noteId,
           update: Array.from(update),
@@ -236,10 +237,10 @@ export function useYjsCollaboration({
       }
       syncedSocketIdRef.current = currentSocketId;
 
-      console.log('[Yjs] Socket connected, initiating sync');
+      console.warn('[Yjs] Socket connected, initiating sync');
       setIsConnected(true);
       setTimeout(() => {
-        console.log('[Yjs] Calling syncState');
+        console.warn('[Yjs] Calling syncState');
         syncState(socket);
       }, NOTE_COLLABORATION_SYNC_RETRY_DELAY_MS);
     });
@@ -255,7 +256,7 @@ export function useYjsCollaboration({
       refreshAttemptedRef.current = true;
       void (async () => {
         try {
-          console.log('[Yjs] Refreshing expired access token before reconnect');
+          console.warn('[Yjs] Refreshing expired access token before reconnect');
           const response = await axios.post(
             `${getWsUrl()}/auth/refresh`,
             { refreshToken },
@@ -324,23 +325,36 @@ export function useYjsCollaboration({
       userId: string;
       content: string;
       title?: string;
-      isPinned?: boolean;
-      isProtected?: boolean;
+      isPinned?: boolean | undefined;
+      isProtected?: boolean | undefined;
+      labels?: string[] | undefined;
       timestamp: number;
     }) => {
       onRemoteContentUpdateRef.current?.(data);
     });
 
-    socket.on('yjs:sync-step-2', (data: { noteId: string; update: number[] }) => {
+    socket.on('yjs:sync-step-2', (data: { noteId: string; update: number[]; stateVector?: number[] }) => {
       if (data.noteId === noteId) {
-        console.log('[Yjs] received yjs:sync-step-2', data.update.length);
+        console.warn('[Yjs] received yjs:sync-step-2', data.update.length);
         handleRemoteUpdate(new Uint8Array(data.update));
+
+        // If server sent its state vector, send back our missing updates (Step 3)
+        if (data.stateVector) {
+          const missingUpdate = Y.encodeStateAsUpdate(nextYDoc, new Uint8Array(data.stateVector));
+          if (missingUpdate.length > 0) {
+            console.warn('[Yjs] emitting yjs:sync-step-3', missingUpdate.length);
+            socket.emit('yjs:sync-step-3', {
+              noteId: data.noteId,
+              update: Array.from(missingUpdate),
+            });
+          }
+        }
       }
     });
 
     socket.on(NOTE_COLLABORATION_EVENTS.yjsUpdate, (data: { noteId: string; update: number[] }) => {
       if (data.noteId === noteId) {
-        console.log('[Yjs] received yjs:update', data.update.length, 'fragment length before apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
+        console.warn('[Yjs] received yjs:update', data.update.length, 'fragment length before apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
         handleRemoteUpdate(new Uint8Array(data.update));
       }
     });
@@ -348,8 +362,8 @@ export function useYjsCollaboration({
     // Attach update listener to emit local updates to the socket
     try {
       const debugDoc = nextYDoc as Y.Doc & { guid?: string | number; clientID?: string | number };
-      // eslint-disable-next-line no-console
-      console.log('[Yjs] Attaching update listener to Y.Doc', debugDoc.guid ?? debugDoc.clientID);
+       
+      console.warn('[Yjs] Attaching update listener to Y.Doc', debugDoc.guid ?? debugDoc.clientID);
     } catch {
       // ignore
     }
@@ -362,8 +376,8 @@ export function useYjsCollaboration({
       // because other hook instances or components may still rely on the same document.
       try {
         const debugDoc = nextYDoc as Y.Doc & { guid?: string | number; clientID?: string | number };
-        // eslint-disable-next-line no-console
-        console.log('[Yjs] Removing update listener from Y.Doc', debugDoc.guid ?? debugDoc.clientID);
+         
+        console.warn('[Yjs] Removing update listener from Y.Doc', debugDoc.guid ?? debugDoc.clientID);
       } catch {
         // ignore
       }
@@ -380,7 +394,7 @@ export function useYjsCollaboration({
     };
   }, [accessToken, enabled, noteId, refreshToken, user]);
 
-  const sendContentUpdate = (content?: string, title?: string, metadata?: { isPinned?: boolean; isProtected?: boolean }) => {
+  const sendContentUpdate = (content?: string | undefined, title?: string | undefined, metadata?: { isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined }) => {
     if (socketRef.current?.connected && noteId) {
       socketRef.current.emit('note:update', { noteId, content, title, ...metadata });
     }

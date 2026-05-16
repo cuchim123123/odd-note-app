@@ -8,7 +8,7 @@ import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { Monitor, Palette, Sparkles, Sun, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { getSortedNotes } from '../../notes/api/notes.api';
+import { useRenameLabel, useDeleteLabel, useNotes } from '../../notes/api/notes.api';
 import { api } from '../../../lib/axios';
 
 const noteFontSizeLabels: Record<NoteFontSize, string> = {
@@ -35,12 +35,15 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const { data: notes = [] } = useNotes();
+  const renameLabelMutation = useRenameLabel();
+  const deleteLabelMutation = useDeleteLabel();
 
   useEffect(() => {
-    if (labels.length === 0) {
-      syncLabels(getSortedNotes().flatMap((note) => note.labels || []));
+    if (labels.length === 0 && notes.length > 0) {
+      syncLabels(notes.flatMap((note) => note.labels || []));
     }
-  }, [labels.length, syncLabels]);
+  }, [labels.length, syncLabels, notes]);
 
   const labelOptions = useMemo(() => labels, [labels]);
 
@@ -241,19 +244,40 @@ export function SettingsPage() {
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => {
-                            renameLabel(label, draftValue);
-                            setRenameDrafts((current) => {
-                              const next = { ...current };
-                              delete next[label];
-                              return next;
-                            });
+                          disabled={renameLabelMutation.isPending}
+                          onClick={async () => {
+                            const trimmedDraft = draftValue.trim();
+                            if (!trimmedDraft || trimmedDraft === label) return;
+                            
+                            try {
+                              await renameLabelMutation.mutateAsync({ oldName: label, newName: trimmedDraft });
+                              renameLabel(label, trimmedDraft);
+                              setRenameDrafts((current) => {
+                                const next = { ...current };
+                                delete next[label];
+                                return next;
+                              });
+                            } catch (error) {
+                              console.error('Failed to rename label:', error);
+                            }
                           }}
                         >
-                          Rename
+                          {renameLabelMutation.isPending && renameLabelMutation.variables?.oldName === label ? 'Saving...' : 'Rename'}
                         </Button>
-                        <Button type="button" variant="destructive" onClick={() => deleteLabel(label)}>
-                          Delete
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          disabled={deleteLabelMutation.isPending}
+                          onClick={async () => {
+                            try {
+                              await deleteLabelMutation.mutateAsync(label);
+                              deleteLabel(label);
+                            } catch (error) {
+                              console.error('Failed to delete label:', error);
+                            }
+                          }}
+                        >
+                          {deleteLabelMutation.isPending && deleteLabelMutation.variables === label ? 'Deleting...' : 'Delete'}
                         </Button>
                       </div>
                     </div>

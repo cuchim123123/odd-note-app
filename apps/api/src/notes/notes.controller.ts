@@ -194,6 +194,24 @@ export class NotesController {
     return await this.notesService.clearDraft(userId, this.parseNoteId(noteId));
   }
 
+  @Post('labels/rename')
+  async renameLabel(
+    @Body(new ZodValidationPipe(z.object({ oldName: z.string(), newName: z.string() }))) body: { oldName: string; newName: string },
+    @Headers('authorization') authorizationHeader?: string,
+  ) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.renameLabel(userId, body.oldName, body.newName);
+  }
+
+  @Delete('labels/:labelName')
+  async deleteLabel(
+    @Param('labelName') labelName: string,
+    @Headers('authorization') authorizationHeader?: string,
+  ) {
+    const userId = this.resolveUserId(authorizationHeader);
+    return await this.notesService.deleteLabel(userId, labelName);
+  }
+
   private parseNoteId(noteId: string): string {
     const parsed = noteIdSchema.safeParse(noteId);
     if (!parsed.success) {

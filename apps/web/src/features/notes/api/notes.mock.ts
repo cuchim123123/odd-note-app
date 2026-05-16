@@ -1,5 +1,5 @@
 import type { Note, CreateNoteInput, UpdateNoteInput } from '@odd-note-app/validation';
-import type { NoteShareRecord, NoteDraft, SharedByProfile } from './notes.api';
+import type { NoteShareRecord, NoteDraft, SharedByProfile, SharePermission, SharedNoteItem } from './notes.api';
 
 const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
   const random = Math.random() * 16 | 0;
@@ -8,6 +8,7 @@ const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (
 });
 
 const now = () => new Date().toISOString();
+const normalizeLabel = (label: string) => label.trim().toLowerCase();
 
 const cloneNote = (note: Note): Note => ({ ...note, labels: [...(note.labels || [])] });
 

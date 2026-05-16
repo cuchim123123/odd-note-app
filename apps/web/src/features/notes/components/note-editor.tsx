@@ -25,9 +25,10 @@ type NoteEditorProps = {
   syncKey?: string | null;
   collaborative?: boolean;
   yDoc?: Y.Doc | undefined;
+  isOwner?: boolean;
 };
 
-export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, yDoc }: NoteEditorProps) {
+export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, yDoc, isOwner = false }: NoteEditorProps) {
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -64,6 +65,15 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     ...(yDoc ? {} : { content }),
     editable: !readOnly,
     onCreate: ({ editor: ed }) => {
+      // Seeding logic: ONLY the owner should seed to avoid conflicts
+      if (collaborative && isOwner && yDoc && content) {
+        const fragment = yDoc.getXmlFragment('prosemirror');
+        if (fragment.length === 0) {
+          console.warn('[NoteEditor] Owner seeding empty Yjs document');
+          ed.commands.setContent(content, false);
+        }
+      }
+
       const extensionNames = ed.extensionManager.extensions.map((extension) => extension.name);
       const pluginKeys = ed.state.plugins.map((plugin) => String((plugin as { key?: string }).key ?? ''));
       console.warn('[NoteEditor] created', {
