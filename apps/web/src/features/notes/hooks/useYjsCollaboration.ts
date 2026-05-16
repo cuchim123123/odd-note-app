@@ -368,22 +368,81 @@ export function useYjsCollaboration({
       }
     });
 
-    socket.on('yjs:awareness:update', (data: { noteId: string; states: RemoteCursorState[] }) => {
-      if (data.noteId !== noteId) {
+    socket.on('yjs:awareness:update', (data: { noteId: string; awareness: RemoteCursorState }) => {
+      if (data.noteId !== noteId || !data.awareness) {
         return;
       }
 
-      // Remote cursors are now handled by the CollaborationCursor extension via awareness
-      // No need to manage state here
+      // Update the awareness instance with remote user's cursor/presence data
+      try {
+        const remoteUserId = data.awareness.userId || 'unknown';
+        console.warn('[Yjs] received yjs:awareness:update for user', remoteUserId);
+
+        // Create a unique client ID for this remote user based on their userId
+        const remoteClientId = Math.abs(remoteUserId.charCodeAt(0) * 31 + (remoteUserId.charCodeAt(1) || 0));
+
+        // Manually add the remote user's state to the awareness states
+        const awarenessStates = (nextAwareness as unknown as { states: Map<number, Record<string, unknown>> }).states;
+        if (awarenessStates) {
+          awarenessStates.set(remoteClientId, {
+            user: {
+              name: data.awareness.displayName,
+              color: data.awareness.color,
+              id: data.awareness.userId,
+            },
+            cursor: {
+              anchor: data.awareness.position,
+              head: data.awareness.position,
+            },
+          });
+
+          // Trigger awareness update event so CollaborationCursor picks it up
+          const awarenessInstance = nextAwareness as unknown as { emit: (event: string, changes: Array<{ key: number }>, source: string) => void };
+          awarenessInstance.emit('change', [{ key: remoteClientId }], 'remote');
+        }
+      } catch (err) {
+        console.error('[Yjs] Error processing awareness:update', err);
+      }
     });
 
     socket.on('yjs:awareness:list', (data: { noteId: string; states: RemoteCursorState[] }) => {
-      if (data.noteId !== noteId) {
+      if (data.noteId !== noteId || !data.states?.length) {
         return;
       }
 
-      // Remote cursors are now handled by the CollaborationCursor extension via awareness
-      // No need to manage state here
+      // Sync all remote user states into awareness
+      try {
+        console.warn('[Yjs] received yjs:awareness:list with', data.states.length, 'states');
+        const awarenessStates = (nextAwareness as unknown as { states: Map<number, Record<string, unknown>> }).states;
+        if (awarenessStates) {
+          const changedKeys: Array<{ key: number }> = [];
+          data.states.forEach((remoteState) => {
+            if (!remoteState?.userId || remoteState.userId === user?.id) {
+              return; // Skip self
+            }
+
+            const remoteClientId = Math.abs(remoteState.userId.charCodeAt(0) * 31 + (remoteState.userId.charCodeAt(1) || 0));
+            awarenessStates.set(remoteClientId, {
+              user: {
+                name: remoteState.displayName,
+                color: remoteState.color,
+                id: remoteState.userId,
+              },
+              cursor: {
+                anchor: remoteState.position,
+                head: remoteState.position,
+              },
+            });
+            changedKeys.push({ key: remoteClientId });
+          });
+
+          // Trigger awareness change event
+          const awarenessInstance = nextAwareness as unknown as { emit: (event: string, changes: Array<{ key: number }>, source: string) => void };
+          awarenessInstance.emit('change', changedKeys, 'remote');
+        }
+      } catch (err) {
+        console.error('[Yjs] Error processing awareness:list', err);
+      }
     });
 
     // Attach update listener to emit local updates to the socket
