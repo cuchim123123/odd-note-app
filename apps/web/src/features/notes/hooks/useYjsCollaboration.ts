@@ -3,6 +3,15 @@ import axios from 'axios';
 import * as Y from 'yjs';
 import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../../auth/stores/auth.store';
+import {
+  NOTE_COLLABORATION_EVENTS,
+  NOTE_COLLABORATION_FRAGMENT_NAME,
+  NOTE_COLLABORATION_NAMESPACE,
+  NOTE_COLLABORATION_RECONNECT_DELAY_MS,
+  NOTE_COLLABORATION_REFRESH_MAX_ATTEMPTS,
+  NOTE_COLLABORATION_SYNC_JOIN_DELAY_MS,
+  NOTE_COLLABORATION_SYNC_RETRY_DELAY_MS,
+} from '../constants/note-collaboration.constants';
 
 // Shared Y.Doc instances keyed by noteId to ensure one stable Y.Doc per note
 const sharedYDocs = new Map<string, Y.Doc>();
@@ -169,26 +178,26 @@ export function useYjsCollaboration({
     const syncState = (socket: Socket) => {
       if (socket.connected) {
         console.log('[Yjs] Emitting note:join for', noteId);
-        socket.emit('note:join', { noteId });
+        socket.emit(NOTE_COLLABORATION_EVENTS.join, { noteId });
         setTimeout(() => {
           if (socket.connected) {
-            console.log('[Yjs] sync-step-1 fragment length before send', nextYDoc.getXmlFragment('prosemirror').length);
+            console.log('[Yjs] sync-step-1 fragment length before send', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
             console.log('[Yjs] Emitting yjs:sync-step-1 for', noteId);
-            socket.emit('yjs:sync-step-1', {
+            socket.emit(NOTE_COLLABORATION_EVENTS.syncStep1, {
               noteId,
               stateVector: Array.from(Y.encodeStateVector(nextYDoc)),
             });
           }
-        }, 50);
+        }, NOTE_COLLABORATION_SYNC_JOIN_DELAY_MS);
       }
     };
 
     const handleRemoteUpdate = (update: Uint8Array) => {
       applyingRemoteUpdateRef.current = true;
       try {
-        console.log('[Yjs] applying remote update', update.length, 'fragment length before apply', nextYDoc.getXmlFragment('prosemirror').length);
+        console.log('[Yjs] applying remote update', update.length, 'fragment length before apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
         Y.applyUpdate(nextYDoc, update);
-        console.log('[Yjs] applied remote update', update.length, 'fragment length after apply', nextYDoc.getXmlFragment('prosemirror').length);
+        console.log('[Yjs] applied remote update', update.length, 'fragment length after apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
       } finally {
         applyingRemoteUpdateRef.current = false;
       }
@@ -200,22 +209,22 @@ export function useYjsCollaboration({
       }
 
       if (socketRef.current?.connected) {
-        console.log('[Yjs] local update', update.length, 'fragment length', nextYDoc.getXmlFragment('prosemirror').length);
+        console.log('[Yjs] local update', update.length, 'fragment length', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
         console.log('[Yjs] emitting yjs:update', noteId, update.length);
-        socketRef.current.emit('yjs:update', {
+        socketRef.current.emit(NOTE_COLLABORATION_EVENTS.yjsUpdate, {
           noteId,
           update: Array.from(update),
         });
       }
     };
 
-    const socket = io(`${getWsUrl()}/collaboration`, {
+    const socket = io(`${getWsUrl()}${NOTE_COLLABORATION_NAMESPACE}`, {
       auth: { token: accessToken },
       transports: ['websocket', 'polling'],
       autoConnect: false,
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      reconnectionDelay: NOTE_COLLABORATION_RECONNECT_DELAY_MS,
+      reconnectionAttempts: NOTE_COLLABORATION_REFRESH_MAX_ATTEMPTS,
     });
 
     socketRef.current = socket;
@@ -232,7 +241,7 @@ export function useYjsCollaboration({
       setTimeout(() => {
         console.log('[Yjs] Calling syncState');
         syncState(socket);
-      }, 100);
+      }, NOTE_COLLABORATION_SYNC_RETRY_DELAY_MS);
     });
 
     socket.on('connect_error', (error) => {
@@ -329,9 +338,9 @@ export function useYjsCollaboration({
       }
     });
 
-    socket.on('yjs:update', (data: { noteId: string; update: number[] }) => {
+    socket.on(NOTE_COLLABORATION_EVENTS.yjsUpdate, (data: { noteId: string; update: number[] }) => {
       if (data.noteId === noteId) {
-        console.log('[Yjs] received yjs:update', data.update.length, 'fragment length before apply', nextYDoc.getXmlFragment('prosemirror').length);
+        console.log('[Yjs] received yjs:update', data.update.length, 'fragment length before apply', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
         handleRemoteUpdate(new Uint8Array(data.update));
       }
     });
@@ -379,7 +388,7 @@ export function useYjsCollaboration({
 
   const sendTypingState = (isTyping: boolean) => {
     if (socketRef.current?.connected && noteId) {
-      socketRef.current.emit('note:typing', { noteId, isTyping });
+      socketRef.current.emit(NOTE_COLLABORATION_EVENTS.typing, { noteId, isTyping });
     }
   };
 

@@ -14,6 +14,7 @@ import { RedisService } from '../redis/redis.service';
 import { Server, Socket } from 'socket.io';
 import type Redis from 'ioredis';
 import * as Y from 'yjs';
+import { COLLABORATION_NAMESPACE, COLLABORATION_TYPING_STALE_AFTER_MS, COLLABORATOR_COLORS } from './collaboration.constants';
 
 type CollaboratorInfo = {
   userId: string;
@@ -40,19 +41,12 @@ type YDocState = {
   updates: Array<number[]>;
 };
 
-const TYPING_STALE_AFTER_MS = 5000;
-
-const COLLABORATOR_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e',
-  '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
-];
-
 @WebSocketGateway({
   cors: {
     origin: '*',
     credentials: true,
   },
-  namespace: '/collaboration',
+  namespace: COLLABORATION_NAMESPACE,
 })
 export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
   @WebSocketServer()
@@ -554,7 +548,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
           }
         })
         .filter((value): value is TypingInfo => Boolean(value))
-        .filter((value) => now - value.updatedAt <= TYPING_STALE_AFTER_MS);
+        .filter((value) => now - value.updatedAt <= COLLABORATION_TYPING_STALE_AFTER_MS);
 
       if (parsed.length !== values.length) {
         const staleEntries = values
@@ -566,7 +560,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
             }
           })
           .filter((value): value is TypingInfo => Boolean(value))
-          .filter((value) => now - value.updatedAt > TYPING_STALE_AFTER_MS)
+          .filter((value) => now - value.updatedAt > COLLABORATION_TYPING_STALE_AFTER_MS)
           .map((value) => value.userId);
 
         if (staleEntries.length > 0) {

@@ -23,55 +23,8 @@ import { Button } from '../../../components/ui/button';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
 import { useYjsCollaboration } from '../hooks/useYjsCollaboration';
 import { ProtectedNoteRoute, type ProtectedNote } from './protected-note-route';
-
-function normalizeNoteHtml(value: string | undefined): string {
-  const html = (value ?? '').trim();
-  if (!html) return '';
-  if (/^(<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+$/i.test(html)) return '';
-  return html;
-}
-
-function getLocalDraftKey(noteId: string): string {
-  return `note-draft:${noteId}`;
-}
-
-function readLocalDraft(noteId: string): { title: string; content: string; updatedAt: string } | null {
-  try {
-    const raw = localStorage.getItem(getLocalDraftKey(noteId));
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as { title?: string; content?: string; updatedAt?: string };
-    if (typeof parsed.title !== 'string' || typeof parsed.content !== 'string' || typeof parsed.updatedAt !== 'string') {
-      return null;
-    }
-
-    return { title: parsed.title, content: parsed.content, updatedAt: parsed.updatedAt };
-  } catch {
-    return null;
-  }
-}
-
-function writeLocalDraft(noteId: string, title: string, content: string): void {
-  try {
-    localStorage.setItem(getLocalDraftKey(noteId), JSON.stringify({ title, content, updatedAt: new Date().toISOString() }));
-  } catch {
-    // Ignore quota / privacy mode errors
-  }
-}
-
-function clearLocalDraft(noteId: string): void {
-  try {
-    localStorage.removeItem(getLocalDraftKey(noteId));
-  } catch {
-    // Ignore
-  }
-}
-
-function safeTimestamp(value: string | undefined): number {
-  if (!value) return 0;
-  const timestamp = new Date(value).getTime();
-  return Number.isFinite(timestamp) ? timestamp : 0;
-}
+import { normalizeNoteHtml, safeTimestamp } from '../utils/note-html';
+import { clearLocalDraft, readLocalDraft, writeLocalDraft } from '../utils/note-draft.storage';
 
 function getYDocDebugId(yDoc?: YDoc | null): string {
   const debugDoc = yDoc as YDoc & { guid?: string | number; clientID?: string | number };

@@ -6,10 +6,16 @@ import Underline from '@tiptap/extension-underline';
 import Collaboration from '@tiptap/extension-collaboration';
 import { useEffect, useMemo, useRef } from 'react';
 import * as Y from 'yjs';
-import { Bold, Code, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Quote, Strikethrough, Underline as UnderlineIcon } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
 import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
 import { cn } from '../../../lib/utils';
+import { NoteEditorToolbar } from './note-editor-toolbar';
+import {
+  NOTE_EDITOR_CONTENT_CLASS,
+  NOTE_EDITOR_EDITABLE_CLASS,
+  NOTE_EDITOR_HEADER_CLASS,
+  NOTE_EDITOR_PLACEHOLDER,
+  NOTE_EDITOR_WRAPPER_CLASS,
+} from '../constants/note-editor.constants';
 
 type NoteEditorProps = {
   content?: string | undefined;
@@ -51,7 +57,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
         },
       }),
       Placeholder.configure({
-        placeholder: 'Start writing your note here...',
+        placeholder: NOTE_EDITOR_PLACEHOLDER,
       }),
       ...collaborationExtensions,
     ],
@@ -76,7 +82,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose-base focus:outline-none max-w-none min-h-[320px] prose-headings:tracking-tight prose-p:leading-7 prose-li:leading-7 prose-blockquote:border-primary/20 prose-blockquote:text-foreground prose-pre:bg-slate-950 prose-pre:text-slate-50',
+        class: NOTE_EDITOR_EDITABLE_CLASS,
       },
     },
   });
@@ -97,30 +103,6 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     }
   }, [editor, readOnly]);
 
-  const isActive = (name: string) => Boolean(editor?.isActive?.(name));
-
-  const toggleLink = () => {
-    if (!editor || readOnly) {
-      return;
-    }
-
-    if (editor.isActive('link')) {
-      editor.chain().focus().unsetLink().run();
-      return;
-    }
-
-    const previousUrl = editor.getAttributes('link').href as string | undefined;
-    const url = window.prompt('Enter a link URL', previousUrl ?? 'https://');
-
-    if (!url) {
-      return;
-    }
-
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-  };
-
-  const toolbarButtonClass = 'h-10 w-10 rounded-full';
-
   useEffect(() => {
     if (!editor) return;
 
@@ -139,47 +121,14 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       data-note-font-size={noteFontSize}
       aria-readonly={readOnly}
       ref={editorContainerRef}
-      className="relative overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.06)]"
+      className={NOTE_EDITOR_WRAPPER_CLASS}
     >
-      <div className="border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-3 py-3 sm:px-4">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pr-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
-          <Button type="button" size="icon" variant={isActive('bold') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBold().run()} disabled={readOnly} aria-label="Bold">
-            <Bold className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant={isActive('italic') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleItalic().run()} disabled={readOnly} aria-label="Italic">
-            <Italic className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant={isActive('underline') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleUnderline().run()} disabled={readOnly} aria-label="Underline">
-            <UnderlineIcon className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant={isActive('strike') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleStrike().run()} disabled={readOnly} aria-label="Strikethrough">
-            <Strikethrough className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant={isActive('code') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleCode().run()} disabled={readOnly} aria-label="Inline code">
-            <Code className="h-4 w-4" />
-          </Button>
-          <div className="mx-1 h-6 w-px bg-border" />
-          <Button type="button" size="icon" variant={isActive('bulletList') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBulletList().run()} disabled={readOnly} aria-label="Bullet list">
-            <List className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant={isActive('orderedList') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleOrderedList().run()} disabled={readOnly} aria-label="Numbered list">
-            <ListOrdered className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant={isActive('blockquote') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBlockquote().run()} disabled={readOnly} aria-label="Blockquote">
-            <Quote className="h-4 w-4" />
-          </Button>
-          <div className="mx-1 h-6 w-px bg-border" />
-          <Button type="button" size="icon" variant={isActive('link') ? 'default' : 'ghost'} className={toolbarButtonClass} onClick={toggleLink} disabled={readOnly} aria-label="Insert link">
-            <LinkIcon className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant="ghost" className={toolbarButtonClass} onClick={onInsertImage} disabled={readOnly || !onInsertImage} aria-label="Insert image">
-            <ImageIcon className="h-4 w-4" />
-          </Button>
-        </div>
+      <div className={NOTE_EDITOR_HEADER_CLASS}>
+        <NoteEditorToolbar editor={editor} readOnly={readOnly} onInsertImage={onInsertImage} />
       </div>
       <EditorContent
         editor={editor}
-        className={cn('prose focus:outline-none max-w-none px-4 py-4 sm:px-5', 'min-h-[240px] sm:min-h-[320px]')}
+        className={cn(NOTE_EDITOR_CONTENT_CLASS, 'min-h-[240px]', 'sm:min-h-[320px]')}
       />
     </div>
   );
