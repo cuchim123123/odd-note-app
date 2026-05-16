@@ -123,7 +123,7 @@ export function NoteDashboard() {
         <div className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-card shadow-sm">
           {selectedNoteId ? (
             <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-background">
-              <div className="border-b border-border/70 bg-white px-4 py-3">
+              <div className="border-b bg-card px-4 py-3">
                 <Button type="button" variant="outline" className="rounded-full" onClick={() => navigate('/notes')}>
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Back to notes
@@ -420,8 +420,8 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
-      <div className="border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-4 py-4 sm:px-6">
+    <div className="flex h-full flex-col overflow-hidden rounded-3xl border bg-card shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+      <div className="border-b bg-gradient-to-r from-muted/30 to-card px-4 py-4 sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1 space-y-2">
             <Input
@@ -439,7 +439,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                 }
                 sendContentUpdate(undefined, e.target.value);
               }}
-              className="h-auto border-border/60 bg-white px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
+              className="h-auto border-border/60 bg-card px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
               placeholder="Note title…"
               readOnly={!canEditContent}
             />
@@ -456,7 +456,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
               {isProtected && <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-700 shadow-sm"><Lock className="h-3 w-3" />Protected</span>}
               {isSharedNote && <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700 shadow-sm"><Share2 className="h-3 w-3" />{sharedPermission === 'EDIT' ? 'Editable' : 'Read-only'}</span>}
             </div>
-            {isSharedNote && <div className="rounded-2xl border border-border/70 bg-slate-50 px-4 py-3 text-sm text-muted-foreground shadow-sm">Shared by <span className="font-medium text-foreground">{sharedBy?.displayName}</span></div>}
+            {isSharedNote && <div className="rounded-2xl border bg-muted/30 px-4 py-3 text-sm text-muted-foreground shadow-sm">Shared by <span className="font-medium text-foreground">{sharedBy?.displayName}</span></div>}
           </div>
 
           <div className="flex items-center gap-2 self-start">
@@ -479,7 +479,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
 
       {deleteConfirmOpen && (
         <div className="border-b border-border/70 bg-slate-50 px-4 py-4 sm:px-6">
-          <div className="rounded-2xl border border-destructive/20 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-destructive/20 bg-card p-5 shadow-sm">
             <h3 className="font-semibold text-destructive">Delete this note?</h3>
             <p className="mt-1 text-sm text-muted-foreground">This cannot be undone.</p>
             <div className="mt-4 flex gap-2">
@@ -493,7 +493,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       {protectionMode !== 'idle' && (
         <div className="border-b border-border/70 bg-slate-50 px-4 py-4 sm:px-6">
           {protectionMode === 'protect' && (
-            <div className="space-y-3 rounded-2xl border border-border/70 bg-white p-5 shadow-sm">
+            <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold">Protect this note</h3>
                 <p className="text-sm text-muted-foreground">Set a password to lock it.</p>
@@ -527,7 +527,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
             </div>
           )}
           {protectionMode === 'remove' && (
-            <div className="space-y-3 rounded-2xl border border-border/70 bg-white p-5 shadow-sm">
+            <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
               <div>
                 <h3 className="font-semibold">Remove protection</h3>
                 <p className="text-sm text-muted-foreground">Enter current password.</p>
@@ -558,8 +558,8 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
       {canManageShares && shareModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button type="button" className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setShareModalOpen(false)} />
-          <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_30px_100px_rgba(15,23,42,0.18)]">
-            <div className="flex items-start justify-between gap-4 border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
+          <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl border bg-card shadow-[0_30px_100px_rgba(15,23,42,0.18)]">
+            <div className="flex items-start justify-between gap-4 border-b bg-gradient-to-r from-muted/30 to-card px-5 py-4">
               <div>
                 <h3 className="text-lg font-semibold">Share this note</h3>
                 <p className="text-sm text-muted-foreground">Grant read or edit access.</p>
@@ -596,7 +596,7 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
                 ) : (
                   <div className="space-y-2">
                     {shares?.map((share) => (
-                      <div key={share.id} className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div key={share.id} className="flex flex-col gap-3 rounded-2xl border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
                           <div className="truncate font-medium">{share.recipientEmail}</div>
                           <div className="text-xs text-muted-foreground">{share.permission === 'EDIT' ? 'Can edit' : 'Read only'}</div>
@@ -632,10 +632,10 @@ function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () =
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white p-4 sm:p-8">
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-muted/20 to-card p-4 sm:p-8">
         <div className="mx-auto max-w-4xl">
           {isCollaborativeNote && (isWsConnected || collaborators.length > 0 || presenceParticipants.length > 0) && (
-            <div className="mb-4 flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-2 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 rounded-full border bg-card px-3 py-2 shadow-sm">
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground">Viewing:</span>
               <div className="flex -space-x-2">

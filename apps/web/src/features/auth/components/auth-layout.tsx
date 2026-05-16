@@ -9,7 +9,7 @@ export function AuthLayout() {
       <div className="absolute -bottom-20 right-0 h-72 w-72 rounded-full bg-violet-200/40 blur-3xl" />
 
       <div className="relative z-10 flex w-full max-w-md flex-col gap-6">
-        <Link to="/" className="group flex items-center justify-center gap-3 self-center rounded-full border border-white/70 bg-white/90 px-4 py-2.5 shadow-[0_20px_40px_rgba(15,23,42,0.08)] backdrop-blur transition-transform hover:-translate-y-0.5">
+        <Link to="/" className="group flex items-center justify-center gap-3 self-center rounded-full border bg-card/90 px-4 py-2.5 shadow-[0_20px_40px_rgba(15,23,42,0.08)] backdrop-blur transition-transform hover:-translate-y-0.5">
           <div className="rounded-full bg-primary/10 p-2 text-primary shadow-sm">
             <Sparkles className="h-6 w-6" />
           </div>

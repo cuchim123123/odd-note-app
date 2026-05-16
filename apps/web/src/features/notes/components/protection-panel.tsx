@@ -58,8 +58,8 @@ export function ProtectionPanel({
 
   if (mode === 'protect') {
     return (
-      <div className="border-b border-border/70 bg-slate-50 px-4 py-4 sm:px-6">
-        <div className="space-y-3 rounded-2xl border border-border/70 bg-white p-5 shadow-sm">
+      <div className="border-b bg-muted/30 px-4 py-4 sm:px-6">
+        <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
           <h3 className="font-semibold">Protect this note</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -87,8 +87,8 @@ export function ProtectionPanel({
   }
 
   return (
-    <div className="border-b border-border/70 bg-slate-50 px-4 py-4 sm:px-6">
-      <div className="space-y-3 rounded-2xl border border-border/70 bg-white p-5 shadow-sm">
+    <div className="border-b bg-muted/30 px-4 py-4 sm:px-6">
+      <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
         <h3 className="font-semibold">Remove protection</h3>
         <Input type="password" placeholder="Enter current password" value={password} onChange={(e) => setPassword(e.target.value)} />
         {message && <p className="text-sm text-destructive">{message}</p>}

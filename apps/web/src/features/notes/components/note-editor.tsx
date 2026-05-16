@@ -95,6 +95,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     const dom = editor.view.dom;
     dom.classList.remove('prose-sm', 'prose-base', 'prose-lg');
     dom.classList.add(noteFontSize === 'sm' ? 'prose-sm' : noteFontSize === 'lg' ? 'prose-lg' : 'prose-base');
+    dom.classList.add('dark:prose-invert');
   }, [editor, noteFontSize]);
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       </div>
       <EditorContent
         editor={editor}
-        className={cn(NOTE_EDITOR_CONTENT_CLASS, 'min-h-[240px]', 'sm:min-h-[320px]')}
+        className={cn(NOTE_EDITOR_CONTENT_CLASS, 'min-h-[240px]', 'sm:min-h-[320px]', 'bg-[hsl(var(--editor-surface))]')}
       />
     </div>
   );

@@ -18,9 +18,9 @@ export function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 border-b border-white/70 bg-white/85 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
+      <header className="sticky top-0 z-50 border-b bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
         <div className="container flex h-16 items-center justify-between gap-4">
-          <Link to="/notes" className="flex items-center gap-3 rounded-full border border-border/70 bg-white px-3 py-2 shadow-sm transition-transform hover:-translate-y-0.5">
+          <Link to="/notes" className="flex items-center gap-3 rounded-full border bg-card px-3 py-2 shadow-sm transition-transform hover:-translate-y-0.5">
             <div className="rounded-full bg-primary/10 p-2 text-primary">
               <Sparkles className="h-4 w-4" />
             </div>
@@ -43,7 +43,7 @@ export function DashboardLayout() {
 
           <div className="flex items-center gap-3">
             <NotificationCenter />
-            <div className="hidden rounded-full border border-border/70 bg-white px-3 py-2 text-sm shadow-sm sm:block">
+            <div className="hidden rounded-full border bg-card px-3 py-2 text-sm shadow-sm sm:block">
               <span className="text-muted-foreground">Logged in as </span>
               <span className="font-medium">{user?.displayName || user?.email}</span>
             </div>
@@ -56,7 +56,7 @@ export function DashboardLayout() {
       </header>
 
       {isUnverified ? (
-        <div className="border-b border-amber-200 bg-amber-50 text-amber-950">
+        <div className="border-b bg-amber-50/10 text-amber-600 dark:text-amber-400">
           <div className="container flex items-center justify-between gap-3 py-3 text-sm font-medium">
             <div className="flex items-center gap-2">
               <BadgeCheck className="h-4 w-4 text-amber-700" />

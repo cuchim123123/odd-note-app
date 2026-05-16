@@ -59,28 +59,28 @@ export function NoteToolbar({
   const IconStatus = saveStatus.icon;
 
   return (
-    <div className="border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-4 py-4 sm:px-6">
+    <div className="border-b bg-muted/50 px-4 py-4 sm:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1 space-y-2">
           <Input
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
-            className="h-auto border-border/60 bg-white px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
+            className="h-auto border-border/60 bg-card px-4 py-3 text-2xl font-semibold shadow-sm focus-visible:border-primary"
             placeholder="Title…"
             readOnly={!canEditContent}
           />
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <IconStatus className={cn('h-3.5 w-3.5', saveStatus.tone, isSaving && 'animate-spin')} />
             <span className={cn('font-medium', saveStatus.tone)}>{saveStatus.label}</span>
-            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-medium shadow-sm', realtimeTone === 'text-emerald-600' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-border/70 bg-background text-muted-foreground')}>
+            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-medium shadow-sm', realtimeTone === 'text-emerald-600' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-border/70 bg-background text-muted-foreground')}>
               <span className={cn('h-1.5 w-1.5 rounded-full', isCollaborativeNote && isWsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/40')} />
               Realtime · {realtimeLabel}
             </span>
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
-            {note.isPinned && <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 shadow-sm"><Pin className="h-3 w-3" />Pinned</span>}
-            {note.isProtected && <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-700 shadow-sm"><Lock className="h-3 w-3" />Protected</span>}
-            {isSharedNote && <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700 shadow-sm"><Share2 className="h-3 w-3" />Shared</span>}
+            {note.isPinned && <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 shadow-sm"><Pin className="h-3 w-3" />Pinned</span>}
+            {note.isProtected && <span className="inline-flex items-center gap-1 rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-600 dark:text-rose-400 shadow-sm"><Lock className="h-3 w-3" />Protected</span>}
+            {isSharedNote && <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-600 dark:text-sky-400 shadow-sm"><Share2 className="h-3 w-3" />Shared</span>}
           </div>
         </div>
 

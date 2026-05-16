@@ -11,12 +11,12 @@ import { useNotePreferencesStore, type NoteColor } from '../../settings/stores/n
 import type { SharedNoteItem } from '../api/notes.api';
 
 const noteColorClasses: Record<NoteColor, string> = {
-  default: 'bg-white',
-  yellow: 'bg-amber-50',
-  green: 'bg-emerald-50',
-  blue: 'bg-sky-50',
-  pink: 'bg-rose-50',
-  purple: 'bg-violet-50',
+  default: 'bg-white dark:bg-slate-900',
+  yellow: 'bg-amber-50 dark:bg-amber-950/20',
+  green: 'bg-emerald-50 dark:bg-emerald-950/20',
+  blue: 'bg-sky-50 dark:bg-sky-950/20',
+  pink: 'bg-rose-50 dark:bg-rose-950/20',
+  purple: 'bg-violet-50 dark:bg-violet-950/20',
 };
 
 type ViewMode = 'grid' | 'list';
@@ -118,7 +118,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
   }, [labels, selectedLabel]);
 
   return (
-    <div className="flex h-full flex-col border-r border-border/70 bg-gradient-to-b from-white to-slate-50/80">
+    <div className="flex h-full flex-col border-r bg-card">
       <div className="space-y-4 border-b border-border/70 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -147,7 +147,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
         {isLoading ? (
           <div className="rounded-2xl border border-dashed border-border/70 bg-white/80 p-6 text-center text-sm text-muted-foreground">Loading notes...</div>
         ) : filteredNotes.length === 0 && filteredSharedNotes.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border/70 bg-white/80 p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border/70 bg-card/80 p-8 text-center text-sm text-muted-foreground">
             {search ? 'No notes found matching your search.' : 'No notes yet. Create your first one.'}
           </div>
         ) : (
@@ -322,7 +322,7 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
 
           <div className="flex max-w-full flex-wrap items-center gap-2">
             {(note.labels || []).map((label: string) => (
-              <span key={label} className="max-w-full truncate rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
+              <span key={label} className="max-w-full truncate rounded-full bg-card/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
                 {label}
               </span>
             ))}

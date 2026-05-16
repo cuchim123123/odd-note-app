@@ -34,37 +34,42 @@
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 1rem;
+    --bg-gradient-to: 210 40% 96%;
+    --editor-surface: 0 0% 100%;
   }
 
   .dark {
-    color-scheme: light;
-    --background: 210 40% 98%;
-    --foreground: 222.2 47.4% 11.2%;
+    color-scheme: dark;
+    --background: 222 47% 6%;
+    --foreground: 213 31% 91%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 47.4% 11.2%;
+    --card: 222 47% 14%;
+    --card-foreground: 213 31% 91%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47.4% 11.2%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 213 31% 91%;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 214.3 31.8% 95.4%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 214.3 31.8% 95.4%;
-    --muted-foreground: 215.4 16.3% 42.9%;
+    --muted: 217 32% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 213 94% 96%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 217 32% 17%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 90.4%;
-    --input: 214.3 31.8% 90.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 217 32% 30%;
+    --input: 217 32% 30%;
+    --ring: 224 76% 48%;
+
+    --bg-gradient-to: 222 47% 4%;
+    --editor-surface: 222 47% 18%;
   }
 }
 
@@ -81,9 +86,9 @@
     min-height: 100vh;
     @apply bg-background text-foreground font-sans antialiased;
     background-image:
-      radial-gradient(circle at top left, hsl(221 83% 53% / 0.08), transparent 32%),
-      radial-gradient(circle at top right, hsl(262 83% 58% / 0.08), transparent 28%),
-      linear-gradient(180deg, hsl(var(--background)), hsl(210 40% 96%));
+      radial-gradient(circle at top left, hsl(226 70% 55% / 0.05), transparent 32%),
+      radial-gradient(circle at top right, hsl(262 83% 58% / 0.05), transparent 28%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--bg-gradient-to)));
   }
 
   ::selection {

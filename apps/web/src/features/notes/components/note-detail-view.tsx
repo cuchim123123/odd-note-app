@@ -284,7 +284,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   return (
     <ProtectedNoteRoute note={note as ProtectedNote | null} isLoading={isLoading} onUnauthorized={onUnauthorized}>
-      <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
+      <div className="flex h-full flex-col overflow-hidden rounded-3xl border bg-card shadow-[0_24px_80px_rgba(15,23,42,0.12)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
       <NoteToolbar
         note={note}
         title={title}
@@ -314,8 +314,8 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
       />
 
       {deleteConfirmOpen && (
-        <div className="border-b border-border/70 bg-slate-50 px-4 py-4 sm:px-6">
-          <div className="rounded-2xl border border-destructive/20 bg-white p-5 shadow-sm">
+        <div className="border-b bg-muted/30 px-4 py-4 sm:px-6">
+          <div className="rounded-2xl border border-destructive/20 bg-card p-5 shadow-sm">
             <h3 className="font-semibold text-destructive">Delete?</h3>
             <p className="mt-1 text-sm text-muted-foreground">Cannot undo.</p>
             <div className="mt-4 flex gap-2">
@@ -357,7 +357,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
         />
       )}
 
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white p-4 sm:p-8">
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-muted/20 to-card p-4 sm:p-8">
         <div className="mx-auto max-w-4xl">
           <NoteEditor
             key={yDoc ? `y-${getYDocDebugId(yDoc)}` : `no-y-${noteId ?? 'none'}`}

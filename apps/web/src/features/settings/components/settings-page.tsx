@@ -68,22 +68,23 @@ export function SettingsPage() {
   };
 
   const noteColorOptions = [
-    { value: 'default', label: 'Default', className: 'bg-white border-2' },
-    { value: 'yellow', label: 'Sunrise', className: 'bg-amber-100 border-2 border-amber-200' },
-    { value: 'green', label: 'Mint', className: 'bg-emerald-100 border-2 border-emerald-200' },
-    { value: 'blue', label: 'Sky', className: 'bg-sky-100 border-2 border-sky-200' },
-    { value: 'pink', label: 'Rose', className: 'bg-rose-100 border-2 border-rose-200' },
-    { value: 'purple', label: 'Lavender', className: 'bg-violet-100 border-2 border-violet-200' },
+    { value: 'default', label: 'Default', className: 'bg-white dark:bg-slate-900 border-2' },
+    { value: 'yellow', label: 'Sunrise', className: 'bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-200 dark:border-amber-800' },
+    { value: 'green', label: 'Mint', className: 'bg-emerald-100 dark:bg-emerald-900/40 border-2 border-emerald-200 dark:border-emerald-800' },
+    { value: 'blue', label: 'Sky', className: 'bg-sky-100 dark:bg-sky-900/40 border-2 border-sky-200 dark:border-sky-800' },
+    { value: 'pink', label: 'Rose', className: 'bg-rose-100 dark:bg-rose-900/40 border-2 border-rose-200 dark:border-rose-800' },
+    { value: 'purple', label: 'Lavender', className: 'bg-violet-100 dark:bg-violet-900/40 border-2 border-violet-200 dark:border-violet-800' },
   ] as const;
 
   const themeOptions = [
     { value: 'light' as const, label: 'Light', icon: Sun, description: 'Bright and crisp everywhere.' },
-    { value: 'system' as const, label: 'System', icon: Monitor, description: 'Keep the app bright by default.' },
+    { value: 'dark' as const, label: 'Dark', icon: Palette, description: 'Deep, immersive dark mode.' },
+    { value: 'system' as const, label: 'System', icon: Monitor, description: 'Adapts to your device settings.' },
   ];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)] backdrop-blur">
+      <div className="rounded-3xl border bg-card p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)] backdrop-blur">
         <div className="flex items-start gap-4">
           <div className="rounded-2xl bg-primary/10 p-3 text-primary shadow-sm">
             <Sparkles className="h-6 w-6" />

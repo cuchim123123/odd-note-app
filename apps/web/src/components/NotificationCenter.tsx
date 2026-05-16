@@ -29,7 +29,7 @@ export const NotificationCenter = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-white text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:text-foreground hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:text-foreground hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
         aria-label="Open notifications"
       >
         <Bell size={18} />
@@ -41,8 +41,8 @@ export const NotificationCenter = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-3 w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-3xl border border-border/70 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.14)]">
-          <div className="flex items-center justify-between border-b border-border/70 bg-gradient-to-r from-slate-50 to-white px-4 py-3">
+        <div className="absolute right-0 z-50 mt-3 w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-3xl border bg-card shadow-[0_30px_80px_rgba(15,23,42,0.14)]">
+          <div className="flex items-center justify-between border-b bg-gradient-to-r from-muted/30 to-card px-4 py-3">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -70,7 +70,7 @@ export const NotificationCenter = () => {
             </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto bg-slate-50/70 p-2">
+          <div className="max-h-96 overflow-y-auto bg-muted/20 p-2">
             {isLoading ? (
               <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">Loading notifications...</div>
             ) : notifications.length === 0 ? (
@@ -95,7 +95,7 @@ export const NotificationCenter = () => {
           </div>
 
           {notifications.length > 0 && (
-            <div className="border-t border-border/70 bg-white px-4 py-3 text-center">
+            <div className="border-t bg-card px-4 py-3 text-center">
               <button className="text-sm font-medium text-primary transition-colors hover:text-primary/80">
                 View all notifications
               </button>
@@ -125,7 +125,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   return (
     <li
       className={`group rounded-2xl border p-4 transition-all ${
-        notification.read ? 'border-border/60 bg-white/95 hover:border-primary/20 hover:shadow-sm' : 'border-primary/15 bg-primary/5 hover:border-primary/25 hover:shadow-sm'
+        notification.read ? 'border-border/60 bg-card/95 hover:border-primary/20 hover:shadow-sm' : 'border-primary/15 bg-primary/5 hover:border-primary/25 hover:shadow-sm'
       }`}
     >
       <div className="flex items-start justify-between gap-3">

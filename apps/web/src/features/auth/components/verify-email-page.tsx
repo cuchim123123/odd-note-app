@@ -42,7 +42,7 @@ export function VerifyEmailPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(221_83%_53%_/_0.1),_transparent_30%),radial-gradient(circle_at_bottom_right,_hsl(190_95%_45%_/_0.08),_transparent_28%)]" />
-      <Card className="relative w-full max-w-md border-white/70 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+      <Card className="relative w-full max-w-md bg-card/95 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
         <CardHeader className="space-y-2 text-center pb-8">
           <CardTitle className="text-2xl font-bold tracking-tight">Email verification</CardTitle>
           <CardDescription>We’re checking your account link right now.</CardDescription>
