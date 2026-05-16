@@ -43,6 +43,7 @@ type UseYjsCollaborationOptions = {
     labels?: string[] | undefined;
     timestamp: number;
   }) => void;
+  onNoteDeleted?: (noteId: string) => void;
 };
 
 function getWsUrl(): string {
@@ -102,6 +103,7 @@ export function useYjsCollaboration({
   noteId,
   enabled,
   onRemoteContentUpdate,
+  onNoteDeleted,
 }: UseYjsCollaborationOptions) {
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
@@ -119,8 +121,10 @@ export function useYjsCollaboration({
   const refreshAttemptedRef = useRef(false);
   const syncedSocketIdRef = useRef<string | null>(null);
   const onRemoteContentUpdateRef = useRef(onRemoteContentUpdate);
+  const onNoteDeletedRef = useRef(onNoteDeleted);
 
   onRemoteContentUpdateRef.current = onRemoteContentUpdate;
+  onNoteDeletedRef.current = onNoteDeleted;
 
   useEffect(() => {
     if (!enabled || !noteId || !accessToken || !user) {
@@ -333,6 +337,10 @@ export function useYjsCollaboration({
       onRemoteContentUpdateRef.current?.(data);
     });
 
+    socket.on('note:deleted', (data: { noteId: string }) => {
+      onNoteDeletedRef.current?.(data.noteId);
+    });
+
     socket.on('yjs:sync-step-2', (data: { noteId: string; update: number[]; stateVector?: number[] }) => {
       if (data.noteId === noteId) {
         console.warn('[Yjs] received yjs:sync-step-2', data.update.length);
@@ -414,5 +422,10 @@ export function useYjsCollaboration({
     yDoc,
     sendContentUpdate,
     sendTypingState,
+    sendDelete: () => {
+      if (socketRef.current?.connected && noteId) {
+        socketRef.current.emit('note:delete', { noteId });
+      }
+    },
   };
 }

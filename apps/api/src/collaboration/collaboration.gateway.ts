@@ -281,6 +281,41 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     });
   }
 
+  @SubscribeMessage('note:delete')
+  async handleNoteDelete(
+    @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
+    @MessageBody() data: { noteId: string },
+  ): Promise<void> {
+    const entry = await this.getSocketRoom(client.id);
+    if (!entry || entry.noteId !== data.noteId) {
+      return;
+    }
+
+    this.logger.log(`User ${client.data.userId} deleted note ${data.noteId} - broadcasting to room`);
+
+    // Notify ALL clients in the room (including the one who deleted it)
+    this.server.to(data.noteId).emit('note:deleted', { noteId: data.noteId });
+
+    // Cleanup Redis state for this note
+    await Promise.all([
+      this.redis.getClient().del(this.participantsKey(data.noteId)),
+      this.redis.getClient().del(this.typingKey(data.noteId)),
+      this.redis.getClient().del(this.snapshotKey(data.noteId)),
+      this.clearYDocState(data.noteId),
+    ]);
+
+    // Local Yjs cleanup
+    const yDoc = this.yDocs.get(data.noteId);
+    if (yDoc) {
+      yDoc.destroy();
+      this.yDocs.delete(data.noteId);
+    }
+    if (this.yDocCleanupTimers.has(data.noteId)) {
+      clearTimeout(this.yDocCleanupTimers.get(data.noteId));
+      this.yDocCleanupTimers.delete(data.noteId);
+    }
+  }
+
   @SubscribeMessage('note:typing')
   async handleTypingUpdate(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },

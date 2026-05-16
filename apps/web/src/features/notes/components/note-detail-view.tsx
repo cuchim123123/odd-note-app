@@ -13,6 +13,7 @@ import {
   saveNoteDraft,
   clearNoteDraft,
   NOTES_KEYS,
+  type NoteDetailItem,
 } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { NoteEditor } from './note-editor';
@@ -276,10 +277,14 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
     requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
   }, [isCollaborativeNote, noteId, note, queryClient]);
 
-  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc } = useYjsCollaboration({
+  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc, sendDelete } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
+    onNoteDeleted: (id) => {
+      console.warn('[NoteDetailView] Note deleted by owner, redirecting...', id);
+      navigate('/notes');
+    },
   });
 
   if (isLoading || !note) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading…</div>;
@@ -298,6 +303,8 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
     if (!isCollaborativeNote) return;
     sendContentUpdate(undefined, title, s);
   };
+
+
 
   const handleToggleLabel = async (label: string) => {
     if (!note || !canEditContent) return;
@@ -370,7 +377,7 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
             <h3 className="font-semibold text-destructive">Delete?</h3>
             <p className="mt-1 text-sm text-muted-foreground">Cannot undo.</p>
             <div className="mt-4 flex gap-2">
-              <Button type="button" variant="destructive" onClick={async () => { await deleteMutation.mutateAsync(); setDeleteConfirmOpen(false); onDeleted(); }} disabled={deleteMutation.isPending}>Delete</Button>
+              <Button type="button" variant="destructive" onClick={async () => { sendDelete(); await deleteMutation.mutateAsync(); setDeleteConfirmOpen(false); onDeleted(); }} disabled={deleteMutation.isPending}>Delete</Button>
               <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
             </div>
           </div>

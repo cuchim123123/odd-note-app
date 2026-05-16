@@ -123,9 +123,9 @@ export function NoteToolbar({
           {canManageShares && <Button type="button" size="sm" variant="outline" onClick={onOpenSharing}><Share2 className="mr-2 h-4 w-4" />Share</Button>}
           <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" />
           <Button size="sm" variant="ghost" onClick={() => imageInputRef.current?.click()} disabled={isSaving || !canEditContent}><ImagePlus className="w-4 h-4" /></Button>
-          <Button size="sm" variant="ghost" onClick={() => onOpenProtection(note.isProtected ? 'remove' : 'protect')} disabled={isSaving || !canEditContent || isSharedNote}><Lock className="w-4 h-4" /></Button>
-          <Button size="sm" variant="ghost" onClick={onPin} disabled={isSaving || !canEditContent || isSharedNote}><Pin className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={onDelete} disabled={!canEditContent || isSharedNote}><Trash2 className="w-4 h-4" /></Button>
+          <Button size="sm" variant="ghost" onClick={() => onOpenProtection(note.isProtected ? 'remove' : 'protect')} disabled={isSaving || !canEditContent || !canManageShares}><Lock className="w-4 h-4" /></Button>
+          <Button size="sm" variant="ghost" onClick={onPin} disabled={isSaving || !canEditContent || !canManageShares}><Pin className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={onDelete} disabled={!canEditContent || !canManageShares}><Trash2 className="w-4 h-4" /></Button>
         </div>
       </div>
     </div>
