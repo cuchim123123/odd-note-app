@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Doc as YDoc } from 'yjs';
@@ -62,16 +62,25 @@ function NoteDetailContent({
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   
-  // Robust permission checks
-  // Robust permission checks: Owners don't have a sharedPermission field, recipients do.
-  const isOwnedNote = note.accessMode === 'owner' || (!note.accessMode && !note.sharedPermission);
-  const isSharedNote = Boolean(note?.isShared || (note && 'accessMode' in note && note.accessMode === 'shared'));
-  const sharedPermission = (note && 'sharedPermission' in note) ? (note as NoteDetailItem).sharedPermission : undefined;
-  
-  // Owners can always edit; recipients need EDIT permission
-  const canEditContent = isOwnedNote || sharedPermission === 'EDIT';
-  const canManageShares = isOwnedNote;
-  const isCollaborativeNote = Boolean(isSharedNote && canEditContent);
+  // Stabilize permissions to prevent UI flickering during cache updates
+  const { isOwnedNote, isSharedNote, canEditContent, canManageShares, isCollaborativeNote } = React.useMemo(() => {
+    const owned = note.accessMode === 'owner' || (!note.accessMode && !note.sharedPermission && !note.isShared);
+    const shared = Boolean(note.isShared || note.accessMode === 'shared');
+    const perm = (note as NoteDetailItem).sharedPermission;
+    
+    // Owners can always edit/manage; recipients check their permission field
+    const canEdit = owned || perm === 'EDIT';
+    const canManage = owned;
+    const collaborative = Boolean(shared && canEdit);
+
+    return { 
+      isOwnedNote: owned, 
+      isSharedNote: shared, 
+      canEditContent: canEdit, 
+      canManageShares: canManage,
+      isCollaborativeNote: collaborative
+    };
+  }, [note.id]); // ONLY re-calculate if the note ID changes (i.e. we switched notes)
 
   const { data: shares = [] } = useNoteShares(isOwnedNote ? noteId : null);
   const updateMutation = useUpdateNote(noteId);
@@ -256,7 +265,16 @@ function NoteDetailContent({
 
   const handleRemoteContentUpdate = useCallback((d: { userId: string; content: string; title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined; timestamp?: string | number }) => {
     isRemoteUpdateRef.current = true;
-    if (d.title !== undefined) setTitle(d.title);
+    if (d.title !== undefined && noteId) {
+      setTitle(d.title);
+      const ut = new Date().toISOString();
+      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
+        ns.map((n) => n.id === noteId ? { ...n, title: d.title, updatedAt: ut } as Note : n),
+      );
+      queryClient.setQueryData<NoteDetailItem>(NOTES_KEYS.detail(noteId), (n) =>
+        n ? ({ ...n, title: d.title, updatedAt: ut } as NoteDetailItem) : n,
+      );
+    }
     if (d.isProtected !== undefined) setServerProtectionStatus(d.isProtected);
     if (d.labels !== undefined && noteId) {
       const ut = new Date().toISOString();
