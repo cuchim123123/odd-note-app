@@ -236,7 +236,7 @@ As of this version, the application now uses **Yjs** (a high-performance CRDT) f
   - Creates a Y.Doc for each note
   - Binds to TipTap editor via `y-prosemirror`
   - Syncs updates bidirectionally with the server
-  - Tracks awareness state (cursor positions, selection) for remote user indicators
+  - Tracks collaborator presence for the active note
 
 - **Data Flow**:
   1. Local edits → Y.Doc applies update locally
