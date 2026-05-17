@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/co
 import { AuthService } from './auth.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto } from './dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto } from './dto';
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import type { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
@@ -32,6 +32,12 @@ export class AuthController {
   @Get('verify-email/:token')
   async verifyEmail(@Param('token') token: string) {
     return await this.emailVerificationService.verifyEmailToken(token.trim());
+  }
+
+  @Post('resend-verification')
+  async resendVerification(@Body() input: ResendVerificationDto) {
+    await this.emailVerificationService.resendVerificationEmail(input.email!);
+    return { success: true, message: 'If the email is registered and unverified, a new verification link has been sent.' };
   }
 
   @UseGuards(AccessTokenGuard)

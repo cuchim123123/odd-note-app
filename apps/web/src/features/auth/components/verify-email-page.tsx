@@ -1,15 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, MailOpen } from 'lucide-react';
 import { api } from '../../../lib/axios';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { useResendVerification } from '../api/auth.api';
 
 export function VerifyEmailPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState<string>('');
+  
+  const [resendEmail, setResendEmail] = useState('');
+  const resendMutation = useResendVerification();
+  const [resendResult, setResendResult] = useState<string | null>(null);
+
+  const handleResend = async () => {
+    if (!resendEmail.trim()) return;
+    try {
+      await resendMutation.mutateAsync(resendEmail.trim());
+      setResendResult('A new verification email has been sent if the account exists and is unverified.');
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+      setResendResult(msg || 'Failed to resend verification email.');
+    }
+  };
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -62,9 +81,41 @@ export function VerifyEmailPage() {
             </div>
           )}
           {status === 'error' && (
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-4 w-full">
               <AlertCircle className="h-12 w-12 text-destructive" />
               <p className="text-center font-medium text-foreground">{message}</p>
+              
+              <div className="w-full mt-4 rounded-2xl border border-border/60 bg-muted/30 p-5 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <MailOpen className="h-4 w-4 text-primary" />
+                  Resend verification link
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  If your verification link has expired, enter your email below to receive a new one.
+                </p>
+                <div className="space-y-2">
+                  <Input 
+                    type="email" 
+                    placeholder="name@example.com" 
+                    value={resendEmail} 
+                    onChange={(e) => setResendEmail(e.target.value)}
+                    className="rounded-xl border-border/60 bg-card focus-visible:border-primary"
+                  />
+                  <Button 
+                    type="button" 
+                    onClick={handleResend}
+                    disabled={resendMutation.isPending || !resendEmail.trim()}
+                    className="w-full rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    {resendMutation.isPending ? 'Sending...' : 'Send Link'}
+                  </Button>
+                </div>
+                {resendResult && (
+                  <p className="text-center text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {resendResult}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
@@ -72,12 +123,12 @@ export function VerifyEmailPage() {
           {status === 'error' && (
             <>
               <Link to="/" className="w-full">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full rounded-xl">
                   Go to home
                 </Button>
               </Link>
               <Link to="/auth/login" className="w-full">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full rounded-xl">
                   Back to login
                 </Button>
               </Link>

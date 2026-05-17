@@ -56,3 +56,13 @@ export const useLogout = () => {
     },
   });
 };
+
+export const useResendVerification = () => {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      const response = await api.post<{ success: boolean; message: string }>('/auth/resend-verification', { email });
+      return response.data;
+    },
+  });
+};
+

@@ -41,4 +41,17 @@ export class EmailVerificationService {
 
     return { user: this.authUserMapper.toProfile(updatedUser) };
   }
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!user || user.isEmailVerified) {
+      return;
+    }
+
+    const token = await this.createTokenForUser(user.id);
+    await this.sendVerificationForUser(user, token);
+  }
 }

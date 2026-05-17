@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../features/auth/stores/auth.store';
-import { useLogout } from '../../features/auth/api/auth.api';
+import { useLogout, useResendVerification } from '../../features/auth/api/auth.api';
 import { Button } from '../ui/button';
 import { NotificationCenter } from '../NotificationCenter';
 import { Sparkles, LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck, ChevronRight } from 'lucide-react';
@@ -8,8 +9,37 @@ import { Sparkles, LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck, Chevr
 export function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
   const logoutMutation = useLogout();
+  const resendMutation = useResendVerification();
   const navigate = useNavigate();
+  
   const isUnverified = Boolean(user && !user.isEmailVerified);
+  
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const interval = setInterval(() => {
+      setCountdown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [countdown]);
+
+  const handleResendBanner = async () => {
+    if (!user?.email || countdown > 0) return;
+    try {
+      await resendMutation.mutateAsync(user.email);
+      setResendStatus('Sent! Check inbox');
+      setCountdown(60);
+      setTimeout(() => setResendStatus(null), 5000);
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+      setResendStatus(msg || 'Failed');
+      setTimeout(() => setResendStatus(null), 5000);
+    }
+  };
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
@@ -69,13 +99,26 @@ export function DashboardLayout() {
       </header>
 
       {isUnverified ? (
-        <div className="border-b bg-amber-50/10 text-amber-600 dark:text-amber-400">
-          <div className="container flex items-center justify-between gap-3 py-3 text-sm font-medium">
-            <div className="flex items-center gap-2">
-              <BadgeCheck className="h-4 w-4 text-amber-700" />
-              Your account is not verified yet. Check your email to unlock the verified state.
+        <div className="border-b bg-amber-500/10 text-amber-700 dark:text-amber-400">
+          <div className="container flex flex-col gap-2 py-3 text-sm font-medium sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <BadgeCheck className="h-4 w-4 text-amber-600" />
+              <span>Your account is not verified yet. Check your email to unlock all features.</span>
+              <button
+                type="button"
+                onClick={handleResendBanner}
+                disabled={resendMutation.isPending || countdown > 0}
+                className="underline hover:text-amber-900 dark:hover:text-amber-200 transition-colors disabled:no-underline disabled:opacity-60 ml-1 font-semibold"
+              >
+                {resendMutation.isPending ? 'Sending...' : countdown > 0 ? `Resend in ${countdown}s` : 'Resend verification email'}
+              </button>
+              {resendStatus && (
+                <span className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400">
+                  {resendStatus}
+                </span>
+              )}
             </div>
-            <Link to="/auth/login" className="inline-flex items-center gap-1 text-amber-700 transition-colors hover:text-amber-900">
+            <Link to="/auth/login" className="inline-flex items-center gap-1 text-amber-700 hover:text-amber-900 transition-colors self-start sm:self-auto">
               <span>Back to login</span>
               <ChevronRight className="h-4 w-4" />
             </Link>
