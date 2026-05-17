@@ -171,6 +171,15 @@ function NoteDetailContent({
   });
 
 
+  const broadcast = useCallback((s: { title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined } = {}) => {
+    if (!isCollaborativeNote) return;
+    sendContentUpdate(undefined, title, s);
+  }, [isCollaborativeNote, sendContentUpdate, title]);
+
+  const onTitleSave = useCallback(async () => {
+    await handleSaveTitle(broadcast);
+  }, [handleSaveTitle, broadcast]);
+
   const isProtected = serverProtectionStatus ?? note.isProtected;
   if (isProtected && !isUnlocked) {
     return (
@@ -180,13 +189,6 @@ function NoteDetailContent({
       />
     );
   }
-
-  const broadcast = (s: { title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined } = {}) => {
-    if (!isCollaborativeNote) return;
-    sendContentUpdate(undefined, title, s);
-  };
-
-
 
   const handleToggleLabel = async (label: string) => {
     if (!note || !canEditContent) return;
@@ -202,10 +204,6 @@ function NoteDetailContent({
       // Silently fail
     }
   };
-
-  const onTitleSave = useCallback(async () => {
-    await handleSaveTitle(broadcast);
-  }, [handleSaveTitle, broadcast]);
 
   const onUnauthorized = () => navigate('/notes');
 
