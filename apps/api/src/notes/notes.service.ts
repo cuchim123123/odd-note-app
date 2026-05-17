@@ -402,8 +402,20 @@ export class NotesService {
   }
 
   async getProtectionStatus(userId: string, noteId: string): Promise<{ isProtected: boolean }> {
+    const note = await this.prisma.note.findFirst({
+      where: {
+        id: noteId,
+        OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
+      },
+      select: { userId: true },
+    });
+
+    if (!note) {
+      throw new NotFoundException('Note not found');
+    }
+
     const protection = await this.prisma.noteProtection.findUnique({
-      where: { userId_noteId: { userId, noteId } },
+      where: { userId_noteId: { userId: note.userId, noteId } },
       select: { id: true },
     });
 
@@ -428,8 +440,20 @@ export class NotesService {
   }
 
   async verifyPassword(userId: string, noteId: string, password: string): Promise<{ verified: boolean }> {
+    const note = await this.prisma.note.findFirst({
+      where: {
+        id: noteId,
+        OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
+      },
+      select: { userId: true },
+    });
+
+    if (!note) {
+      throw new NotFoundException('Note not found');
+    }
+
     const protection = await this.prisma.noteProtection.findUnique({
-      where: { userId_noteId: { userId, noteId } },
+      where: { userId_noteId: { userId: note.userId, noteId } },
     });
 
     if (!protection) {
@@ -440,6 +464,15 @@ export class NotesService {
   }
 
   async removePassword(userId: string, noteId: string, password: string): Promise<{ removed: true }> {
+    const note = await this.prisma.note.findUnique({
+      where: { id: noteId },
+      select: { userId: true },
+    });
+
+    if (!note || note.userId !== userId) {
+      throw new UnauthorizedException('Only the note owner can remove password protection');
+    }
+
     const protection = await this.prisma.noteProtection.findUnique({
       where: { userId_noteId: { userId, noteId } },
     });
