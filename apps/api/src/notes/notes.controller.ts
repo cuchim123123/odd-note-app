@@ -57,9 +57,13 @@ export class NotesController {
   }
 
   @Get(':noteId')
-  async getById(@Param('noteId') noteId: string, @Headers('authorization') authorizationHeader?: string) {
+  async getById(
+    @Param('noteId') noteId: string,
+    @Headers('authorization') authorizationHeader?: string,
+    @Headers('x-note-unlock-token') unlockToken?: string,
+  ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.getById(userId, this.parseNoteId(noteId));
+    return await this.notesService.getById(userId, this.parseNoteId(noteId), unlockToken);
   }
 
   @Post()
@@ -174,9 +178,10 @@ export class NotesController {
   async getDraft(
     @Param('noteId') noteId: string,
     @Headers('authorization') authorizationHeader?: string,
+    @Headers('x-note-unlock-token') unlockToken?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.getDraft(userId, this.parseNoteId(noteId));
+    return await this.notesService.getDraft(userId, this.parseNoteId(noteId), unlockToken);
   }
 
   @Post(':noteId/draft')

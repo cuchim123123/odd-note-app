@@ -14,5 +14,6 @@ import { NotesCrdtService } from './notes-crdt.service';
   imports: [PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
   controllers: [NotesController],
   providers: [NotesService, NotesShareService, NotesProtectionService, NotesCrdtService, MailerService],
+  exports: [NotesProtectionService, NotesService],
 })
 export class NotesModule {}

@@ -6,7 +6,7 @@ import { cn } from '../../../lib/utils';
 import { setNotePassword, removeNotePassword, verifyNotePassword } from '../api/notes.api';
 import { useUpdateNote } from '../api/notes.api';
 
-export function ProtectionUnlockPrompt({ noteId, onUnlock }: { noteId: string; onUnlock: () => void }) {
+export function ProtectionUnlockPrompt({ noteId, onUnlock }: { noteId: string; onUnlock: (token?: string) => void }) {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export function ProtectionUnlockPrompt({ noteId, onUnlock }: { noteId: string; o
               try {
                 const r = await verifyNotePassword(noteId, password.trim());
                 if (!r.verified) { setMessage('Wrong password.'); return; }
-                onUnlock();
+                onUnlock(r.unlockToken);
                 setPassword('');
               } catch { setMessage('Wrong password.'); }
             }}>Unlock</Button>
@@ -49,7 +49,7 @@ export function ProtectionPanel({
   onClose: () => void;
   onProtected: () => void;
   onUnprotected: () => void;
-  onUnlock: () => void;
+  onUnlock: (token?: string) => void;
   onLock: () => void;
 }) {
   const updateMutation = useUpdateNote(noteId);

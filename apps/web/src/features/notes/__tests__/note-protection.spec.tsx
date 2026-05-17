@@ -7,6 +7,8 @@ import * as notesApi from '../api/notes.api';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
 import { renderWithQueryClient } from '../../../test/render-with-query-client';
 
+import { Routes, Route } from 'react-router-dom';
+
 describe('Note protection behavior', () => {
   beforeEach(() => {
     notesApi.resetMockNotes();
@@ -25,21 +27,26 @@ describe('Note protection behavior', () => {
       return { verified: password === 'secret123' };
     });
 
-    renderWithQueryClient(<NoteDashboard />);
+    renderWithQueryClient(
+      <Routes>
+        <Route path="/notes/:noteId" element={<NoteDashboard />} />
+        <Route path="*" element={<NoteDashboard />} />
+      </Routes>
+    );
 
     await user.click(await screen.findByText(note.title || ''));
 
-    expect(await screen.findByText('This note is protected')).toBeInTheDocument();
+    expect(await screen.findByText('Protected')).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText('Password'), 'wrong');
-    await user.click(screen.getByRole('button', { name: 'Unlock note' }));
+    await user.type(screen.getByPlaceholderText('Password'), 'wrong');
+    await user.click(screen.getByRole('button', { name: 'Unlock' }));
 
-    expect(await screen.findByText('Incorrect password.')).toBeInTheDocument();
+    expect(await screen.findByText('Wrong password.')).toBeInTheDocument();
 
-    await user.clear(screen.getByLabelText('Password'));
-    await user.type(screen.getByLabelText('Password'), 'secret123');
-    await user.click(screen.getByRole('button', { name: 'Unlock note' }));
+    await user.clear(screen.getByPlaceholderText('Password'));
+    await user.type(screen.getByPlaceholderText('Password'), 'secret123');
+    await user.click(screen.getByRole('button', { name: 'Unlock' }));
 
-    expect(await screen.findByPlaceholderText('Note title...')).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText('Title…')).toBeInTheDocument();
   });
 });

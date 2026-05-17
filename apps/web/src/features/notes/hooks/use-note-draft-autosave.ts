@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Note } from '@odd-note-app/validation';
+import { useNoteProtectionStore } from '../stores/note-protection.store';
 import {
   getNoteProtectionStatus,
   getNoteDraft,
@@ -30,6 +31,8 @@ export function useNoteDraftAndAutoSave({
   markLocked,
 }: UseNoteDraftAndAutoSaveProps) {
   const queryClient = useQueryClient();
+  const getUnlockToken = useNoteProtectionStore((s) => s.getUnlockToken);
+  const unlockToken = noteId ? getUnlockToken(noteId) : undefined;
 
   const [title, setTitle] = useState(note.title || '');
   const [content, setContent] = useState(note.content || '');
@@ -97,7 +100,7 @@ export function useNoteDraftAndAutoSave({
       }
     }
 
-    getNoteDraft(note.id!)
+    getNoteDraft(note.id!, unlockToken)
       .then((d) => {
         if (!d || canceled) return;
         const draftEmpty = !d.title.trim() && !d.content.trim();
@@ -112,7 +115,7 @@ export function useNoteDraftAndAutoSave({
       })
       .catch(() => {});
     return () => { canceled = true; };
-  }, [note?.id, canEditContent]);
+  }, [note?.id, canEditContent, unlockToken]);
 
   // AGGRESSIVE AUTOSAVE: Always save immediately to IndexedDB, then to server
   useEffect(() => {

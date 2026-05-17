@@ -11,6 +11,8 @@ import { JwtService } from '@nestjs/jwt';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { JwtConfigService } from '../config';
 import { RedisService } from '../redis/redis.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotesProtectionService } from '../notes/notes-protection.service';
 import { Server, Socket } from 'socket.io';
 import type Redis from 'ioredis';
 import * as Y from 'yjs';
@@ -67,6 +69,8 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
     private readonly redis: RedisService,
+    private readonly prisma: PrismaService,
+    private readonly notesProtectionService: NotesProtectionService,
   ) {}
 
   afterInit(server: Server): void {
@@ -205,11 +209,41 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   @SubscribeMessage('note:join')
   async handleJoinNote(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
-    @MessageBody() data: { noteId: string },
+    @MessageBody() data: { noteId: string; unlockToken?: string },
   ): Promise<void> {
     try {
-      const { noteId } = data;
+      const { noteId, unlockToken } = data;
       const { userId, displayName } = client.data;
+
+      // 1. Authorization: Verify that user has ownership or is a recipient of a share
+      const note = await this.prisma.note.findFirst({
+        where: {
+          id: noteId,
+          OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
+        },
+        select: { userId: true },
+      });
+
+      if (!note) {
+        this.logger.warn(`User ${userId} attempted to join unauthorized note ${noteId} — disconnecting`);
+        client.disconnect();
+        return;
+      }
+
+      // 2. Encryption/Protection: Verify unlockToken if password protected
+      const protection = await this.prisma.noteProtection.findUnique({
+        where: { userId_noteId: { userId: note.userId, noteId } },
+        select: { id: true },
+      });
+
+      if (protection) {
+        const isUnlocked = await this.notesProtectionService.verifyUnlockToken(userId, noteId, unlockToken);
+        if (!isUnlocked) {
+          this.logger.warn(`User ${userId} attempted to join locked note ${noteId} without valid token — disconnecting`);
+          client.disconnect();
+          return;
+        }
+      }
 
       // Leave any previous room
       const prevEntry = await this.getSocketRoom(client.id);

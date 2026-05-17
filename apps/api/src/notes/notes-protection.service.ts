@@ -1,13 +1,17 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { JwtConfigService } from '../config/jwt-config.service';
 
 @Injectable()
 export class NotesProtectionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly jwtService: JwtService,
+    private readonly jwtConfig: JwtConfigService,
   ) {}
 
   async getProtectionStatus(userId: string, noteId: string): Promise<{ isProtected: boolean }> {
@@ -48,7 +52,7 @@ export class NotesProtectionService {
     return { isProtected: true };
   }
 
-  async verifyPassword(userId: string, noteId: string, password: string): Promise<{ verified: boolean }> {
+  async verifyPassword(userId: string, noteId: string, password: string): Promise<{ verified: boolean; unlockToken?: string }> {
     const note = await this.prisma.note.findFirst({
       where: {
         id: noteId,
@@ -69,7 +73,29 @@ export class NotesProtectionService {
       return { verified: false };
     }
 
-    return { verified: await bcrypt.compare(password, protection.passwordHash) };
+    const verified = await bcrypt.compare(password, protection.passwordHash);
+    if (!verified) {
+      return { verified: false };
+    }
+
+    const unlockToken = this.jwtService.sign(
+      { sub: userId, noteId, type: 'note-unlock' },
+      { secret: this.jwtConfig.getAccessTokenSecret(), expiresIn: '24h' },
+    );
+
+    return { verified: true, unlockToken };
+  }
+
+  async verifyUnlockToken(userId: string, noteId: string, token?: string): Promise<boolean> {
+    if (!token) return false;
+    try {
+      const payload = this.jwtService.verify<{ sub: string; noteId: string; type: string }>(token, {
+        secret: this.jwtConfig.getAccessTokenSecret(),
+      });
+      return payload.sub === userId && payload.noteId === noteId && payload.type === 'note-unlock';
+    } catch {
+      return false;
+    }
   }
 
   async removePassword(userId: string, noteId: string, password: string): Promise<{ removed: true }> {

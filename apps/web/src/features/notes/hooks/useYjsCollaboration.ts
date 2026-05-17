@@ -3,6 +3,7 @@ import axios from 'axios';
 import * as Y from 'yjs';
 import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../../auth/stores/auth.store';
+import { useNoteProtectionStore } from '../stores/note-protection.store';
 import {
   NOTE_COLLABORATION_EVENTS,
   NOTE_COLLABORATION_FRAGMENT_NAME,
@@ -110,6 +111,8 @@ export function useYjsCollaboration({
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const refreshToken = useAuthStore((state) => state.refreshToken);
+  const getUnlockToken = useNoteProtectionStore((s) => s.getUnlockToken);
+  const unlockToken = noteId ? getUnlockToken(noteId) : undefined;
 
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [presenceParticipants, setPresenceParticipants] = useState<PresenceParticipant[]>([]);
@@ -187,7 +190,7 @@ export function useYjsCollaboration({
     const syncState = (socket: Socket) => {
       if (socket.connected) {
         console.warn('[Yjs] Emitting note:join for', noteId);
-        socket.emit(NOTE_COLLABORATION_EVENTS.join, { noteId });
+        socket.emit(NOTE_COLLABORATION_EVENTS.join, { noteId, unlockToken });
         setTimeout(() => {
           if (socket.connected) {
             console.warn('[Yjs] sync-step-1 fragment length before send', nextYDoc.getXmlFragment(NOTE_COLLABORATION_FRAGMENT_NAME).length);
@@ -408,7 +411,7 @@ export function useYjsCollaboration({
       setTypingParticipants([]);
       setYDoc(null);
     };
-  }, [accessToken, enabled, noteId, refreshToken, user]);
+  }, [accessToken, enabled, noteId, refreshToken, user, unlockToken]);
 
   const sendContentUpdate = (content?: string | undefined, title?: string | undefined, metadata?: { title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined }) => {
     if (socketRef.current?.connected && noteId) {

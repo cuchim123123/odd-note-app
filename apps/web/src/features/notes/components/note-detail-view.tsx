@@ -185,7 +185,7 @@ function NoteDetailContent({
     return (
       <ProtectionUnlockPrompt
         noteId={noteId}
-        onUnlock={() => markUnlocked(noteId)}
+        onUnlock={(token) => markUnlocked(noteId, token)}
       />
     );
   }
@@ -285,7 +285,7 @@ function NoteDetailContent({
             setServerProtectionStatus(false);
             broadcast({ isProtected: false });
           }}
-          onUnlock={() => markUnlocked(noteId)}
+          onUnlock={(token) => markUnlocked(noteId, token)}
           onLock={() => markLocked(noteId)}
         />
       )}

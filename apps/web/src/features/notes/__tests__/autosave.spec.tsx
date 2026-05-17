@@ -6,6 +6,8 @@ import { NoteDashboard } from '../components/note-dashboard';
 import { resetMockNotes } from '../api/notes.api';
 import { renderWithQueryClient } from '../../../test/render-with-query-client';
 
+import { Routes, Route } from 'react-router-dom';
+
 describe('Autosave behavior (observable)', () => {
   beforeEach(() => {
     resetMockNotes();
@@ -14,7 +16,12 @@ describe('Autosave behavior (observable)', () => {
   it('shows autosave status when editing and eventually shows saved', async () => {
     const user = userEvent.setup();
 
-    renderWithQueryClient(<NoteDashboard />);
+    renderWithQueryClient(
+      <Routes>
+        <Route path="/notes/:noteId" element={<NoteDashboard />} />
+        <Route path="*" element={<NoteDashboard />} />
+      </Routes>
+    );
 
     // create a new note via the sidebar button
     const createBtn = screen.getAllByLabelText('Create new note')[0]!;
@@ -25,7 +32,7 @@ describe('Autosave behavior (observable)', () => {
     expect(editor).toBeTruthy();
 
     // update the title which should trigger autosave behavior
-    const titleInput = screen.getByPlaceholderText('Note title...') as HTMLInputElement;
+    const titleInput = screen.getByPlaceholderText('Title…') as HTMLInputElement;
     await user.clear(titleInput);
     await user.type(titleInput, 'Autosave test title');
 

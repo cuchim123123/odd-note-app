@@ -23,6 +23,9 @@ function createService() {
       findUnique: vi.fn(),
       updateMany: vi.fn(),
     },
+    user: {
+      findUnique: vi.fn().mockResolvedValue({ displayName: 'Mock User' }),
+    },
     $transaction: vi.fn(),
   };
 
@@ -113,8 +116,8 @@ describe('SessionTokenService', () => {
       },
     };
 
-    prisma.$transaction.mockImplementation(async (callback: (tx: TransactionClientMock) => Promise<unknown>) => {
-      const tx: TransactionClientMock = {
+    prisma.$transaction.mockImplementation(async (callback: (tx: TransactionClientMock & { user: { findUnique: ReturnType<typeof vi.fn> } }) => Promise<unknown>) => {
+      const tx: TransactionClientMock & { user: { findUnique: ReturnType<typeof vi.fn> } } = {
         refreshToken: {
           findUnique: vi.fn().mockResolvedValue(state.tokenRecord),
           updateMany: vi.fn(async () => {
@@ -126,6 +129,9 @@ describe('SessionTokenService', () => {
             return { count: 1 };
           }),
           create: vi.fn(async () => undefined),
+        },
+        user: {
+          findUnique: vi.fn().mockResolvedValue({ displayName: 'Mock User' }),
         },
       };
       return callback(tx);

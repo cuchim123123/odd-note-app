@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../common/mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
 import { NotesCrdtService, type CollaborationSnapshot } from './notes-crdt.service';
+import { NotesProtectionService } from './notes-protection.service';
 
 type SharePermission = 'READ' | 'EDIT';
 
@@ -82,6 +83,7 @@ export class NotesService {
     private readonly mailer: MailerService,
     private readonly redis: RedisService,
     private readonly notesCrdtService: NotesCrdtService,
+    private readonly notesProtectionService: NotesProtectionService,
   ) {}
 
   async list(userId: string): Promise<NoteResponse[]> {
@@ -95,7 +97,7 @@ export class NotesService {
       notes.map(async (note: NoteWithShares) => {
         const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
         const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
-        return this.toResponse(note, undefined, snapshot, yDocContent ?? undefined);
+        return this.toResponse(note, undefined, snapshot, yDocContent ?? undefined, userId);
       }),
     );
   }
@@ -115,12 +117,12 @@ export class NotesService {
       sharedNotes.map(async (share: ShareRecordWithRelations) => {
         const yDocContent = await this.notesCrdtService.readYDocContent(share.note.id);
         const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(share.note.id);
-        return this.toSharedResponse(share, snapshot, yDocContent ?? undefined);
+        return this.toSharedResponse(share, snapshot, yDocContent ?? undefined, userId);
       }),
     );
   }
 
-  async getById(userId: string, noteId: string): Promise<NoteResponse> {
+  async getById(userId: string, noteId: string, unlockToken?: string): Promise<NoteResponse> {
     const note = await this.prisma.note.findFirst({
       where: {
         id: noteId,
@@ -146,6 +148,8 @@ export class NotesService {
       sharedAccess ? { permission: sharedAccess.permission, owner: sharedAccess.owner, createdAt: sharedAccess.createdAt } : undefined,
       snapshot,
       yDocContent ?? undefined,
+      userId,
+      unlockToken,
     );
   }
 
@@ -242,8 +246,25 @@ export class NotesService {
 
 
 
-  async getDraft(userId: string, noteId: string): Promise<NoteDraftResponse | null> {
+  async getDraft(userId: string, noteId: string, unlockToken?: string): Promise<NoteDraftResponse | null> {
     await this.ensureCanEditNote(userId, noteId);
+
+    const note = await this.prisma.note.findUnique({
+      where: { id: noteId },
+      select: { userId: true },
+    });
+    if (note) {
+      const protection = await this.prisma.noteProtection.findUnique({
+        where: { userId_noteId: { userId: note.userId, noteId } },
+        select: { id: true },
+      });
+      if (protection) {
+        const isUnlocked = await this.notesProtectionService.verifyUnlockToken(userId, noteId, unlockToken);
+        if (!isUnlocked) {
+          throw new UnauthorizedException('Note is locked');
+        }
+      }
+    }
 
     const value = await this.redis.getClient().get(this.getDraftKey(userId, noteId));
     if (!value) {
@@ -363,6 +384,8 @@ export class NotesService {
     sharedAccess?: { permission: SharePermission; owner: SharedByProfile; createdAt: Date },
     snapshot?: CollaborationSnapshot | null,
     yDocContent?: string,
+    requestingUserId?: string,
+    unlockToken?: string,
   ): Promise<NoteResponse> {
     const effectiveNote = this.mergeNoteWithSnapshot(note, snapshot);
     const effectiveContent = yDocContent !== undefined ? yDocContent : effectiveNote.content ?? '';
@@ -372,12 +395,22 @@ export class NotesService {
       select: { id: true },
     });
 
+    const isProtected = Boolean(protection);
+    let content = effectiveContent;
+
+    if (isProtected && requestingUserId) {
+      const isUnlocked = await this.notesProtectionService.verifyUnlockToken(requestingUserId, effectiveNote.id, unlockToken);
+      if (!isUnlocked) {
+        content = ''; // Plaintext protection enforcement on the server!
+      }
+    }
+
     return {
       id: effectiveNote.id,
       title: effectiveNote.title,
-      content: effectiveContent,
+      content,
       isPinned: effectiveNote.isPinned,
-      isProtected: Boolean(protection),
+      isProtected,
       isShared: effectiveNote.isShared || effectiveNote.shares.length > 0 || Boolean(sharedAccess),
       labels: effectiveNote.labels,
       createdAt: effectiveNote.createdAt.toISOString(),
@@ -389,12 +422,18 @@ export class NotesService {
     };
   }
 
-  private async toSharedResponse(share: ShareRecordWithRelations, snapshot?: CollaborationSnapshot | null, yDocContent?: string): Promise<SharedNoteResponse> {
+  private async toSharedResponse(
+    share: ShareRecordWithRelations,
+    snapshot?: CollaborationSnapshot | null,
+    yDocContent?: string,
+    requestingUserId?: string,
+    unlockToken?: string,
+  ): Promise<SharedNoteResponse> {
     const note = await this.toResponse(share.note, {
       permission: share.permission,
       owner: share.owner,
       createdAt: share.createdAt,
-    }, snapshot, yDocContent);
+    }, snapshot, yDocContent, requestingUserId, unlockToken);
 
     return {
       ...note,

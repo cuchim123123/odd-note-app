@@ -6,11 +6,9 @@ vi.mock('../../config', () => ({
   JwtConfigService: class JwtConfigService {},
 }));
 
-vi.mock('bcrypt', () => ({
-  default: {
-    hash: vi.fn(),
-    compare: vi.fn(),
-  },
+vi.mock('bcryptjs', () => ({
+  hash: vi.fn(),
+  compare: vi.fn(),
 }));
 
 import * as bcrypt from 'bcryptjs';

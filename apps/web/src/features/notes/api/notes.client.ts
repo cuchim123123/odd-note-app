@@ -7,8 +7,9 @@ export async function fetchNotesFromApi(): Promise<Note[]> {
   return response.data;
 }
 
-export async function fetchNoteFromApi(id: string): Promise<Note> {
-  const response = await api.get<Note>(`/notes/${id}`);
+export async function fetchNoteFromApi(id: string, unlockToken?: string): Promise<Note> {
+  const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
+  const response = await api.get<Note>(`/notes/${id}`, { headers });
   return response.data;
 }
 

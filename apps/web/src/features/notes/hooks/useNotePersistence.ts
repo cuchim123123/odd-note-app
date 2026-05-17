@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { getNoteDraft, saveNoteDraft, clearNoteDraft } from '../api/notes.api';
+import { useNoteProtectionStore } from '../stores/note-protection.store';
 import type { Note } from '@odd-note-app/validation';
 
 interface UseNotePersistenceProps {
@@ -9,6 +10,9 @@ interface UseNotePersistenceProps {
 }
 
 export function useNotePersistence({ note, canEditContent, updateNote }: UseNotePersistenceProps) {
+  const getUnlockToken = useNoteProtectionStore((s) => s.getUnlockToken);
+  const unlockToken = note?.id ? getUnlockToken(note.id) : undefined;
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -119,7 +123,7 @@ export function useNotePersistence({ note, canEditContent, updateNote }: UseNote
           }
         }
 
-        const draft = await getNoteDraft(noteId);
+        const draft = await getNoteDraft(noteId, unlockToken);
         if (!draft || isCancelled) return;
 
         const isDraftEmpty = draft.title.trim().length === 0 && draft.content.trim().length === 0;
@@ -137,7 +141,7 @@ export function useNotePersistence({ note, canEditContent, updateNote }: UseNote
 
     void loadDraft();
     return () => { isCancelled = true; };
-  }, [canEditContent, note]);
+  }, [canEditContent, note, unlockToken]);
 
   // Dirty check
   useEffect(() => {

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/axios';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
+import { useNoteProtectionStore } from '../stores/note-protection.store';
 import type { Note, CreateNoteInput, UpdateNoteInput, CreateNoteShareInput, UpdateNoteShareInput } from '@odd-note-app/validation';
 
 export type SharePermission = 'READ' | 'EDIT';
@@ -197,12 +198,12 @@ export async function setNotePassword(noteId: string, password: string): Promise
   return response.data;
 }
 
-export async function verifyNotePassword(noteId: string, password: string): Promise<{ verified: boolean }> {
+export async function verifyNotePassword(noteId: string, password: string): Promise<{ verified: boolean; unlockToken?: string }> {
   if (!backendNotesAvailable()) {
     return { verified: password === 'secret123' };
   }
 
-  const response = await api.post<{ verified: boolean }>(`/notes/${noteId}/verify-password`, { password });
+  const response = await api.post<{ verified: boolean; unlockToken?: string }>(`/notes/${noteId}/verify-password`, { password });
   return response.data;
 }
 
@@ -218,7 +219,7 @@ export async function removeNotePassword(noteId: string, password: string): Prom
   return response.data;
 }
 
-export async function getNoteDraft(noteId: string): Promise<NoteDraft | null> {
+export async function getNoteDraft(noteId: string, unlockToken?: string): Promise<NoteDraft | null> {
   if (!backendNotesAvailable()) {
     try {
       const db = await openNotesDb();
@@ -238,7 +239,8 @@ export async function getNoteDraft(noteId: string): Promise<NoteDraft | null> {
     }
   }
 
-  const response = await api.get<NoteDraft | null>(`/notes/${noteId}/draft`);
+  const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
+  const response = await api.get<NoteDraft | null>(`/notes/${noteId}/draft`, { headers });
   return response.data;
 }
 
@@ -322,15 +324,18 @@ export const useSharedNotes = () => {
 };
 
 export const useNote = (id: string | null) => {
+  const getUnlockToken = useNoteProtectionStore((s) => s.getUnlockToken);
+  const unlockToken = id ? getUnlockToken(id) : undefined;
+
   return useQuery<NoteDetailItem>({
-    queryKey: NOTES_KEYS.detail(id!),
+    queryKey: [...NOTES_KEYS.detail(id!), unlockToken],
     enabled: !!id,
     queryFn: async () => {
       if (!backendNotesAvailable()) {
         return (await getOfflineNote(id!)) as NoteDetailItem;
       }
 
-      const note = await fetchNoteFromApi(id!);
+      const note = await fetchNoteFromApi(id!, unlockToken);
       await upsertNoteInDb(note);
       return note;
     },

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { renameLabelInNotes } from '../../notes/api/notes.api';
 
 type LabelManagementState = {
   labels: string[];
@@ -36,6 +37,12 @@ export const useLabelManagementStore = create<LabelManagementState>()(
         set({
           labels: normalizeLabels(get().labels.map((label) => (label === trimmedOldLabel ? trimmedNewLabel : label))),
         });
+
+        try {
+          renameLabelInNotes(trimmedOldLabel, trimmedNewLabel);
+        } catch {
+          // ignore in case of loading order issues
+        }
       },
       deleteLabel: (label) => {
         const trimmedLabel = label.trim();

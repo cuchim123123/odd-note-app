@@ -3,6 +3,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule } from '../config/config.module';
 import { JwtConfigModule, JwtConfigService } from '../config';
 import { RedisModule } from '../redis/redis.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { NotesModule } from '../notes/notes.module';
 import { CollaborationGateway } from './collaboration.gateway';
 
 @Module({
@@ -10,6 +12,8 @@ import { CollaborationGateway } from './collaboration.gateway';
     ConfigModule,
     JwtConfigModule,
     RedisModule,
+    PrismaModule,
+    NotesModule,
     JwtModule.registerAsync({
       imports: [JwtConfigModule],
       inject: [JwtConfigService],
