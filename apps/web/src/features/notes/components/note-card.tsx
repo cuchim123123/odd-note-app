@@ -35,7 +35,7 @@ function formatPreview(noteContent: string | undefined): string {
 type NoteCardProps = {
   note: DisplayNote;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (id: string) => void;
   isGridView: boolean;
   isSelectionMode?: boolean;
   isSelectedForBulk?: boolean;
@@ -72,10 +72,16 @@ export const NoteCard = memo(function NoteCard({
     }
   };
 
+  const handleSelect = () => {
+    if (note.id) {
+      onSelect(note.id);
+    }
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onSelect();
+      handleSelect();
     }
   };
 
@@ -84,7 +90,7 @@ export const NoteCard = memo(function NoteCard({
       role="button"
       tabIndex={0}
       onKeyDown={onKeyDown}
-      onClick={onSelect}
+      onClick={handleSelect}
       className={cn(
         'note-item group overflow-hidden rounded-2xl border border-border/70 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)] focus:outline-none focus:ring-2 focus:ring-primary/20',
         isGridView ? 'w-64 max-w-full justify-self-center' : 'w-full',

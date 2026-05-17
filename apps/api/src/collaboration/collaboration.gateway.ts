@@ -64,6 +64,10 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   // Yjs document store: maps noteId -> Y.Doc
   private yDocs = new Map<string, Y.Doc>();
   private yDocCleanupTimers = new Map<string, NodeJS.Timeout>();
+  private activeFlushes = new Set<string>();
+  private pendingFlushes = new Set<string>();
+  private flushDebounceTimers = new Map<string, NodeJS.Timeout>();
+  private periodicFlushTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -446,9 +450,9 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     });
     this.logger.log(`[Yjs] broadcast yjs:update note=${data.noteId} from=${client.data.userId} bytes=${data.update?.length ?? 0}`);
 
-    // Persist to Redis
-    await this.persistYDoc(data.noteId, yDoc);
-    this.logger.log(`[Yjs] persisted yDoc after sync-step-3 note=${data.noteId}`);
+    // Persist to Redis (debounced/throttled background queue)
+    this.scheduleYDocFlush(data.noteId, yDoc);
+    this.logger.log(`[Yjs] scheduled debounced yDoc flush after sync-step-3 note=${data.noteId}`);
   }
 
   @SubscribeMessage('yjs:update')
@@ -473,9 +477,9 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     });
     this.logger.log(`[Yjs] broadcast yjs:update note=${data.noteId} from=${client.data.userId} bytes=${data.update?.length ?? 0}`);
 
-    // Persist to Redis
-    await this.persistYDoc(data.noteId, yDoc);
-    this.logger.log(`[Yjs] persisted yDoc after yjs:update note=${data.noteId}`);
+    // Persist to Redis (debounced/throttled background queue)
+    this.scheduleYDocFlush(data.noteId, yDoc);
+    this.logger.log(`[Yjs] scheduled debounced yDoc flush after yjs:update note=${data.noteId}`);
   }
 
   private extractToken(client: Socket): string | null {
@@ -754,6 +758,21 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     const timer = setTimeout(() => {
       const yDoc = this.yDocs.get(noteId);
       if (yDoc) {
+        // Safe immediate flush of any unsaved keystrokes on document unload
+        if (this.flushDebounceTimers.has(noteId) || this.periodicFlushTimers.has(noteId) || this.pendingFlushes.has(noteId)) {
+          void this.triggerPersist(noteId, yDoc);
+        }
+
+        // Cleanup active timers to prevent memory leaks
+        if (this.flushDebounceTimers.has(noteId)) {
+          clearTimeout(this.flushDebounceTimers.get(noteId));
+          this.flushDebounceTimers.delete(noteId);
+        }
+        if (this.periodicFlushTimers.has(noteId)) {
+          clearTimeout(this.periodicFlushTimers.get(noteId));
+          this.periodicFlushTimers.delete(noteId);
+        }
+
         yDoc.destroy();
         this.yDocs.delete(noteId);
         this.yDocCleanupTimers.delete(noteId);
@@ -762,6 +781,60 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     }, 5 * 60 * 1000); // 5 minutes
 
     this.yDocCleanupTimers.set(noteId, timer);
+  }
+
+  private scheduleYDocFlush(noteId: string, yDoc: Y.Doc): void {
+    this.resetYDocCleanupTimer(noteId);
+
+    // 1. Clear any active idle-debounce timer
+    if (this.flushDebounceTimers.has(noteId)) {
+      clearTimeout(this.flushDebounceTimers.get(noteId));
+      this.flushDebounceTimers.delete(noteId);
+    }
+
+    // 2. Set up periodic flush limit if not already running (5s delay)
+    if (!this.periodicFlushTimers.has(noteId)) {
+      const periodicTimer = setTimeout(() => {
+        this.periodicFlushTimers.delete(noteId);
+        void this.triggerPersist(noteId, yDoc);
+      }, 5000);
+      this.periodicFlushTimers.set(noteId, periodicTimer);
+    }
+
+    // 3. Set up idle debounce (2s delay after user stops typing)
+    const debounceTimer = setTimeout(() => {
+      this.flushDebounceTimers.delete(noteId);
+      if (this.periodicFlushTimers.has(noteId)) {
+        clearTimeout(this.periodicFlushTimers.get(noteId));
+        this.periodicFlushTimers.delete(noteId);
+      }
+      void this.triggerPersist(noteId, yDoc);
+    }, 2000);
+    this.flushDebounceTimers.set(noteId, debounceTimer);
+  }
+
+  private async triggerPersist(noteId: string, yDoc: Y.Doc): Promise<void> {
+    if (this.activeFlushes.has(noteId)) {
+      this.pendingFlushes.add(noteId);
+      return;
+    }
+
+    this.activeFlushes.add(noteId);
+    this.pendingFlushes.delete(noteId);
+
+    try {
+      await this.persistYDoc(noteId, yDoc);
+      this.logger.log(`[Yjs] Triggered debounced persist successfully for note ${noteId}`);
+    } catch (err) {
+      this.logger.error(`[Yjs] Error during debounced persist for note ${noteId}: ${err}`);
+    } finally {
+      this.activeFlushes.delete(noteId);
+
+      // Coalesce continuous edits: if changes occurred during the flush, trigger a new save with the absolute latest YDoc state!
+      if (this.pendingFlushes.has(noteId)) {
+        void this.triggerPersist(noteId, yDoc);
+      }
+    }
   }
 
   private async persistYDoc(noteId: string, yDoc: Y.Doc): Promise<void> {

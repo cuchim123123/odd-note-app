@@ -54,6 +54,7 @@ model Note {
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   shares      NoteShare[]
+  protection  NoteProtection?
 
   @@index([userId])
   @@index([updatedAt])
@@ -81,12 +82,13 @@ model NoteShare {
 
 model NoteProtection {
   id           String   @id @default(cuid())
-  noteId       String
+  noteId       String   @unique
   passwordHash String
   userId       String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note         Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
   @@unique([userId, noteId])
   @@index([noteId])

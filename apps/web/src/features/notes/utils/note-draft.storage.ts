@@ -1,42 +1,67 @@
-const LOCAL_DRAFT_PREFIX = 'note-draft:';
+import { openNotesDb } from '../api/notes.storage';
 
 export type LocalDraft = {
+  id: string;
   title: string;
   content: string;
   updatedAt: string;
 };
 
-export function getLocalDraftKey(noteId: string): string {
-  return `${LOCAL_DRAFT_PREFIX}${noteId}`;
-}
-
-export function readLocalDraft(noteId: string): LocalDraft | null {
+export async function readLocalDraft(noteId: string): Promise<LocalDraft | null> {
   try {
-    const raw = localStorage.getItem(getLocalDraftKey(noteId));
-    if (!raw) return null;
+    const db = await openNotesDb();
+    const tx = db.transaction('drafts', 'readonly');
+    const store = tx.objectStore('drafts');
 
-    const parsed = JSON.parse(raw) as Partial<LocalDraft>;
-    if (typeof parsed.title !== 'string' || typeof parsed.content !== 'string' || typeof parsed.updatedAt !== 'string') {
-      return null;
-    }
+    const draft = await new Promise<LocalDraft | null>((resolve, reject) => {
+      const request = store.get(noteId);
+      request.onsuccess = () => resolve((request.result as LocalDraft) || null);
+      request.onerror = () => reject(request.error);
+    });
 
-    return { title: parsed.title, content: parsed.content, updatedAt: parsed.updatedAt };
+    db.close();
+    return draft;
   } catch {
     return null;
   }
 }
 
-export function writeLocalDraft(noteId: string, title: string, content: string): void {
+export async function writeLocalDraft(noteId: string, title: string, content: string): Promise<void> {
   try {
-    localStorage.setItem(getLocalDraftKey(noteId), JSON.stringify({ title, content, updatedAt: new Date().toISOString() }));
+    const db = await openNotesDb();
+    const tx = db.transaction('drafts', 'readwrite');
+    const store = tx.objectStore('drafts');
+
+    await new Promise<void>((resolve, reject) => {
+      const request = store.put({
+        id: noteId,
+        title,
+        content,
+        updatedAt: new Date().toISOString(),
+      });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
   } catch {
-    // Ignore quota / privacy mode errors.
+    // Ignore quota or private mode database errors.
   }
 }
 
-export function clearLocalDraft(noteId: string): void {
+export async function clearLocalDraft(noteId: string): Promise<void> {
   try {
-    localStorage.removeItem(getLocalDraftKey(noteId));
+    const db = await openNotesDb();
+    const tx = db.transaction('drafts', 'readwrite');
+    const store = tx.objectStore('drafts');
+
+    await new Promise<void>((resolve, reject) => {
+      const request = store.delete(noteId);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
   } catch {
     // Ignore cleanup failures.
   }

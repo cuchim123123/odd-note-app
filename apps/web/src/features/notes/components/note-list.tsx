@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useNotes, useSharedNotes, useCreateNote, useBulkDeleteNotes, useBulkAddLabel } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
@@ -13,11 +13,27 @@ import type { SharedNoteItem } from '../api/notes.api';
 
 type DisplayNote = Note | SharedNoteItem;
 
+const htmlStripCache = new Map<string, string>();
+
 function stripHtml(html: string | undefined): string {
   if (!html) {
     return '';
   }
-  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const cached = htmlStripCache.get(html);
+  if (cached !== undefined) return cached;
+
+  const stripped = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  // Throttle cache growth to 500 items max
+  if (htmlStripCache.size > 500) {
+    const firstKey = htmlStripCache.keys().next().value;
+    if (firstKey !== undefined) {
+      htmlStripCache.delete(firstKey);
+    }
+  }
+  
+  htmlStripCache.set(html, stripped);
+  return stripped;
 }
 
 type ViewMode = 'grid' | 'list';
@@ -81,6 +97,22 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
     const newNote = await createNoteMutation.mutateAsync({ title: 'Untitled Note', content: '' });
     onSelectNote(newNote.id || '');
   };
+
+  const handleSelectNote = useCallback((noteId: string) => {
+    if (isSelectionMode) {
+      setSelectedNotesIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(noteId)) {
+          next.delete(noteId);
+        } else {
+          next.add(noteId);
+        }
+        return next;
+      });
+    } else {
+      onSelectNote(noteId);
+    }
+  }, [isSelectionMode, onSelectNote]);
 
   const matchesNote = (note: DisplayNote) => {
     if (!debouncedSearch) {
@@ -226,19 +258,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                     key={note.id}
                     note={note}
                     isSelected={isSelected}
-                    onSelect={() => {
-                      if (isSelectionMode) {
-                        const newSet = new Set(selectedNotesIds);
-                        if (newSet.has(note.id || '')) {
-                          newSet.delete(note.id || '');
-                        } else {
-                          newSet.add(note.id || '');
-                        }
-                        setSelectedNotesIds(newSet);
-                      } else {
-                        onSelectNote(note.id || '');
-                      }
-                    }}
+                    onSelect={handleSelectNote}
                     isGridView={isGridView}
                     isSelectionMode={isSelectionMode}
                     isSelectedForBulk={isSelectedForBulk}
@@ -265,19 +285,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                         key={`shared-${note.id}`}
                         note={note}
                         isSelected={isSelected}
-                        onSelect={() => {
-                          if (isSelectionMode) {
-                            const newSet = new Set(selectedNotesIds);
-                            if (newSet.has(note.id || '')) {
-                              newSet.delete(note.id || '');
-                            } else {
-                              newSet.add(note.id || '');
-                            }
-                            setSelectedNotesIds(newSet);
-                          } else {
-                            onSelectNote(note.id || '');
-                          }
-                        }}
+                        onSelect={handleSelectNote}
                         isGridView={isGridView}
                         isSelectionMode={isSelectionMode}
                         isSelectedForBulk={isSelectedForBulk}

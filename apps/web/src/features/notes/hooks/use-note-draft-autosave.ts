@@ -84,23 +84,27 @@ export function useNoteDraftAndAutoSave({
   useEffect(() => {
     if (!note || !canEditContent) return;
     let canceled = false;
-    const localDraft = readLocalDraft(note.id!);
-    if (localDraft) {
-      const draftEmpty = !localDraft.title.trim() && !localDraft.content.trim();
-      const noteEmpty = !note.title?.trim() && !note.content?.trim();
-      if (!(draftEmpty && !noteEmpty)) {
-        const draftTime = safeTimestamp(localDraft.updatedAt);
-        const noteTime = safeTimestamp(note.updatedAt);
-        if (draftTime >= noteTime) {
-          setTitle(localDraft.title);
-          setContent(localDraft.content);
-          return () => { canceled = true; };
+
+    const loadDraft = async () => {
+      const localDraft = await readLocalDraft(note.id!);
+      if (canceled) return;
+
+      if (localDraft) {
+        const draftEmpty = !localDraft.title.trim() && !localDraft.content.trim();
+        const noteEmpty = !note.title?.trim() && !note.content?.trim();
+        if (!(draftEmpty && !noteEmpty)) {
+          const draftTime = safeTimestamp(localDraft.updatedAt);
+          const noteTime = safeTimestamp(note.updatedAt);
+          if (draftTime >= noteTime) {
+            setTitle(localDraft.title);
+            setContent(localDraft.content);
+            return;
+          }
         }
       }
-    }
 
-    getNoteDraft(note.id!, unlockToken)
-      .then((d) => {
+      try {
+        const d = await getNoteDraft(note.id!, unlockToken);
         if (!d || canceled) return;
         const draftEmpty = !d.title.trim() && !d.content.trim();
         const noteEmpty = !note.title?.trim() && !note.content?.trim();
@@ -111,17 +115,21 @@ export function useNoteDraftAndAutoSave({
           setTitle(d.title);
           setContent(d.content);
         }
-      })
-      .catch(() => {});
+      } catch {
+        // Ignore loading errors.
+      }
+    };
+
+    void loadDraft();
     return () => { canceled = true; };
   }, [note?.id, canEditContent, unlockToken]);
 
-  // AGGRESSIVE AUTOSAVE: Always save immediately to IndexedDB, then to server
+  // HIGH-PERFORMANCE DEBOUNCED AUTOSAVE: Debounce IndexedDB to 150ms and API/Server to 1000ms
   useEffect(() => {
     if (!canEditContent) return;
 
     const normalized = normalizeNoteHtml(content);
-    const changed = normalized !== normalizeNoteHtml(note.content || '');
+    const changed = (normalized !== normalizeNoteHtml(note.content || '')) || (title !== (note.title || ''));
 
     if (!changed) {
       setIsDirty(false);
@@ -131,13 +139,22 @@ export function useNoteDraftAndAutoSave({
     setIsDirty(true);
     setSaveError(null);
 
-    writeLocalDraft(note.id!, title, normalized);
-
-    void saveNoteDraft(note.id!, title, normalized, unlockToken).catch(() => {
-      console.warn('Draft save failed');
-    });
-
+    // 1. Debounce async IndexedDB local write (150ms) to ensure frictionless typing
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    draftTimeoutRef.current = setTimeout(async () => {
+      await writeLocalDraft(note.id!, title, normalized);
+    }, 150);
+
+    // 2. Debounce remote API draft save (1000ms) to prevent server connection flooding
+    const apiDraftTimer = setTimeout(async () => {
+      try {
+        await saveNoteDraft(note.id!, title, normalized, unlockToken);
+      } catch {
+        console.warn('Draft API save failed');
+      }
+    }, 1000);
+
+    // 3. Debounce full note server save
     if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
 
     if (isCollaborativeNote) {
@@ -155,9 +172,9 @@ export function useNoteDraftAndAutoSave({
           setLastSavedAt(upd?.updatedAt || optTime);
           setIsDirty(false);
           await clearNoteDraft(note.id!, unlockToken).catch(() => {
-            console.warn('Failed to clear draft');
+            console.warn('Failed to clear remote draft');
           });
-          clearLocalDraft(note.id!);
+          await clearLocalDraft(note.id!);
         } catch (e) {
           const msg = e instanceof Error ? e.message : 'Failed';
           if (!msg.toLowerCase().includes('offline') && !msg.toLowerCase().includes('network') && !msg.toLowerCase().includes('connect')) {
@@ -167,11 +184,12 @@ export function useNoteDraftAndAutoSave({
         } finally {
           setIsSavingLocal(false);
         }
-      }, 300);
+      }, 1000); // 1000ms server save debounce
     }
 
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+      clearTimeout(apiDraftTimer);
       if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
     };
   }, [content, note, title, updateNote, isCollaborativeNote, canEditContent, unlockToken]);
@@ -180,7 +198,7 @@ export function useNoteDraftAndAutoSave({
     if (!note || !canEditContent) return;
 
     const flushLocalDraft = () => {
-      writeLocalDraft(note.id!, title, content);
+      void writeLocalDraft(note.id!, title, content);
     };
 
     window.addEventListener('beforeunload', flushLocalDraft);
@@ -235,7 +253,7 @@ export function useNoteDraftAndAutoSave({
 
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
-    writeLocalDraft(note.id!, newTitle, content);
+    void writeLocalDraft(note.id!, newTitle, content);
   };
 
   const handleSaveTitle = async (

@@ -26,6 +26,10 @@ type NoteWithShares = {
   shares: Array<{ id: string }>;
 };
 
+type NoteWithRelations = NoteWithShares & {
+  protection?: { id: string } | null;
+};
+
 type ShareRecordWithRelations = {
   id: string;
   recipientEmail: string;
@@ -34,7 +38,7 @@ type ShareRecordWithRelations = {
   updatedAt: Date;
   owner: SharedByProfile;
   recipient: { displayName: string } | null;
-  note: NoteWithShares;
+  note: NoteWithRelations;
 };
 
 export type NoteResponse = {
@@ -89,15 +93,18 @@ export class NotesService {
   async list(userId: string): Promise<NoteResponse[]> {
     const notes = await this.prisma.note.findMany({
       where: { userId },
-      include: { shares: { select: { id: true } } },
+      include: {
+        shares: { select: { id: true } },
+        protection: { select: { id: true } },
+      },
       orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
     });
 
     return await Promise.all(
-      notes.map(async (note: NoteWithShares) => {
+      notes.map(async (note) => {
         const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
         const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
-        return this.toResponse(note, undefined, snapshot, yDocContent ?? undefined, userId);
+        return this.toResponse(note as NoteWithRelations, undefined, snapshot, yDocContent ?? undefined, userId);
       }),
     );
   }
@@ -108,16 +115,21 @@ export class NotesService {
       include: {
         owner: { select: { id: true, email: true, displayName: true } },
         recipient: { select: { displayName: true } },
-        note: { include: { shares: { select: { id: true } } } },
+        note: {
+          include: {
+            shares: { select: { id: true } },
+            protection: { select: { id: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
 
     return await Promise.all(
-      sharedNotes.map(async (share: ShareRecordWithRelations) => {
+      sharedNotes.map(async (share) => {
         const yDocContent = await this.notesCrdtService.readYDocContent(share.note.id);
         const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(share.note.id);
-        return this.toSharedResponse(share, snapshot, yDocContent ?? undefined, userId);
+        return this.toSharedResponse(share as ShareRecordWithRelations, snapshot, yDocContent ?? undefined, userId);
       }),
     );
   }
@@ -128,7 +140,10 @@ export class NotesService {
         id: noteId,
         OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
       },
-      include: { shares: { select: { id: true } } },
+      include: {
+        shares: { select: { id: true } },
+        protection: { select: { id: true } },
+      },
     });
 
     if (!note) {
@@ -144,7 +159,7 @@ export class NotesService {
     const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(noteId);
 
     return await this.toResponse(
-      note as NoteWithShares,
+      note as NoteWithRelations,
       sharedAccess ? { permission: sharedAccess.permission, owner: sharedAccess.owner, createdAt: sharedAccess.createdAt } : undefined,
       snapshot,
       yDocContent ?? undefined,
@@ -161,13 +176,16 @@ export class NotesService {
         content: input.content ?? null,
         labels: input.labels ?? [],
       },
-      include: { shares: { select: { id: true } } },
+      include: {
+        shares: { select: { id: true } },
+        protection: { select: { id: true } },
+      },
     });
 
-    const noteWithShares = note as NoteWithShares;
+    const noteWithRelations = note as NoteWithRelations;
     const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
     const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
-    return await this.toResponse(noteWithShares, undefined, snapshot, yDocContent ?? undefined);
+    return await this.toResponse(noteWithRelations, undefined, snapshot, yDocContent ?? undefined);
   }
 
   async update(
@@ -181,7 +199,10 @@ export class NotesService {
         id: noteId,
         OR: [{ userId }, { shares: { some: { recipientId: userId, permission: 'EDIT' } } }],
       },
-      include: { shares: { select: { id: true } } },
+      include: {
+        shares: { select: { id: true } },
+        protection: { select: { id: true } },
+      },
     });
 
     if (!existing) {
@@ -208,20 +229,23 @@ export class NotesService {
         isShared: input.isShared ?? existing.isShared,
         labels: input.labels ?? existing.labels,
       },
-      include: { shares: { select: { id: true } } },
+      include: {
+        shares: { select: { id: true } },
+        protection: { select: { id: true } },
+      },
     });
 
-    const noteWithShares = note as NoteWithShares;
+    const noteWithRelations = note as NoteWithRelations;
     await this.notesCrdtService.persistCollaborationSnapshot(
-      noteWithShares.id,
-      noteWithShares.title,
-      noteWithShares.content,
-      noteWithShares.isPinned,
-      noteWithShares.updatedAt,
+      noteWithRelations.id,
+      noteWithRelations.title,
+      noteWithRelations.content,
+      noteWithRelations.isPinned,
+      noteWithRelations.updatedAt,
     );
     const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
     const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
-     return await this.toResponse(noteWithShares, undefined, snapshot, yDocContent ?? undefined, userId, unlockToken);
+    return await this.toResponse(noteWithRelations, undefined, snapshot, yDocContent ?? undefined, userId, unlockToken);
   }
 
   async delete(userId: string, noteId: string): Promise<void> {
@@ -360,7 +384,7 @@ export class NotesService {
     }
   }
 
-  private mergeNoteWithSnapshot(note: NoteWithShares, snapshot?: CollaborationSnapshot | null): NoteWithShares {
+  private mergeNoteWithSnapshot(note: NoteWithRelations, snapshot?: CollaborationSnapshot | null): NoteWithRelations {
     if (!snapshot) {
       return note;
     }
@@ -381,7 +405,7 @@ export class NotesService {
   }
 
   private async toResponse(
-    note: NoteWithShares,
+    note: NoteWithRelations,
     sharedAccess?: { permission: SharePermission; owner: SharedByProfile; createdAt: Date },
     snapshot?: CollaborationSnapshot | null,
     yDocContent?: string,
@@ -391,12 +415,17 @@ export class NotesService {
     const effectiveNote = this.mergeNoteWithSnapshot(note, snapshot);
     const effectiveContent = yDocContent !== undefined ? yDocContent : effectiveNote.content ?? '';
 
-    const protection = await this.prisma.noteProtection.findUnique({
-      where: { userId_noteId: { userId: effectiveNote.userId, noteId: effectiveNote.id } },
-      select: { id: true },
-    });
+    let isProtected = false;
+    if (effectiveNote.protection !== undefined) {
+      isProtected = Boolean(effectiveNote.protection);
+    } else {
+      const protection = await this.prisma.noteProtection.findUnique({
+        where: { userId_noteId: { userId: effectiveNote.userId, noteId: effectiveNote.id } },
+        select: { id: true },
+      });
+      isProtected = Boolean(protection);
+    }
 
-    const isProtected = Boolean(protection);
     let content = effectiveContent;
 
     if (isProtected && requestingUserId) {
