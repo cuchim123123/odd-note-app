@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Bell, X, CheckCheck, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, X, CheckCheck, Sparkles, Share2 } from 'lucide-react';
 import { useNotifications, useMarkNotificationAsRead, useDeleteNotification, useMarkAllNotificationsAsRead } from '../hooks/useNotifications';
 import type { Notification } from '../types/notification';
+import { Button } from './ui/button';
 
 export const NotificationCenter = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
   const { data: notificationsData, isLoading } = useNotifications();
   const markAsRead = useMarkNotificationAsRead();
   const deleteNotification = useDeleteNotification();
@@ -23,6 +26,12 @@ export const NotificationCenter = () => {
 
   const handleMarkAllAsRead = () => {
     markAllAsRead.mutate();
+  };
+
+  const handleJoinNote = (noteId: string, notificationId: string) => {
+    markAsRead.mutate(notificationId);
+    navigate(`/notes/${noteId}`);
+    setIsOpen(false);
   };
 
   return (
@@ -88,6 +97,7 @@ export const NotificationCenter = () => {
                     notification={notification}
                     onMarkAsRead={() => handleMarkAsRead(notification.id)}
                     onDelete={() => handleDelete(notification.id)}
+                    onJoin={(noteId) => handleJoinNote(noteId, notification.id)}
                   />
                 ))}
               </ul>
@@ -115,27 +125,53 @@ interface NotificationItemProps {
   notification: Notification;
   onMarkAsRead: () => void;
   onDelete: () => void;
+  onJoin: (noteId: string) => void;
 }
 
 const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onMarkAsRead,
   onDelete,
+  onJoin,
 }) => {
+  const noteId = notification.data?.noteId as string | undefined;
+
   return (
     <li
-      className={`group rounded-2xl border p-4 transition-all ${
-        notification.read ? 'border-border/60 bg-card/95 hover:border-primary/20 hover:shadow-sm' : 'border-primary/15 bg-primary/5 hover:border-primary/25 hover:shadow-sm'
+      className={`group relative rounded-2xl border p-4 transition-all duration-200 ${
+        notification.read
+          ? 'border-border/50 bg-card/75 hover:border-primary/20 hover:shadow-sm'
+          : 'border-primary/15 bg-primary/5 hover:border-primary/25 hover:shadow-md shadow-primary/5'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            {!notification.read ? <span className="h-2 w-2 rounded-full bg-primary" /> : null}
-            <h4 className="font-semibold text-foreground">{notification.title}</h4>
+      <div className="flex gap-3">
+        {/* Left Side: Dynamic Icon */}
+        <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+          notification.read 
+            ? 'bg-muted text-muted-foreground' 
+            : 'bg-primary/10 text-primary'
+        }`}>
+          {notification.type === 'note_shared' ? (
+            <Share2 className="h-4.5 w-4.5" />
+          ) : (
+            <Bell className="h-4.5 w-4.5" />
+          )}
+        </div>
+
+        {/* Center: Title, Message, Date */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            {!notification.read && (
+              <span className="h-2 w-2 shrink-0 rounded-full bg-primary animate-pulse" />
+            )}
+            <h4 className="font-semibold text-foreground text-sm leading-tight truncate">
+              {notification.title}
+            </h4>
           </div>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">{notification.message}</p>
-          <span className="mt-2 block text-xs text-muted-foreground">
+          <p className="mt-1 text-xs leading-normal text-muted-foreground break-words">
+            {notification.message}
+          </p>
+          <span className="mt-2.5 block text-[10px] font-medium text-muted-foreground/60">
             {new Date(notification.createdAt).toLocaleDateString(undefined, {
               month: 'short',
               day: 'numeric',
@@ -143,30 +179,54 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
               minute: '2-digit',
             })}
           </span>
+
+          {/* Action Row: Join Button */}
+          {noteId && (
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="rounded-xl h-8 px-3.5 bg-primary text-primary-foreground font-semibold text-xs shadow-sm hover:shadow transition-all"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onJoin(noteId);
+                }}
+              >
+                Join Note
+              </Button>
+              {!notification.read && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-xl h-8 px-3 text-xs text-primary hover:bg-primary/10 hover:text-primary font-semibold"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkAsRead();
+                  }}
+                >
+                  Mark read
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-1">
-          {!notification.read && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onMarkAsRead();
-              }}
-              className="rounded-full px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
-            >
-              Mark read
-            </button>
-          )}
-          <button
+        {/* Right Side: Delete Button */}
+        <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
             }}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="h-7 w-7 rounded-full text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 shrink-0"
             aria-label="Delete notification"
           >
-            <X size={16} />
-          </button>
+            <X className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
     </li>
