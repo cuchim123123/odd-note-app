@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { NoteList } from './note-list';
 import { NoteDetailView } from './note-detail-view';
 import { Button } from '../../../components/ui/button';
-import { ChevronLeft, Grid2x2, List } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 
 type ViewMode = 'grid' | 'list';
 
@@ -57,18 +57,8 @@ export function NoteDashboard() {
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Your notes</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Switch between grid and list views, search instantly, and open any note to edit it.
+            Filter instantly by multiple labels, search text, and click any note card to open the editor.
           </p>
-        </div>
-        <div className="hidden items-center gap-2 rounded-full border bg-background p-1 shadow-sm sm:flex">
-          <Button type="button" variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="rounded-full">
-            <Grid2x2 className="mr-2 h-4 w-4" />
-            Grid
-          </Button>
-          <Button type="button" variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="rounded-full">
-            <List className="mr-2 h-4 w-4" />
-            List
-          </Button>
         </div>
       </div>
 
@@ -97,7 +87,7 @@ export function NoteDashboard() {
             </div>
           ) : (
             <div className="w-full">
-              <NoteList selectedNoteId={selectedNoteId} onSelectNote={(id) => { navigate(`/notes/${id}`); setSelectedNoteId(id); setMobileView('editor'); }} viewMode={viewMode} />
+              <NoteList selectedNoteId={selectedNoteId} onSelectNote={(id) => { navigate(`/notes/${id}`); setSelectedNoteId(id); setMobileView('editor'); }} viewMode={viewMode} onViewModeChange={setViewMode} />
             </div>
           )}
         </div>
@@ -105,7 +95,7 @@ export function NoteDashboard() {
         <div className="space-y-3">
           {mobileView === 'list' || !selectedNoteId ? (
             <div className="max-h-[calc(100dvh-16rem)] overflow-hidden rounded-xl border bg-card shadow-sm">
-              <NoteList selectedNoteId={selectedNoteId} onSelectNote={(id) => { navigate(`/notes/${id}`); setSelectedNoteId(id); setMobileView('editor'); }} viewMode={viewMode} />
+              <NoteList selectedNoteId={selectedNoteId} onSelectNote={(id) => { navigate(`/notes/${id}`); setSelectedNoteId(id); setMobileView('editor'); }} viewMode={viewMode} onViewModeChange={setViewMode} />
             </div>
           ) : null}
           {selectedNoteId && mobileView === 'editor' ? (
