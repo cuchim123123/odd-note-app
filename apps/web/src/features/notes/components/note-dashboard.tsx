@@ -26,7 +26,7 @@ export function NoteDashboard() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8.5rem)] gap-4 animate-in fade-in duration-300">
-      <div className="flex-1 min-h-0 overflow-hidden rounded-2xl border border-border/50 bg-card/45 backdrop-blur-md shadow-sm">
+      <div className="flex-1 min-h-0 overflow-hidden sm:rounded-2xl border-0 sm:border border-border/50 bg-transparent sm:bg-card/45 backdrop-blur-none sm:backdrop-blur-md shadow-none sm:shadow-sm">
         {selectedNoteId ? (
           /* Single-Pane Editor Stack (Full Page) */
           <div className="flex h-full w-full flex-col overflow-hidden bg-background/30 animate-in slide-in-from-right duration-300">

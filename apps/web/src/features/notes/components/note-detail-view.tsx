@@ -243,7 +243,7 @@ function NoteDetailContent({
 
   return (
     <ProtectedNoteRoute note={note as ProtectedNote | null} isLoading={false} onUnauthorized={onUnauthorized}>
-      <div className="flex h-full flex-col overflow-hidden rounded-3xl border bg-card shadow-[0_24px_80px_rgba(15,23,42,0.12)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
+      <div className="flex h-full flex-col overflow-hidden bg-transparent">
       <NoteToolbar
         note={note}
         title={title}

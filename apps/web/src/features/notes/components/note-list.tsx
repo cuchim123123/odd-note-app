@@ -145,6 +145,14 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
 
   const isGridView = viewMode === 'grid';
 
+  const visibleLabels = useMemo(() => {
+    // Dynamically elevate selected labels to the front so they are visible and toggleable on mobile viewports
+    const selected = selectedLabels;
+    const remaining = labels.filter((l) => !selected.includes(l));
+    const merged = [...selected, ...remaining];
+    return merged.slice(0, 3);
+  }, [labels, selectedLabels]);
+
   useEffect(() => {
     if ((notes?.length ?? 0) > 0 && labels.length === 0) {
       syncLabels((notes ?? []).flatMap((note) => note.labels || []));
@@ -156,7 +164,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
   }, [labels]);
 
   return (
-    <div className="flex h-full flex-col border-r bg-card">
+    <div className="flex h-full flex-col bg-card/50 sm:bg-transparent">
       <div className="space-y-4 border-b border-border/70 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -210,7 +218,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         {/* Sticky Filters Header */}
         <div className="flex items-center justify-between gap-3 pb-1 border-b border-border/10 shrink-0">
           {/* Left Side: Label Row with 3 limit */}
@@ -223,7 +231,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
             >
               All
             </Button>
-            {labels.slice(0, 3).map((label) => {
+            {visibleLabels.map((label) => {
               const isSelected = selectedLabels.includes(label);
               return (
                 <Button
@@ -239,7 +247,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
                 </Button>
               );
             })}
-            {labels.length > 3 && (
+            {labels.length > visibleLabels.length && (
               <Button
                 size="sm"
                 variant="outline"
@@ -247,7 +255,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
                 className="rounded-full shrink-0 h-8 bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 flex items-center gap-1 font-semibold text-xs"
               >
                 <Tag className="h-3.5 w-3.5" />
-                +{labels.length - 3} more
+                +{labels.length - visibleLabels.length} more
               </Button>
             )}
           </div>
