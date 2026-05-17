@@ -17,6 +17,7 @@ import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { createNoteSchema, createNoteShareSchema, updateNoteSchema, updateNoteShareSchema } from '@odd-note-app/validation';
 import { NotesService } from './notes.service';
 import { NotesShareService } from './notes-share.service';
+import { NotesProtectionService } from './notes-protection.service';
 
 const noteIdSchema = z.string().trim().min(1, 'noteId is required');
 const notePasswordSchema = z.object({
@@ -38,6 +39,7 @@ export class NotesController {
   constructor(
     private readonly notesService: NotesService,
     private readonly notesShareService: NotesShareService,
+    private readonly notesProtectionService: NotesProtectionService,
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
   ) {}
@@ -135,7 +137,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.getProtectionStatus(userId, this.parseNoteId(noteId));
+    return await this.notesProtectionService.getProtectionStatus(userId, this.parseNoteId(noteId));
   }
 
   @Post(':noteId/set-password')
@@ -145,7 +147,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.setPassword(userId, this.parseNoteId(noteId), body.password.trim());
+    return await this.notesProtectionService.setPassword(userId, this.parseNoteId(noteId), body.password.trim());
   }
 
   @Post(':noteId/verify-password')
@@ -155,7 +157,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.verifyPassword(userId, this.parseNoteId(noteId), body.password.trim());
+    return await this.notesProtectionService.verifyPassword(userId, this.parseNoteId(noteId), body.password.trim());
   }
 
   @Delete(':noteId/password')
@@ -165,7 +167,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.removePassword(userId, this.parseNoteId(noteId), body.password.trim());
+    return await this.notesProtectionService.removePassword(userId, this.parseNoteId(noteId), body.password.trim());
   }
 
   @Get(':noteId/draft')

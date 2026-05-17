@@ -7,10 +7,11 @@ import { MailerService } from '../common/mailer/mailer.service';
 import { NotesController } from './notes.controller';
 import { NotesService } from './notes.service';
 import { NotesShareService } from './notes-share.service';
+import { NotesProtectionService } from './notes-protection.service';
 
 @Module({
   imports: [PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
   controllers: [NotesController],
-  providers: [NotesService, NotesShareService, MailerService],
+  providers: [NotesService, NotesShareService, NotesProtectionService, MailerService],
 })
 export class NotesModule {}
