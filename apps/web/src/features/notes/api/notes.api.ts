@@ -709,3 +709,59 @@ export const useDeleteLabel = () => {
     },
   });
 };
+
+export const useBulkDeleteNotes = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        if (!backendNotesAvailable()) {
+          deleteNote(id);
+          await deleteNoteFromDb(id);
+          queueOfflineMutation({
+            type: 'delete',
+            noteId: id,
+            payload: { noteId: id },
+          });
+        } else {
+          await deleteNoteInApi(id);
+          await deleteNoteFromDb(id);
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+    },
+  });
+};
+
+export const useBulkAddLabel = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids, label, notes }: { ids: string[]; label: string; notes: Note[] }) => {
+      for (const id of ids) {
+        const note = notes.find((n) => n.id === id);
+        if (!note) continue;
+        const newLabels = Array.from(new Set([...(note.labels || []), label]));
+
+        if (!backendNotesAvailable()) {
+          const updatedNote = updateNote(id, { labels: newLabels });
+          await upsertNoteInDb(updatedNote);
+          queueOfflineMutation({
+            type: 'update',
+            noteId: id,
+            payload: { noteId: id, labels: newLabels } as Record<string, unknown>,
+          });
+        } else {
+          const updatedNote = await updateNoteInApi(id, { labels: newLabels });
+          await upsertNoteInDb(updatedNote);
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
+    },
+  });
+};

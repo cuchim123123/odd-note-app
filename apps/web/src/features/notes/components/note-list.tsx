@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, memo } from 'react';
 import { flushSync } from 'react-dom';
-import { useNotes, useSharedNotes, useCreateNote, useUpdateNote } from '../api/notes.api';
+import { useNotes, useSharedNotes, useCreateNote, useUpdateNote, useBulkDeleteNotes, useBulkAddLabel } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { Button } from '../../../components/ui/button';
-import { FileText, Lock, Pin, Plus, Search, Share2, Sparkles } from 'lucide-react';
+import { FileText, Lock, Pin, Plus, Search, Share2, Sparkles, Trash, Check } from 'lucide-react';
+import { LabelSelector } from './label-selector';
 import { Input } from '../../../components/ui/input';
 import { cn } from '../../../lib/utils';
 import { useLabelManagementStore } from '../../settings/stores/label-management.store';
@@ -55,6 +56,34 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const labels = useLabelManagementStore((state) => state.labels);
   const syncLabels = useLabelManagementStore((state) => state.syncLabels);
+
+  const bulkDeleteMutation = useBulkDeleteNotes();
+  const bulkAddLabelMutation = useBulkAddLabel();
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedNotesIds, setSelectedNotesIds] = useState<Set<string>>(new Set());
+
+  const handleToggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    setSelectedNotesIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedNotesIds.size === 0) return;
+    await bulkDeleteMutation.mutateAsync(Array.from(selectedNotesIds));
+    setIsSelectionMode(false);
+    setSelectedNotesIds(new Set());
+  };
+
+  const handleBulkAddLabel = async (label: string) => {
+    if (selectedNotesIds.size === 0) return;
+    await bulkAddLabelMutation.mutateAsync({
+      ids: Array.from(selectedNotesIds),
+      label,
+      notes: [...(notes ?? []), ...(sharedNotes ?? [])] as Note[],
+    });
+    setIsSelectionMode(false);
+    setSelectedNotesIds(new Set());
+  };
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -128,19 +157,48 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
             </div>
             <h2 className="mt-1 text-lg font-semibold tracking-tight">All notes</h2>
           </div>
-          <Button size="icon" variant="default" onClick={handleCreateNew} disabled={createNoteMutation.isPending} aria-label="Create new note" title="Create new note" className="rounded-2xl">
-            <Plus className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant={isSelectionMode ? "default" : "outline"} onClick={handleToggleSelectionMode} className="rounded-2xl h-10 px-4">
+              {isSelectionMode ? 'Cancel' : 'Select'}
+            </Button>
+            <Button size="icon" variant="default" onClick={handleCreateNew} disabled={createNoteMutation.isPending || isSelectionMode} aria-label="Create new note" title="Create new note" className="rounded-2xl">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search notes..."
-            className="pl-10"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        {isSelectionMode ? (
+          <div className="flex items-center justify-between rounded-xl bg-primary/10 px-4 py-2 border border-primary/20">
+            <span className="text-sm font-semibold text-primary">{selectedNotesIds.size} selected</span>
+            <div className="flex items-center gap-2">
+              <LabelSelector
+                selectedLabels={[]}
+                onToggleLabel={handleBulkAddLabel}
+                onOpenManagement={() => {}}
+                disabled={selectedNotesIds.size === 0 || bulkAddLabelMutation.isPending}
+              />
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={selectedNotesIds.size === 0 || bulkDeleteMutation.isPending}
+                className="h-8 rounded-full"
+              >
+                <Trash className="mr-2 h-3.5 w-3.5" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search notes..."
+              className="pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3">
@@ -180,13 +238,29 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
               {filteredNotes.map((note) => {
                 const isSelected = selectedNoteId === note.id;
 
+                const isSelectedForBulk = selectedNotesIds.has(note.id || '');
+
                 return (
                   <NoteCard
                     key={note.id}
                     note={note}
                     isSelected={isSelected}
-                    onSelect={() => onSelectNote(note.id || '')}
+                    onSelect={() => {
+                      if (isSelectionMode) {
+                        const newSet = new Set(selectedNotesIds);
+                        if (newSet.has(note.id || '')) {
+                          newSet.delete(note.id || '');
+                        } else {
+                          newSet.add(note.id || '');
+                        }
+                        setSelectedNotesIds(newSet);
+                      } else {
+                        onSelectNote(note.id || '');
+                      }
+                    }}
                     isGridView={isGridView}
+                    isSelectionMode={isSelectionMode}
+                    isSelectedForBulk={isSelectedForBulk}
                   />
                 );
               })}
@@ -203,13 +277,29 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
                   {filteredSharedNotes.map((note: SharedNoteItem) => {
                     const isSelected = selectedNoteId === note.id;
 
+                    const isSelectedForBulk = selectedNotesIds.has(note.id || '');
+
                     return (
                       <NoteCard
                         key={`shared-${note.id}`}
                         note={note}
                         isSelected={isSelected}
-                        onSelect={() => onSelectNote(note.id || '')}
+                        onSelect={() => {
+                          if (isSelectionMode) {
+                            const newSet = new Set(selectedNotesIds);
+                            if (newSet.has(note.id || '')) {
+                              newSet.delete(note.id || '');
+                            } else {
+                              newSet.add(note.id || '');
+                            }
+                            setSelectedNotesIds(newSet);
+                          } else {
+                            onSelectNote(note.id || '');
+                          }
+                        }}
                         isGridView={isGridView}
+                        isSelectionMode={isSelectionMode}
+                        isSelectedForBulk={isSelectedForBulk}
                       />
                     );
                   })}
@@ -223,7 +313,21 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode }: NoteListPro
   );
 }
 
-const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView }: { note: DisplayNote; isSelected: boolean; onSelect: () => void; isGridView: boolean }) {
+const NoteCard = memo(function NoteCard({
+  note,
+  isSelected,
+  onSelect,
+  isGridView,
+  isSelectionMode,
+  isSelectedForBulk,
+}: {
+  note: DisplayNote;
+  isSelected: boolean;
+  onSelect: () => void;
+  isGridView: boolean;
+  isSelectionMode?: boolean;
+  isSelectedForBulk?: boolean;
+}) {
   const update = useUpdateNote(note.id || '');
   const isSharedAccess = 'accessMode' in note && note.accessMode === 'shared';
   const noteColor = useNotePreferencesStore((state) => state.noteColor);
@@ -271,7 +375,13 @@ const NoteCard = memo(function NoteCard({ note, isSelected, onSelect, isGridView
     >
       <div className={cn('flex items-start gap-3', isGridView ? 'flex-col' : 'flex-row')}>
         <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10', isSelected && 'bg-primary/15', isGridView && 'mx-auto')}>
-          <FileText className={cn('h-4 w-4', isSelected ? 'text-primary' : 'text-muted-foreground')} />
+          {isSelectionMode ? (
+            <div className={cn("h-5 w-5 rounded border-2 flex items-center justify-center transition-colors", isSelectedForBulk ? "bg-primary border-primary" : "border-primary/50")}>
+              {isSelectedForBulk && <Check className="h-3 w-3 text-primary-foreground" />}
+            </div>
+          ) : (
+            <FileText className={cn('h-4 w-4', isSelected ? 'text-primary' : 'text-muted-foreground')} />
+          )}
         </div>
 
         <div className="min-w-0 flex-1 space-y-2">
