@@ -4,6 +4,7 @@ import { MailerService } from '../common/mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
 import { NotesCrdtService, type CollaborationSnapshot } from './notes-crdt.service';
 import { NotesProtectionService } from './notes-protection.service';
+import { REDIS_CHANNELS } from '../collaboration/collaboration.constants';
 
 type SharePermission = 'READ' | 'EDIT';
 
@@ -476,7 +477,7 @@ export class NotesService {
 
   private async notifyCollaborationChange(noteId: string, type: 'permissions_updated' | 'note_deleted'): Promise<void> {
     try {
-      await this.redis.getClient().publish('collaboration:events', JSON.stringify({ type, noteId }));
+      await this.redis.getClient().publish(REDIS_CHANNELS.COLLABORATION_EVENTS, JSON.stringify({ type, noteId }));
     } catch (err) {
       console.error('Failed to publish collaboration event', err);
     }

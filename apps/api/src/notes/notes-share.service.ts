@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException, UnauthorizedExcepti
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../common/mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
+import { REDIS_CHANNELS, REDIS_EVENT_TYPES } from '../collaboration/collaboration.constants';
 
 export type SharePermission = 'READ' | 'EDIT';
 
@@ -119,8 +120,8 @@ export class NotesShareService {
       });
 
       // Publish event to Redis for real-time delivery
-      await this.redis.getClient().publish('collaboration:events', JSON.stringify({
-        type: 'notification_created',
+      await this.redis.getClient().publish(REDIS_CHANNELS.COLLABORATION_EVENTS, JSON.stringify({
+        type: REDIS_EVENT_TYPES.NOTIFICATION_CREATED,
         userId: recipient.id,
         notification: {
           id: notification.id,
@@ -202,7 +203,7 @@ export class NotesShareService {
 
   private async notifyCollaborationChange(noteId: string, type: 'permissions_updated' | 'note_deleted'): Promise<void> {
     try {
-      await this.redis.getClient().publish('collaboration:events', JSON.stringify({ type, noteId }));
+      await this.redis.getClient().publish(REDIS_CHANNELS.COLLABORATION_EVENTS, JSON.stringify({ type, noteId }));
     } catch (err) {
       console.error('Failed to publish collaboration event', err);
     }

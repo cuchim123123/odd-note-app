@@ -16,7 +16,15 @@ import { NotesProtectionService } from '../notes/notes-protection.service';
 import { Server, Socket } from 'socket.io';
 import type Redis from 'ioredis';
 import * as Y from 'yjs';
-import { COLLABORATION_NAMESPACE, COLLABORATION_TYPING_STALE_AFTER_MS, COLLABORATOR_COLORS } from './collaboration.constants';
+import {
+  COLLABORATION_NAMESPACE,
+  COLLABORATION_TYPING_STALE_AFTER_MS,
+  COLLABORATOR_COLORS,
+  REDIS_CHANNELS,
+  REDIS_EVENT_TYPES,
+  WS_EVENTS,
+  REDIS_KEYS,
+} from './collaboration.constants';
 
 type CollaboratorInfo = {
   userId: string;
@@ -112,18 +120,18 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
         socketServer.adapter(createAdapter(this.pubClient, this.subClient));
         
         // Listen for internal events from NotesService
-        await this.internalSubClient.subscribe('collaboration:events');
+        await this.internalSubClient.subscribe(REDIS_CHANNELS.COLLABORATION_EVENTS);
         this.internalSubClient.on('message', (channel, message) => {
-          if (channel === 'collaboration:events') {
+          if (channel === REDIS_CHANNELS.COLLABORATION_EVENTS) {
             try {
               const event = JSON.parse(message) as { type: string; noteId?: string; userId?: string; notification?: Record<string, unknown> };
-              if (event.type === 'permissions_updated' && event.noteId) {
-                this.server.to(event.noteId).emit('note:permissions_updated', { noteId: event.noteId });
-              } else if (event.type === 'note_deleted' && event.noteId) {
-                this.server.to(event.noteId).emit('note:deleted', { noteId: event.noteId });
-              } else if (event.type === 'notification_created' && event.userId && event.notification) {
-                this.logger.log(`Received notification_created event for user ${event.userId} - emitting to room user:${event.userId}`);
-                this.server.to(`user:${event.userId}`).emit('notification:new', event.notification);
+              if (event.type === REDIS_EVENT_TYPES.PERMISSIONS_UPDATED && event.noteId) {
+                this.server.to(event.noteId).emit(WS_EVENTS.PERMISSIONS_UPDATED, { noteId: event.noteId });
+              } else if (event.type === REDIS_EVENT_TYPES.NOTE_DELETED && event.noteId) {
+                this.server.to(event.noteId).emit(WS_EVENTS.NOTE_DELETED, { noteId: event.noteId });
+              } else if (event.type === REDIS_EVENT_TYPES.NOTIFICATION_CREATED && event.userId && event.notification) {
+                this.logger.log(`Received ${REDIS_EVENT_TYPES.NOTIFICATION_CREATED} event for user ${event.userId} - emitting to room user:${event.userId}`);
+                this.server.to(`user:${event.userId}`).emit(WS_EVENTS.NOTIFICATION_NEW, event.notification);
               }
             } catch (err) {
               this.logger.error('Failed to process internal collaboration event', err as Error);
@@ -216,7 +224,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     this.logger.log(`Client ${client.id} disconnected`);
   }
 
-  @SubscribeMessage('note:join')
+  @SubscribeMessage(WS_EVENTS.JOIN)
   async handleJoinNote(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; unlockToken?: string },
@@ -261,7 +269,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
         void client.leave(prevEntry.noteId);
         await this.removeParticipant(prevEntry.noteId, client.id);
         await this.removeTyping(prevEntry.noteId, prevEntry.user.userId);
-        client.to(prevEntry.noteId).emit('collaborator:left', { userId: prevEntry.user.userId });
+        client.to(prevEntry.noteId).emit(WS_EVENTS.COLLABORATOR_LEFT, { userId: prevEntry.user.userId });
         await this.broadcastCollaborators(prevEntry.noteId);
         await this.broadcastPresence(prevEntry.noteId);
         await this.broadcastTyping(prevEntry.noteId);
@@ -282,13 +290,13 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       await this.addParticipant(noteId, client.id, collaborator);
 
       // Notify the room about the new collaborator
-      client.to(noteId).emit('collaborator:joined', collaborator);
+      client.to(noteId).emit(WS_EVENTS.COLLABORATOR_JOINED, collaborator);
 
       // Send the joining client the current list of collaborators
       const collaborators = await this.getCollaboratorsInRoom(noteId);
-      client.emit('collaborators:list', collaborators);
-      client.emit('presence:list', collaborators);
-      client.emit('typing:list', await this.getTypingInRoom(noteId));
+      client.emit(WS_EVENTS.COLLABORATORS_LIST, collaborators);
+      client.emit(WS_EVENTS.PRESENCE_LIST, collaborators);
+      client.emit(WS_EVENTS.TYPING_LIST, await this.getTypingInRoom(noteId));
       await this.broadcastPresence(noteId);
 
       this.logger.log(`User ${userId} joined note ${noteId}`);
@@ -298,7 +306,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  @SubscribeMessage('note:leave')
+  @SubscribeMessage(WS_EVENTS.LEAVE)
   async handleLeaveNote(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
   ): Promise<void> {
@@ -307,7 +315,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       void client.leave(entry.noteId);
       await this.removeParticipant(entry.noteId, client.id);
       await this.removeTyping(entry.noteId, entry.user.userId);
-      client.to(entry.noteId).emit('collaborator:left', { userId: entry.user.userId });
+      client.to(entry.noteId).emit(WS_EVENTS.COLLABORATOR_LEFT, { userId: entry.user.userId });
       await this.clearSocketRoom(client.id);
       await this.broadcastCollaborators(entry.noteId);
       await this.broadcastPresence(entry.noteId);
@@ -315,7 +323,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  @SubscribeMessage('note:update')
+  @SubscribeMessage(WS_EVENTS.UPDATE)
   async handleNoteUpdate(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; content?: string; title?: string; isPinned?: boolean; isProtected?: boolean },
@@ -336,7 +344,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     });
 
     // Broadcast the content change to all OTHER clients in the room
-    client.to(data.noteId).emit('note:updated', {
+    client.to(data.noteId).emit(WS_EVENTS.NOTE_UPDATED, {
       userId: client.data.userId,
       content: nextContent,
       title: data.title,
@@ -346,7 +354,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     });
   }
 
-  @SubscribeMessage('note:delete')
+  @SubscribeMessage(WS_EVENTS.DELETE)
   async handleNoteDelete(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string },
@@ -359,7 +367,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     this.logger.log(`User ${client.data.userId} deleted note ${data.noteId} - broadcasting to room`);
 
     // Notify ALL clients in the room (including the one who deleted it)
-    this.server.to(data.noteId).emit('note:deleted', { noteId: data.noteId });
+    this.server.to(data.noteId).emit(WS_EVENTS.NOTE_DELETED, { noteId: data.noteId });
 
     // Cleanup Redis state for this note
     await Promise.all([
@@ -381,7 +389,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  @SubscribeMessage('note:typing')
+  @SubscribeMessage(WS_EVENTS.TYPING)
   async handleTypingUpdate(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; isTyping: boolean },
@@ -407,7 +415,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
 
   // ============ Yjs CRDT Message Handlers ============
 
-  @SubscribeMessage('yjs:sync-step-1')
+  @SubscribeMessage(WS_EVENTS.SYNC_STEP_1)
   async handleYjsSyncStep1(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; stateVector: number[] },
@@ -423,7 +431,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       const yDoc = await this.getOrCreateYDoc(data.noteId);
       const update = Y.encodeStateAsUpdate(yDoc, new Uint8Array(data.stateVector));
       this.logger.log(`Sending yjs:sync-step-2 with ${update.length} bytes to ${client.data.userId}`);
-      client.emit('yjs:sync-step-2', {
+      client.emit(WS_EVENTS.SYNC_STEP_2, {
         noteId: data.noteId,
         update: Array.from(update),
         stateVector: Array.from(Y.encodeStateVector(yDoc)),
@@ -434,7 +442,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  @SubscribeMessage('yjs:sync-step-3')
+  @SubscribeMessage(WS_EVENTS.SYNC_STEP_3)
   async handleYjsSyncStep3(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; update: number[] },
@@ -450,7 +458,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     Y.applyUpdate(yDoc, new Uint8Array(data.update));
 
     // Broadcast to other clients
-    client.to(data.noteId).emit('yjs:update', {
+    client.to(data.noteId).emit(WS_EVENTS.YJS_UPDATE, {
       noteId: data.noteId,
       update: data.update,
     });
@@ -461,7 +469,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     this.logger.log(`[Yjs] scheduled debounced yDoc flush after sync-step-3 note=${data.noteId}`);
   }
 
-  @SubscribeMessage('yjs:update')
+  @SubscribeMessage(WS_EVENTS.YJS_UPDATE)
   async handleYjsUpdate(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
     @MessageBody() data: { noteId: string; update: number[] },
@@ -477,7 +485,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
     Y.applyUpdate(yDoc, new Uint8Array(data.update));
 
     // Broadcast to other clients
-    client.to(data.noteId).emit('yjs:update', {
+    client.to(data.noteId).emit(WS_EVENTS.YJS_UPDATE, {
       noteId: data.noteId,
       update: data.update,
     });
@@ -498,19 +506,19 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   private socketKey(socketId: string): string {
-    return `collab:socket:${socketId}`;
+    return `${REDIS_KEYS.SOCKET_PREFIX}${socketId}`;
   }
 
   private participantsKey(noteId: string): string {
-    return `collab:note:${noteId}:participants`;
+    return REDIS_KEYS.PARTICIPANTS(noteId);
   }
 
   private typingKey(noteId: string): string {
-    return `collab:note:${noteId}:typing`;
+    return REDIS_KEYS.TYPING(noteId);
   }
 
   private snapshotKey(noteId: string): string {
-    return `collab:note:${noteId}:snapshot`;
+    return REDIS_KEYS.SNAPSHOT(noteId);
   }
 
   private async setSocketRoom(socketId: string, noteId: string, user: CollaboratorInfo): Promise<void> {
@@ -678,17 +686,17 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
 
   private async broadcastCollaborators(noteId: string): Promise<void> {
     const collaborators = await this.getCollaboratorsInRoom(noteId);
-    this.server.to(noteId).emit('collaborators:list', collaborators);
+    this.server.to(noteId).emit(WS_EVENTS.COLLABORATORS_LIST, collaborators);
   }
 
   private async broadcastPresence(noteId: string): Promise<void> {
     const viewers = await this.getCollaboratorsInRoom(noteId);
-    this.server.to(noteId).emit('presence:list', viewers);
+    this.server.to(noteId).emit(WS_EVENTS.PRESENCE_LIST, viewers);
   }
 
   private async broadcastTyping(noteId: string): Promise<void> {
     const typing = await this.getTypingInRoom(noteId);
-    this.server.to(noteId).emit('typing:list', typing);
+    this.server.to(noteId).emit(WS_EVENTS.TYPING_LIST, typing);
   }
 
   private async persistSnapshot(noteId: string, snapshot: CollaborationSnapshot): Promise<void> {
