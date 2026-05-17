@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import * as Y from 'yjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../common/mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
+import { NotesCrdtService, type CollaborationSnapshot } from './notes-crdt.service';
 
 type SharePermission = 'READ' | 'EDIT';
 
@@ -74,18 +74,6 @@ export type NoteDraftResponse = {
   updatedAt: string;
 };
 
-type CollaborationSnapshot = {
-  title: string;
-  content: string;
-  isPinned: boolean;
-  updatedAt: string;
-};
-
-type YDocState = {
-  stateVector: number[];
-  updates: Array<number[]>;
-  timestamp: number;
-};
 
 @Injectable()
 export class NotesService {
@@ -93,6 +81,7 @@ export class NotesService {
     private readonly prisma: PrismaService,
     private readonly mailer: MailerService,
     private readonly redis: RedisService,
+    private readonly notesCrdtService: NotesCrdtService,
   ) {}
 
   async list(userId: string): Promise<NoteResponse[]> {
@@ -104,8 +93,8 @@ export class NotesService {
 
     return await Promise.all(
       notes.map(async (note: NoteWithShares) => {
-        const yDocContent = await this.readYDocContent(note.id);
-        const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(note.id);
+        const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
+        const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
         return this.toResponse(note, undefined, snapshot, yDocContent ?? undefined);
       }),
     );
@@ -124,8 +113,8 @@ export class NotesService {
 
     return await Promise.all(
       sharedNotes.map(async (share: ShareRecordWithRelations) => {
-        const yDocContent = await this.readYDocContent(share.note.id);
-        const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(share.note.id);
+        const yDocContent = await this.notesCrdtService.readYDocContent(share.note.id);
+        const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(share.note.id);
         return this.toSharedResponse(share, snapshot, yDocContent ?? undefined);
       }),
     );
@@ -149,8 +138,8 @@ export class NotesService {
       include: { owner: { select: { id: true, email: true, displayName: true } } },
     });
 
-    const yDocContent = await this.readYDocContent(noteId);
-    const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(noteId);
+    const yDocContent = await this.notesCrdtService.readYDocContent(noteId);
+    const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(noteId);
 
     return await this.toResponse(
       note as NoteWithShares,
@@ -172,8 +161,8 @@ export class NotesService {
     });
 
     const noteWithShares = note as NoteWithShares;
-    const yDocContent = await this.readYDocContent(note.id);
-    const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(note.id);
+    const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
+    const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
     return await this.toResponse(noteWithShares, undefined, snapshot, yDocContent ?? undefined);
   }
 
@@ -218,9 +207,15 @@ export class NotesService {
     });
 
     const noteWithShares = note as NoteWithShares;
-    await this.persistCollaborationSnapshot(noteWithShares);
-    const yDocContent = await this.readYDocContent(note.id);
-    const snapshot = yDocContent !== null ? null : await this.readCollaborationSnapshot(note.id);
+    await this.notesCrdtService.persistCollaborationSnapshot(
+      noteWithShares.id,
+      noteWithShares.title,
+      noteWithShares.content,
+      noteWithShares.isPinned,
+      noteWithShares.updatedAt,
+    );
+    const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
+    const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
     return await this.toResponse(noteWithShares, undefined, snapshot, yDocContent ?? undefined);
   }
 
@@ -236,8 +231,8 @@ export class NotesService {
     ]);
 
     await Promise.all([
-      this.clearCollaborationSnapshot(noteId),
-      this.clearYDocState(noteId),
+      this.notesCrdtService.clearCollaborationSnapshot(noteId),
+      this.notesCrdtService.clearYDocState(noteId),
     ]);
 
     void this.notifyCollaborationChange(noteId, 'note_deleted');
@@ -343,7 +338,25 @@ export class NotesService {
     }
   }
 
+  private mergeNoteWithSnapshot(note: NoteWithShares, snapshot?: CollaborationSnapshot | null): NoteWithShares {
+    if (!snapshot) {
+      return note;
+    }
 
+    const noteUpdatedAt = new Date(note.updatedAt).getTime();
+    const snapshotUpdatedAt = new Date(snapshot.updatedAt).getTime();
+    if (Number.isNaN(snapshotUpdatedAt) || snapshotUpdatedAt <= noteUpdatedAt) {
+      return note;
+    }
+
+    return {
+      ...note,
+      title: snapshot.title,
+      content: snapshot.content,
+      isPinned: snapshot.isPinned,
+      updatedAt: new Date(snapshot.updatedAt),
+    };
+  }
 
   private async toResponse(
     note: NoteWithShares,
@@ -400,105 +413,5 @@ export class NotesService {
     }
   }
 
-  private collaborationSnapshotKey(noteId: string): string {
-    return `collab:note:${noteId}:snapshot`;
-  }
 
-  private mergeNoteWithSnapshot(note: NoteWithShares, snapshot?: CollaborationSnapshot | null): NoteWithShares {
-    if (!snapshot) {
-      return note;
-    }
-
-    const noteUpdatedAt = new Date(note.updatedAt).getTime();
-    const snapshotUpdatedAt = new Date(snapshot.updatedAt).getTime();
-    if (Number.isNaN(snapshotUpdatedAt) || snapshotUpdatedAt <= noteUpdatedAt) {
-      return note;
-    }
-
-    return {
-      ...note,
-      title: snapshot.title,
-      content: snapshot.content,
-      isPinned: snapshot.isPinned,
-      updatedAt: new Date(snapshot.updatedAt),
-    };
-  }
-
-  private async readCollaborationSnapshot(noteId: string): Promise<CollaborationSnapshot | null> {
-    const value = await this.redis.getClient().get(this.collaborationSnapshotKey(noteId));
-    if (!value) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(value) as CollaborationSnapshot;
-    } catch {
-      return null;
-    }
-  }
-
-  private async persistCollaborationSnapshot(note: NoteWithShares): Promise<void> {
-    const snapshot: CollaborationSnapshot = {
-      title: note.title,
-      content: note.content ?? '',
-      isPinned: note.isPinned,
-      updatedAt: note.updatedAt.toISOString(),
-    };
-
-    await this.redis.getClient().set(this.collaborationSnapshotKey(note.id), JSON.stringify(snapshot));
-  }
-
-  private async clearCollaborationSnapshot(noteId: string): Promise<void> {
-    await this.redis.getClient().del(this.collaborationSnapshotKey(noteId));
-  }
-
-  // ============ Yjs State Helpers ============
-
-  private yDocKey(noteId: string): string {
-    return `collab:ydoc:${noteId}`;
-  }
-
-  private async readYDocState(noteId: string): Promise<YDocState | null> {
-    try {
-      const value = await this.redis.getClient().get(this.yDocKey(noteId));
-      if (!value) {
-        return null;
-      }
-
-      return JSON.parse(value) as YDocState;
-    } catch {
-      return null;
-    }
-  }
-
-  private async readYDocContent(noteId: string): Promise<string | null> {
-    try {
-      const yDocState = await this.readYDocState(noteId);
-      if (!yDocState) {
-        return null;
-      }
-
-      // Reconstruct Y.Doc from persisted state
-      const yDoc = new Y.Doc();
-      if (yDocState.updates && yDocState.updates.length > 0) {
-        for (const update of yDocState.updates) {
-          Y.applyUpdate(yDoc, new Uint8Array(update));
-        }
-      }
-
-      // Extract text content
-      const yText = yDoc.getText('content');
-      return yText.toString();
-    } catch {
-      return null;
-    }
-  }
-
-  private async clearYDocState(noteId: string): Promise<void> {
-    try {
-      await this.redis.getClient().del(this.yDocKey(noteId));
-    } catch {
-      // Silently fail on cleanup
-    }
-  }
 }
