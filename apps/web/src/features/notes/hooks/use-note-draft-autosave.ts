@@ -56,6 +56,15 @@ export function useNoteDraftAndAutoSave({
     setLastSavedAt(note.updatedAt || null);
   }, [note.title, note.content, note.updatedAt]);
 
+  // Reset state variables immediately when switching notes to avoid cross-note pollution
+  useEffect(() => {
+    setIsDirty(false);
+    setSaveError(null);
+    setTitle(note.title || '');
+    setContent(note.content || '');
+    setLastSavedAt(note.updatedAt || null);
+  }, [noteId]);
+
   // Relock note when navigating away or unmounting (ensure E2E prompt on next enter)
   useEffect(() => {
     return () => {

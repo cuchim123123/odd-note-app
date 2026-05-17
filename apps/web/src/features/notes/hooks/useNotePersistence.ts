@@ -142,7 +142,7 @@ export function useNotePersistence({ note, canEditContent, updateNote }: UseNote
     return () => { isCancelled = true; };
   }, [canEditContent, note, unlockToken]);
 
-  // Dirty check
+  // Dirty check & Debounced local draft saving
   useEffect(() => {
     if (!note || !canEditContent) return;
     const noteTitle = note.title ?? '';
@@ -152,7 +152,10 @@ export function useNotePersistence({ note, canEditContent, updateNote }: UseNote
     setIsDirty(hasChanges);
 
     if (hasChanges) {
-      writeLocalDraft(noteId, title, content);
+      const handler = window.setTimeout(() => {
+        writeLocalDraft(noteId, title, content);
+      }, 200);
+      return () => window.clearTimeout(handler);
     }
   }, [canEditContent, content, note, title]);
 

@@ -31,7 +31,7 @@ type NoteCardProps = {
   isSelectedForBulk?: boolean;
 };
 
-export const NoteCard = memo(function NoteCard({
+const NoteCardComponent = function NoteCard({
   note,
   isSelected,
   onSelect,
@@ -86,7 +86,7 @@ export const NoteCard = memo(function NoteCard({
         isGridView ? 'w-full h-[11rem] flex flex-col justify-between' : 'w-full flex flex-col justify-between min-h-[6.5rem]',
         isSelected
           ? 'border-primary bg-primary/10 shadow-lg shadow-primary/5 ring-1 ring-primary/20 scale-[1.01]'
-          : 'border-border/30 bg-card/45 backdrop-blur-sm hover:bg-card/75 hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
+          : 'border-border/30 bg-card hover:bg-card/90 hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
         'p-4 animate-in fade-in slide-in-from-bottom-2 duration-300',
       )}
     >
@@ -197,4 +197,23 @@ export const NoteCard = memo(function NoteCard({
       </div>
     </div>
   );
-});
+};
+
+const noteCardAreEqual = (prevProps: NoteCardProps, nextProps: NoteCardProps) => {
+  return (
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isGridView === nextProps.isGridView &&
+    prevProps.isSelectionMode === nextProps.isSelectionMode &&
+    prevProps.isSelectedForBulk === nextProps.isSelectedForBulk &&
+    prevProps.note.id === nextProps.note.id &&
+    prevProps.note.title === nextProps.note.title &&
+    prevProps.note.content === nextProps.note.content &&
+    prevProps.note.updatedAt === nextProps.note.updatedAt &&
+    prevProps.note.isPinned === nextProps.note.isPinned &&
+    prevProps.note.isProtected === nextProps.note.isProtected &&
+    prevProps.note.isShared === nextProps.note.isShared &&
+    (prevProps.note.labels || []).join(',') === (nextProps.note.labels || []).join(',')
+  );
+};
+
+export const NoteCard = memo(NoteCardComponent, noteCardAreEqual);

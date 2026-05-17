@@ -73,7 +73,6 @@ export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDelete
 
   return (
     <NoteDetailContent 
-      key={note.id}
       note={note} 
       noteId={noteId} 
       onDeleted={onDeleted} 
