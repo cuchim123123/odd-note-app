@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Lock } from 'lucide-react';
+import { Lock, Loader2, CheckCircle2 } from 'lucide-react';
+import { cn } from '../../../lib/utils';
 import { setNotePassword, removeNotePassword, verifyNotePassword } from '../api/notes.api';
 import { useUpdateNote } from '../api/notes.api';
 
@@ -56,6 +57,12 @@ export function ProtectionPanel({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
+  const [subMode, setSubMode] = useState<'disable' | 'change'>('disable');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   if (mode === 'protect') {
     return (
       <div className="border-b bg-muted/30 px-4 py-4 sm:px-6">
@@ -86,23 +93,142 @@ export function ProtectionPanel({
     );
   }
 
+  const handleUpdatePassword = async () => {
+    const currentPw = password.trim();
+    const newPw = newPassword.trim();
+    const confirmPw = confirmNewPassword.trim();
+
+    if (!currentPw) {
+      setMessage('Enter current password.');
+      return;
+    }
+    if (!newPw) {
+      setMessage('Enter new password.');
+      return;
+    }
+    if (newPw.length < 8) {
+      setMessage('New password must be at least 8 characters long.');
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setMessage('New passwords do not match.');
+      return;
+    }
+
+    setIsUpdating(true);
+    setMessage(null);
+    setSuccess(null);
+
+    try {
+      // 1. Verify old password
+      const verifyRes = await verifyNotePassword(noteId, currentPw);
+      if (!verifyRes.verified) {
+        setMessage('Incorrect current password.');
+        setIsUpdating(false);
+        return;
+      }
+
+      // 2. Set new password
+      await setNotePassword(noteId, newPw);
+      
+      setSuccess('Password updated successfully!');
+      setPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to change note password', err);
+      setMessage('Failed to change password.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div className="border-b bg-muted/30 px-4 py-4 sm:px-6">
       <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
-        <h3 className="font-semibold">Remove protection</h3>
-        <Input type="password" placeholder="Enter current password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        {message && <p className="text-sm text-destructive">{message}</p>}
-        <div className="flex gap-2">
-          <Button type="button" onClick={async () => {
-            try {
-              await removeNotePassword(noteId, password.trim());
-              await updateMutation.mutateAsync({ isProtected: false });
-              onUnprotected();
-              onClose();
-            } catch { setMessage('Wrong password.'); }
-          }} disabled={updateMutation.isPending}>Remove</Button>
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+        {/* Sleek active tabs control block */}
+        <div className="flex border-b border-border/40 gap-2 mb-2">
+          <button 
+            type="button" 
+            className={cn(
+              "px-4 py-2 text-xs font-semibold rounded-t-xl transition-all border-b-2",
+              subMode === 'disable' 
+                ? "border-primary text-primary bg-primary/5" 
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => { setSubMode('disable'); setMessage(null); setSuccess(null); setPassword(''); }}
+          >
+            Disable Lock
+          </button>
+          <button 
+            type="button" 
+            className={cn(
+              "px-4 py-2 text-xs font-semibold rounded-t-xl transition-all border-b-2",
+              subMode === 'change' 
+                ? "border-primary text-primary bg-primary/5" 
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => { setSubMode('change'); setMessage(null); setSuccess(null); setPassword(''); }}
+          >
+            Change Password
+          </button>
         </div>
+
+        {subMode === 'disable' ? (
+          <>
+            <h3 className="font-semibold text-sm">Remove protection</h3>
+            <Input type="password" placeholder="Enter current password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            {message && <p className="text-sm text-destructive">{message}</p>}
+            <div className="flex gap-2">
+              <Button type="button" onClick={async () => {
+                try {
+                  await removeNotePassword(noteId, password.trim());
+                  await updateMutation.mutateAsync({ isProtected: false });
+                  onUnprotected();
+                  onClose();
+                } catch { setMessage('Wrong password.'); }
+              }} disabled={updateMutation.isPending}>Remove</Button>
+              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="font-semibold text-sm">Change password</h3>
+            <div className="space-y-3">
+              <Input type="password" placeholder="Current password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isUpdating} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isUpdating} />
+                <Input type="password" placeholder="Confirm new password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} disabled={isUpdating} />
+              </div>
+            </div>
+            
+            {message && <p className="text-sm text-destructive">{message}</p>}
+            {success && (
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-sm">
+                <CheckCircle2 className="h-4 w-4 shrink-0 animate-bounce" />
+                <span>{success}</span>
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              <Button type="button" onClick={handleUpdatePassword} disabled={isUpdating}>
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
+              </Button>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isUpdating}>Cancel</Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
