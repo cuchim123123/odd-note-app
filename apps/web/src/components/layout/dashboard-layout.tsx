@@ -5,8 +5,11 @@ import { useLogout, useResendVerification } from '../../features/auth/api/auth.a
 import { Button } from '../ui/button';
 import { NotificationCenter } from '../NotificationCenter';
 import { Sparkles, LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck, ChevronRight } from 'lucide-react';
+import { useRealtimeNotifications } from '../../features/notifications/hooks/useRealtimeNotifications';
 
 export function DashboardLayout() {
+  useRealtimeNotifications(); // Start global realtime notification socket listener
+  
   const user = useAuthStore((state) => state.user);
   const logoutMutation = useLogout();
   const resendMutation = useResendVerification();

@@ -9,6 +9,7 @@ import { VerifyEmailPage } from '../features/auth/components/verify-email-page';
 import { DashboardLayout } from '../components/layout/dashboard-layout';
 import { SettingsPage } from '../features/settings/components/settings-page';
 import { NoteDashboard } from '../features/notes/components/note-dashboard';
+import { NotificationsPage } from '../features/notifications/components/notifications-page';
 
 export const router = createBrowserRouter([
   {
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
       {
         path: 'settings',
         element: <SettingsPage />,
+      },
+      {
+        path: 'notifications',
+        element: <NotificationsPage />,
       },
     ],
   },

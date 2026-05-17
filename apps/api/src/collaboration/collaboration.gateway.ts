@@ -116,11 +116,14 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
         this.internalSubClient.on('message', (channel, message) => {
           if (channel === 'collaboration:events') {
             try {
-              const event = JSON.parse(message) as { type: string; noteId: string };
-              if (event.type === 'permissions_updated') {
+              const event = JSON.parse(message) as { type: string; noteId?: string; userId?: string; notification?: Record<string, unknown> };
+              if (event.type === 'permissions_updated' && event.noteId) {
                 this.server.to(event.noteId).emit('note:permissions_updated', { noteId: event.noteId });
-              } else if (event.type === 'note_deleted') {
+              } else if (event.type === 'note_deleted' && event.noteId) {
                 this.server.to(event.noteId).emit('note:deleted', { noteId: event.noteId });
+              } else if (event.type === 'notification_created' && event.userId && event.notification) {
+                this.logger.log(`Received notification_created event for user ${event.userId} - emitting to room user:${event.userId}`);
+                this.server.to(`user:${event.userId}`).emit('notification:new', event.notification);
               }
             } catch (err) {
               this.logger.error('Failed to process internal collaboration event', err as Error);
@@ -187,6 +190,9 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
         userId: payload.sub,
         displayName: payload.displayName ?? 'Anonymous',
       };
+
+      // Join the personal room to support user-scoped real-time notifications
+      await client.join(`user:${payload.sub}`);
 
       this.logger.log(`Client ${client.id} authenticated as user ${payload.sub}`);
     } catch (error) {

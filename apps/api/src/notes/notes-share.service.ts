@@ -104,7 +104,7 @@ export class NotesShareService {
     }
 
     try {
-      await this.prisma.notification.create({
+      const notification = await this.prisma.notification.create({
         data: {
           userId: recipient.id,
           type: 'note_shared',
@@ -117,6 +117,21 @@ export class NotesShareService {
           }),
         },
       });
+
+      // Publish event to Redis for real-time delivery
+      await this.redis.getClient().publish('collaboration:events', JSON.stringify({
+        type: 'notification_created',
+        userId: recipient.id,
+        notification: {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          read: notification.read,
+          data: JSON.parse(notification.data || '{}'),
+          createdAt: notification.createdAt.toISOString(),
+        }
+      }));
     } catch (error) {
       console.error('Failed to create notification record:', error);
     }

@@ -7,6 +7,7 @@ import {
   OfflineBanner,
 } from '../features/offline/components/offline-banner';
 import { useOfflineSync } from '../features/offline/hooks/use-offline-sync';
+import { ToastProvider } from '../components/ui/toast';
 
 type AppProviderProps = { children: ReactNode };
 
@@ -35,7 +36,9 @@ export function AppProvider({ children }: AppProviderProps) {
       <OfflineSyncInitializer />
       <AuthSessionBootstrap />
       <OfflineBanner />
-      {children}
+      <ToastProvider>
+        {children}
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

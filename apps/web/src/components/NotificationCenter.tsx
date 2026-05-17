@@ -106,7 +106,13 @@ export const NotificationCenter = () => {
 
           {notifications.length > 0 && (
             <div className="border-t bg-card px-4 py-3 text-center">
-              <button className="text-sm font-medium text-primary transition-colors hover:text-primary/80">
+              <button
+                onClick={() => {
+                  navigate('/notifications');
+                  setIsOpen(false);
+                }}
+                className="w-full text-sm font-medium text-primary transition-colors hover:text-primary/80"
+              >
                 View all notifications
               </button>
             </div>
