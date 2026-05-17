@@ -78,6 +78,7 @@ export function ProtectionPanel({
               const pw = password.trim();
               const cpw = confirmPassword.trim();
               if (!pw) { setMessage('Enter password.'); return; }
+              if (pw.length < 4) { setMessage('Password must be at least 4 characters long.'); return; }
               if (pw !== cpw) { setMessage('Passwords do not match.'); return; }
               try {
                 await setNotePassword(noteId, pw);
@@ -106,8 +107,8 @@ export function ProtectionPanel({
       setMessage('Enter new password.');
       return;
     }
-    if (newPw.length < 8) {
-      setMessage('New password must be at least 8 characters long.');
+    if (newPw.length < 4) {
+      setMessage('New password must be at least 4 characters long.');
       return;
     }
     if (newPw !== confirmPw) {
