@@ -221,8 +221,9 @@ export function useNoteDraftAndAutoSave({
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = ''; // Required by modern browsers
-      return '';
+      const warningText = 'Are you sure you want to leave? Changes you made may not be saved.';
+      e.returnValue = warningText; // Truthy string is strictly required by modern Chrome/Firefox to trigger the alert!
+      return warningText;
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
