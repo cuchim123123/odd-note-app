@@ -201,7 +201,7 @@ export function useNoteDraftAndAutoSave({
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
         ns.map((n) => n.id === noteId ? { ...n, title: d.title, updatedAt: ut } as Note : n),
       );
-      queryClient.setQueryData<NoteDetailItem>(NOTES_KEYS.detail(noteId), (n) =>
+      queryClient.setQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(noteId) }, (n) =>
         n ? ({ ...n, title: d.title, updatedAt: ut } as NoteDetailItem) : n,
       );
     }
@@ -211,7 +211,7 @@ export function useNoteDraftAndAutoSave({
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
         ns.map((n) => n.id === noteId ? { ...n, labels: d.labels ?? n.labels, updatedAt: ut } as Note : n),
       );
-      queryClient.setQueryData<Note>(NOTES_KEYS.detail(noteId), (n) =>
+      queryClient.setQueriesData<Note>({ queryKey: NOTES_KEYS.detail(noteId) }, (n) =>
         n ? ({ ...n, labels: d.labels ?? n.labels, updatedAt: ut } as Note) : n,
       );
     }
@@ -220,7 +220,7 @@ export function useNoteDraftAndAutoSave({
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
         ns.map((n) => n.id === noteId ? { ...n, isPinned: d.isPinned ?? n.isPinned, updatedAt: ut } as Note : n),
       );
-      queryClient.setQueryData<Note>(NOTES_KEYS.detail(noteId!), (n) =>
+      queryClient.setQueriesData<Note>({ queryKey: NOTES_KEYS.detail(noteId!) }, (n) =>
         n ? ({ ...n, isPinned: (d.isPinned ?? n.isPinned) as boolean, updatedAt: ut } as Note) : n,
       );
     }

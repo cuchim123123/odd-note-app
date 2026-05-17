@@ -413,7 +413,7 @@ export const useCreateNote = () => {
       } as Note;
 
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes) => [optimisticNote, ...(currentNotes || [])]);
-      queryClient.setQueryData<NoteDetailItem>(NOTES_KEYS.detail(optimisticNote.id || ''), optimisticNote);
+      queryClient.setQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(optimisticNote.id || '') }, optimisticNote);
 
       return { previousNotes, optimisticId: optimisticNote.id || '' };
     },
@@ -426,7 +426,7 @@ export const useCreateNote = () => {
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
         currentNotes.map((note) => (note.id === context?.optimisticId ? createdNote : note)),
       );
-      queryClient.setQueryData(NOTES_KEYS.detail(createdNote.id || ''), createdNote);
+      queryClient.setQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(createdNote.id || '') }, createdNote);
       void upsertNoteInDb(createdNote);
     },
     onSettled: () => {
@@ -463,7 +463,7 @@ export const useUpdateNote = (id: string) => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.detail(id) });
 
       const previousNotes = queryClient.getQueryData<Note[]>(NOTES_KEYS.all);
-      const previousNote = queryClient.getQueryData<Note>(NOTES_KEYS.detail(id));
+      const previousDetailQueries = queryClient.getQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(id) });
 
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
         currentNotes.map((note) =>
@@ -481,7 +481,7 @@ export const useUpdateNote = (id: string) => {
         ),
       );
 
-      queryClient.setQueryData<NoteDetailItem>(NOTES_KEYS.detail(id), (currentNote: NoteDetailItem | undefined) =>
+      queryClient.setQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(id) }, (currentNote: NoteDetailItem | undefined) =>
         currentNote
           ? ({
               ...currentNote,
@@ -495,15 +495,17 @@ export const useUpdateNote = (id: string) => {
           : currentNote,
       );
 
-      return { previousNotes, previousNote };
+      return { previousNotes, previousDetailQueries };
     },
     onError: (_error, _input, context) => {
       if (context?.previousNotes) {
         queryClient.setQueryData(NOTES_KEYS.all, context.previousNotes);
       }
 
-      if (context?.previousNote) {
-        queryClient.setQueryData(NOTES_KEYS.detail(id), context.previousNote);
+      if (context?.previousDetailQueries) {
+        context.previousDetailQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: (updatedNote) => {
@@ -512,7 +514,7 @@ export const useUpdateNote = (id: string) => {
           note.id === id ? { ...note, ...updatedNote } : note
         ),
       );
-      queryClient.setQueryData(NOTES_KEYS.detail(id), (current: NoteDetailItem | undefined) =>
+      queryClient.setQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(id) }, (current) =>
         current ? { ...current, ...updatedNote } : updatedNote
       );
       void upsertNoteInDb(updatedNote);
@@ -544,22 +546,24 @@ export const useDeleteNote = (id: string) => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.detail(id) });
 
       const previousNotes = queryClient.getQueryData<Note[]>(NOTES_KEYS.all);
-      const previousNote = queryClient.getQueryData<Note>(NOTES_KEYS.detail(id));
+      const previousDetailQueries = queryClient.getQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(id) });
 
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
         currentNotes.filter((note) => note.id !== id),
       );
       queryClient.removeQueries({ queryKey: NOTES_KEYS.detail(id) });
 
-      return { previousNotes, previousNote };
+      return { previousNotes, previousDetailQueries };
     },
     onError: (_error, _input, context) => {
       if (context?.previousNotes) {
         queryClient.setQueryData(NOTES_KEYS.all, context.previousNotes);
       }
 
-      if (context?.previousNote) {
-        queryClient.setQueryData(NOTES_KEYS.detail(id), context.previousNote);
+      if (context?.previousDetailQueries) {
+        context.previousDetailQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
     onSuccess: () => {
