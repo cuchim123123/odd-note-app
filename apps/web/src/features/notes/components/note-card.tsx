@@ -19,7 +19,7 @@ function formatPreview(noteContent: string | undefined): string {
   if (!plainText) {
     return 'No content yet.';
   }
-  return plainText.length > 80 ? `${plainText.slice(0, 80)}…` : plainText;
+  return plainText.length > 50 ? `${plainText.slice(0, 50)}…` : plainText;
 }
 
 type NoteCardProps = {
@@ -47,7 +47,7 @@ export const NoteCard = memo(function NoteCard({
     try {
       await update.mutateAsync({ isPinned: !note.isPinned });
     } catch {
-      // noop - optimistic updates handled by mutation
+      // noop
     }
   };
 
@@ -56,7 +56,7 @@ export const NoteCard = memo(function NoteCard({
     try {
       await update.mutateAsync({ isShared: !note.isShared });
     } catch {
-      // noop - optimistic updates handled by mutation
+      // noop
     }
   };
 
@@ -73,6 +73,8 @@ export const NoteCard = memo(function NoteCard({
     }
   };
 
+  const hasContent = !!stripHtml(note.content);
+
   return (
     <div
       role="button"
@@ -81,33 +83,33 @@ export const NoteCard = memo(function NoteCard({
       onClick={handleSelect}
       className={cn(
         'group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/20',
-        isGridView ? 'w-[16rem] h-[14.5rem] flex flex-col justify-between' : 'w-full flex flex-col justify-between',
+        isGridView ? 'w-full h-[11rem] flex flex-col justify-between' : 'w-full flex flex-col justify-between min-h-[6.5rem]',
         isSelected
-          ? 'border-primary bg-primary/[0.03] shadow-md shadow-primary/[0.02]'
-          : 'border-border/60 bg-card/65 hover:bg-card/90 hover:border-primary/20 hover:shadow-md hover:-translate-y-0.5',
-        'p-4.5 animate-in fade-in slide-in-from-bottom-2 duration-300',
+          ? 'border-primary bg-primary/10 shadow-lg shadow-primary/5 ring-1 ring-primary/20 scale-[1.01]'
+          : 'border-border/30 bg-card/45 backdrop-blur-sm hover:bg-card/75 hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
+        'p-4 animate-in fade-in slide-in-from-bottom-2 duration-300',
       )}
     >
       <div className="flex flex-col gap-2.5 h-full justify-between">
         <div className="space-y-2">
           {/* Header row: Icon & Title & Badges */}
-          <div className="flex items-start justify-between gap-2.5">
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className={cn(
-                'flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
-                isSelected ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
+                isSelected ? 'bg-primary/20 text-primary' : 'bg-primary/5 text-primary/80 group-hover:bg-primary/10 group-hover:text-primary'
               )}>
                 {isSelectionMode ? (
                   <div className={cn("h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors", isSelectedForBulk ? "bg-primary border-primary" : "border-primary/50")}>
                     {isSelectedForBulk && <Check className="h-3 w-3 text-primary-foreground" />}
                   </div>
                 ) : (
-                  <FileText className="h-4 w-4" />
+                  <FileText className="h-4.5 w-4.5" />
                 )}
               </div>
               
               <span className={cn(
-                'font-bold text-foreground truncate text-sm tracking-tight',
+                'font-semibold text-foreground truncate text-sm tracking-tight flex-1',
                 isSelected && 'text-primary'
               )}>
                 {note.title || 'Untitled Note'}
@@ -115,7 +117,7 @@ export const NoteCard = memo(function NoteCard({
             </div>
 
             {/* Float actions on hover */}
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               {isSharedAccess ? null : (
                 <button
                   type="button"
@@ -141,7 +143,10 @@ export const NoteCard = memo(function NoteCard({
           </div>
 
           {/* Subtext description preview */}
-          <p className="text-xs leading-relaxed text-muted-foreground/90 line-clamp-3 overflow-hidden">
+          <p className={cn(
+            "text-xs leading-relaxed line-clamp-2 overflow-hidden",
+            hasContent ? "text-muted-foreground/90 group-hover:text-slate-300 transition-colors duration-200" : "text-muted-foreground/30 italic font-light"
+          )}>
             {formatPreview(note.content)}
           </p>
         </div>
@@ -153,13 +158,13 @@ export const NoteCard = memo(function NoteCard({
               {(note.labels || []).slice(0, 3).map((label: string) => (
                 <span 
                   key={label} 
-                  className="max-w-[7.5rem] truncate rounded-lg border border-primary/10 bg-primary/[0.02] px-2 py-0.5 text-[10px] font-semibold text-primary/80 tracking-wide"
+                  className="max-w-[7.5rem] truncate rounded-lg border border-primary/10 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary/90 tracking-wide"
                 >
                   {label}
                 </span>
               ))}
               {(note.labels || []).length > 3 && (
-                <span className="rounded-lg border border-border bg-muted/30 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
+                <span className="rounded-lg border border-border/30 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground/80">
                   +{(note.labels || []).length - 3}
                 </span>
               )}
@@ -174,9 +179,12 @@ export const NoteCard = memo(function NoteCard({
           )}
 
           {/* Footer Metadata */}
-          <div className="flex items-center justify-between border-t border-border/10 pt-2 text-[10px] font-medium text-muted-foreground/60 shrink-0">
-            <span>{new Date(note.updatedAt || 0).toLocaleDateString()}</span>
-            <span>{new Date(note.updatedAt || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <div className="flex items-center justify-between border-t border-border/10 pt-2 text-[10px] font-medium text-muted-foreground/50 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span>{new Date(note.updatedAt || 0).toLocaleDateString()}</span>
+              <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+              <span>{new Date(note.updatedAt || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
             
             {/* Corner Badge Icons */}
             <div className="flex items-center gap-1">

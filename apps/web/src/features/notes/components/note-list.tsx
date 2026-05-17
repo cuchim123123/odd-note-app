@@ -287,7 +287,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
             </div>
           ) : (
             <div className="space-y-4">
-              <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
+              <div className={cn(isGridView ? 'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' : 'space-y-2')}>
                 {filteredNotes.map((note) => {
                   const isSelected = selectedNoteId === note.id;
 
@@ -314,7 +314,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
                     Shared with me
                   </div>
 
-                  <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
+                  <div className={cn(isGridView ? 'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' : 'space-y-2')}>
                     {filteredSharedNotes.map((note: SharedNoteItem) => {
                       const isSelected = selectedNoteId === note.id;
 
