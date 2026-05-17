@@ -68,16 +68,20 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: [
-    {
-      command: 'pnpm --filter @odd-note-app/web dev',
-      url: 'http://localhost:5173',
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command: 'docker compose up -d api',
-      url: 'http://localhost:4000/health',
-      reuseExistingServer: !process.env.CI,
-    },
-  ],
+  webServer: process.env.SKIP_WEBSERVER
+    ? undefined
+    : [
+        {
+          command: 'pnpm --filter @odd-note-app/web dev',
+          url: 'http://localhost:5173',
+          reuseExistingServer: !process.env.CI,
+        },
+        {
+          // Running docker compose without -d keeps the process alive, allowing Playwright 
+          // to manage the container lifecycle and check the health port properly without early exit.
+          command: 'docker compose up api',
+          url: 'http://localhost:4000/health',
+          reuseExistingServer: !process.env.CI,
+        },
+      ],
 });

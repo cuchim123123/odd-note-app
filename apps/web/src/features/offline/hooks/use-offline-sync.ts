@@ -116,25 +116,25 @@ async function syncItem(item: SyncQueueItem, apiClient: typeof api) {
     case 'create': {
       const { noteId, ...payload } = item.payload;
       void noteId;
-      return apiClient.post('/api/notes', payload);
+      return apiClient.post('/notes', payload);
     }
 
     case 'update': {
       const { noteId } = item.payload;
       if (!noteId) throw new Error('Missing noteId for update');
-      return apiClient.patch(`/api/notes/${noteId}`, item.payload);
+      return apiClient.patch(`/notes/${noteId}`, item.payload);
     }
 
     case 'delete': {
       const { noteId } = item.payload;
       if (!noteId) throw new Error('Missing noteId for delete');
-      return apiClient.delete(`/api/notes/${noteId}`);
+      return apiClient.delete(`/notes/${noteId}`);
     }
 
     case 'share': {
       const { noteId, recipientEmail, permission } = item.payload;
       if (!noteId) throw new Error('Missing noteId for share');
-      return apiClient.post(`/api/notes/${noteId}/share`, {
+      return apiClient.post(`/notes/${noteId}/shares`, {
         recipientEmail,
         permission,
       });
