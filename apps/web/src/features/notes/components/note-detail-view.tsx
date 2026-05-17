@@ -164,6 +164,13 @@ function NoteDetailContent({
     setLastSavedAt(note.updatedAt || null);
   }, [note.title, note.content, note.updatedAt]);
 
+  // Relock note when navigating away or unmounting (ensure E2E prompt on next enter)
+  useEffect(() => {
+    return () => {
+      markLocked(noteId);
+    };
+  }, [noteId, markLocked]);
+
   // Sync protection status
   useEffect(() => {
     if (!note) return;
