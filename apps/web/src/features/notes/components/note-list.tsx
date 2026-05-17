@@ -210,130 +210,134 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
-        {isLoading ? (
-          <div className="rounded-2xl border border-dashed border-border/70 bg-white/80 p-6 text-center text-sm text-muted-foreground">Loading notes...</div>
-        ) : filteredNotes.length === 0 && filteredSharedNotes.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border/70 bg-card/80 p-8 text-center text-sm text-muted-foreground">
-            {search ? 'No notes found matching your search.' : 'No notes yet. Create your first one.'}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3 pb-1 border-b border-border/10">
-              {/* Left Side: Label Row with 3 limit */}
-              <div className="flex flex-1 items-center gap-1.5 overflow-x-auto pr-2 scrollbar-none">
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
+        {/* Sticky Filters Header */}
+        <div className="flex items-center justify-between gap-3 pb-1 border-b border-border/10 shrink-0">
+          {/* Left Side: Label Row with 3 limit */}
+          <div className="flex flex-1 items-center gap-1.5 overflow-x-auto pr-2 scrollbar-none">
+            <Button
+              size="sm"
+              variant={selectedLabels.length === 0 ? 'default' : 'outline'}
+              onClick={() => setSelectedLabels([])}
+              className="rounded-full shrink-0 h-8"
+            >
+              All
+            </Button>
+            {labels.slice(0, 3).map((label) => {
+              const isSelected = selectedLabels.includes(label);
+              return (
                 <Button
+                  key={label}
                   size="sm"
-                  variant={selectedLabels.length === 0 ? 'default' : 'outline'}
-                  onClick={() => setSelectedLabels([])}
+                  variant={isSelected ? 'default' : 'outline'}
+                  onClick={() => setSelectedLabels((prev) =>
+                    prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+                  )}
                   className="rounded-full shrink-0 h-8"
                 >
-                  All
+                  {label}
                 </Button>
-                {labels.slice(0, 3).map((label) => {
-                  const isSelected = selectedLabels.includes(label);
+              );
+            })}
+            {labels.length > 3 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsFilterModalOpen(true)}
+                className="rounded-full shrink-0 h-8 bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 flex items-center gap-1 font-semibold text-xs"
+              >
+                <Tag className="h-3.5 w-3.5" />
+                +{labels.length - 3} more
+              </Button>
+            )}
+          </div>
+
+          {/* Right Side: View Mode Toggler */}
+          <div className="flex items-center gap-0.5 rounded-full border bg-background p-0.5 shadow-sm shrink-0">
+            <Button
+              type="button"
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => onViewModeChange('grid')}
+              className="h-7 w-7 rounded-full p-0"
+              title="Grid view"
+            >
+              <Grid2x2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => onViewModeChange('list')}
+              className="h-7 w-7 rounded-full p-0"
+              title="List view"
+            >
+              <List className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Scrollable Results Container */}
+        <div className="flex-1 overflow-y-auto pr-0.5">
+          {isLoading ? (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-white/80 p-6 text-center text-sm text-muted-foreground animate-pulse">Loading notes...</div>
+          ) : filteredNotes.length === 0 && filteredSharedNotes.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-card/80 p-8 text-center text-sm text-muted-foreground">
+              {search || selectedLabels.length > 0 ? 'No notes found matching your search.' : 'No notes yet. Create your first one.'}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
+                {filteredNotes.map((note) => {
+                  const isSelected = selectedNoteId === note.id;
+
+                  const isSelectedForBulk = selectedNotesIds.has(note.id || '');
+
                   return (
-                    <Button
-                      key={label}
-                      size="sm"
-                      variant={isSelected ? 'default' : 'outline'}
-                      onClick={() => setSelectedLabels((prev) =>
-                        prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
-                      )}
-                      className="rounded-full shrink-0 h-8"
-                    >
-                      {label}
-                    </Button>
+                    <NoteCard
+                      key={note.id}
+                      note={note}
+                      isSelected={isSelected}
+                      onSelect={handleSelectNote}
+                      isGridView={isGridView}
+                      isSelectionMode={isSelectionMode}
+                      isSelectedForBulk={isSelectedForBulk}
+                    />
                   );
                 })}
-                {labels.length > 3 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsFilterModalOpen(true)}
-                    className="rounded-full shrink-0 h-8 bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 flex items-center gap-1 font-semibold text-xs"
-                  >
-                    <Tag className="h-3.5 w-3.5" />
-                    +{labels.length - 3} more
-                  </Button>
-                )}
               </div>
 
-              {/* Right Side: View Mode Toggler */}
-              <div className="flex items-center gap-0.5 rounded-full border bg-background p-0.5 shadow-sm shrink-0">
-                <Button
-                  type="button"
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="icon"
-                  onClick={() => onViewModeChange('grid')}
-                  className="h-7 w-7 rounded-full p-0"
-                  title="Grid view"
-                >
-                  <Grid2x2 className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="icon"
-                  onClick={() => onViewModeChange('list')}
-                  className="h-7 w-7 rounded-full p-0"
-                  title="List view"
-                >
-                  <List className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
+              {filteredSharedNotes.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <Share2 className="h-3.5 w-3.5" />
+                    Shared with me
+                  </div>
 
-            <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
-              {filteredNotes.map((note) => {
-                const isSelected = selectedNoteId === note.id;
+                  <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
+                    {filteredSharedNotes.map((note: SharedNoteItem) => {
+                      const isSelected = selectedNoteId === note.id;
 
-                const isSelectedForBulk = selectedNotesIds.has(note.id || '');
+                      const isSelectedForBulk = selectedNotesIds.has(note.id || '');
 
-                return (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    isSelected={isSelected}
-                    onSelect={handleSelectNote}
-                    isGridView={isGridView}
-                    isSelectionMode={isSelectionMode}
-                    isSelectedForBulk={isSelectedForBulk}
-                  />
-                );
-              })}
-            </div>
-
-            {filteredSharedNotes.length > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  <Share2 className="h-3.5 w-3.5" />
-                  Shared with me
+                      return (
+                        <NoteCard
+                          key={`shared-${note.id}`}
+                          note={note}
+                          isSelected={isSelected}
+                          onSelect={handleSelectNote}
+                          isGridView={isGridView}
+                          isSelectionMode={isSelectionMode}
+                          isSelectedForBulk={isSelectedForBulk}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-
-                <div className={cn(isGridView ? 'grid justify-center gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,16rem))]' : 'space-y-2')}>
-                  {filteredSharedNotes.map((note: SharedNoteItem) => {
-                    const isSelected = selectedNoteId === note.id;
-
-                    const isSelectedForBulk = selectedNotesIds.has(note.id || '');
-
-                    return (
-                      <NoteCard
-                        key={`shared-${note.id}`}
-                        note={note}
-                        isSelected={isSelected}
-                        onSelect={handleSelectNote}
-                        isGridView={isGridView}
-                        isSelectionMode={isSelectionMode}
-                        isSelectedForBulk={isSelectedForBulk}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        )}
+              ) : null}
+            </div>
+          )}
+        </div>
       </div>
 
       {isFilterModalOpen && (
