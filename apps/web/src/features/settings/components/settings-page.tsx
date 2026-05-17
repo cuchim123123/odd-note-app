@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRenameLabel, useDeleteLabel, useNotes } from '../../notes/api/notes.api';
 import { api } from '../../../lib/axios';
 import { AvatarUpload } from './avatar-upload';
+import { ChangePasswordForm } from './change-password-form';
 
 const noteFontSizeLabels: Record<NoteFontSize, string> = {
   sm: 'Compact',
@@ -123,6 +124,8 @@ export function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        <ChangePasswordForm />
 
         <Card>
           <CardHeader>

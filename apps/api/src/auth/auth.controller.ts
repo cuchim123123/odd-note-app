@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/co
 import { AuthService } from './auth.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto } from './dto';
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import type { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
@@ -44,6 +44,13 @@ export class AuthController {
   @Patch('profile')
   async updateProfile(@CurrentUser() userId: string, @Body() input: { displayName?: string; avatarUrl?: string | null }) {
     return await this.authService.updateProfile(userId, input);
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @Patch('change-password')
+  async changePassword(@CurrentUser() userId: string, @Body() input: ChangePasswordDto) {
+    await this.authService.changePassword(userId, input);
+    return { success: true, message: 'Password changed successfully' };
   }
 
   @Post('refresh')

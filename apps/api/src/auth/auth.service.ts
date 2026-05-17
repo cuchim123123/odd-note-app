@@ -1,10 +1,10 @@
-import { Injectable, ConflictException, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthConfigService } from '../config';
-import type { LoginInput, RegisterInput } from '@odd-note-app/validation';
+import type { LoginInput, RegisterInput, ChangePasswordOutput } from '@odd-note-app/validation';
 import type { AuthTokens, AuthUserProfile, LoginResult, RegisterResult } from './auth.types';
 import { SessionTokenService } from './session-token.service';
 import { AuthUserMapper } from './auth-user.mapper';
@@ -141,5 +141,26 @@ export class AuthService {
     });
 
     return this.authUserMapper.toProfile(user);
+  }
+
+  async changePassword(userId: string, input: ChangePasswordOutput): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(input.currentPassword!, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Incorrect current password');
+    }
+
+    const passwordHash = await bcrypt.hash(input.newPassword!, this.passwordSaltRounds);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
   }
 }

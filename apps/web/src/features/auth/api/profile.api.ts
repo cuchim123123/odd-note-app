@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../../../lib/axios';
 import { useAuthStore, type UserProfile } from '../stores/auth.store';
+import type { ChangePasswordInput } from '@odd-note-app/validation';
 
 export type UpdateProfileInput = {
   displayName?: string;
@@ -37,6 +38,18 @@ export const useUploadAvatar = () => {
           'Content-Type': 'multipart/form-data',
         },
       });
+      return response.data;
+    },
+  });
+};
+
+/**
+ * Mutation hook to change the user's authenticated password.
+ */
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: async (data: ChangePasswordInput) => {
+      const response = await api.patch<{ success: boolean; message: string }>('/auth/change-password', data);
       return response.data;
     },
   });
