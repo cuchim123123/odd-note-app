@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand, GetObjectCommand, PutBucketPolicyCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
@@ -13,6 +13,7 @@ export class UploadsService {
   private readonly client: S3Client;
   private readonly bucket: string;
   private readonly endpoint: string;
+  private readonly publicEndpoint: string;
 
   constructor() {
     const useSsl = (process.env.S3_USE_SSL || 'false').toLowerCase() === 'true';
@@ -24,6 +25,8 @@ export class UploadsService {
     this.endpoint = s3Host
       ? `${s3Host.startsWith('http://') || s3Host.startsWith('https://') ? s3Host : `${protocol}://${s3Host}`}${s3Port ? `:${s3Port}` : ''}`
       : process.env.MINIO_ENDPOINT || 'http://minio:9000';
+
+    this.publicEndpoint = process.env.S3_PUBLIC_ENDPOINT || this.endpoint;
 
     const region = process.env.MINIO_REGION || 'us-east-1';
     const accessKey = process.env.S3_ACCESS_KEY || process.env.MINIO_ACCESS_KEY || 'minioadmin';
@@ -42,18 +45,49 @@ export class UploadsService {
     try {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
       this.logger.log(`Bucket '${this.bucket}' already exists`);
+      await this.setBucketPolicy();
     } catch (err) {
       this.logger.log(`Bucket '${this.bucket}' not found or MinIO not ready; attempting to create...`);
       this.logger.debug(`HeadBucket error: ${getErrorMessage(err)}`);
       try {
         await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
         this.logger.log(`Bucket '${this.bucket}' created`);
+        await this.setBucketPolicy();
       } catch (createErr) {
         this.logger.error(
           `Failed to create bucket '${this.bucket}'. MinIO might not be fully initialized yet. Error: ${getErrorMessage(createErr)}`,
         );
         // Don't throw the error, allow the app to start. MinIO uploads might fail until it's ready.
       }
+    }
+  }
+
+  private async setBucketPolicy(): Promise<void> {
+    try {
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Sid: 'PublicRead',
+            Effect: 'Allow',
+            Principal: '*',
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${this.bucket}/*`],
+          },
+        ],
+      };
+
+      await this.client.send(
+        new PutBucketPolicyCommand({
+          Bucket: this.bucket,
+          Policy: JSON.stringify(policy),
+        }),
+      );
+      this.logger.log(`Public read policy set on bucket '${this.bucket}'`);
+    } catch (policyErr) {
+      this.logger.error(
+        `Failed to set public policy on bucket '${this.bucket}': ${getErrorMessage(policyErr)}`,
+      );
     }
   }
 
@@ -69,10 +103,11 @@ export class UploadsService {
       }),
     );
 
-    const url = `${this.endpoint}/${this.bucket}/${encodeURIComponent(key)}`;
+    const url = `${this.publicEndpoint}/${this.bucket}/${encodeURIComponent(key)}`;
 
     // generate a presigned GET URL valid for 1 hour
-    const signedUrl = await getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: 3600 });
+    const rawSignedUrl = await getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: 3600 });
+    const signedUrl = rawSignedUrl.replace(this.endpoint, this.publicEndpoint);
 
     return { url, key, signedUrl };
   }

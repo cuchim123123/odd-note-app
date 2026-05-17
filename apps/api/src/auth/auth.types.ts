@@ -6,6 +6,7 @@ export type AuthUserProfile = {
   displayName: string;
   role: UserRole;
   isEmailVerified: boolean;
+  avatarUrl: string | null;
 };
 
 export type AuthTokens = {

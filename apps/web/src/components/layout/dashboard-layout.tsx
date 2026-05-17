@@ -43,9 +43,22 @@ export function DashboardLayout() {
 
           <div className="flex items-center gap-3">
             <NotificationCenter />
-            <div className="hidden rounded-full border bg-card px-3 py-2 text-sm shadow-sm sm:block">
-              <span className="text-muted-foreground">Logged in as </span>
-              <span className="font-medium">{user?.displayName || user?.email}</span>
+            <div className="hidden items-center gap-2 rounded-full border bg-card pl-2 pr-3 py-1 text-sm shadow-sm sm:flex">
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.displayName}
+                  className="h-6 w-6 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  {user ? user.displayName.trim().charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Logged in as </span>
+                <span className="font-medium">{user?.displayName || user?.email}</span>
+              </div>
             </div>
             <Button variant="ghost" size="sm" onClick={handleLogout} disabled={logoutMutation.isPending} aria-label="Logout from your account" className="rounded-full">
               <LogOut className="mr-2 h-4 w-4" />

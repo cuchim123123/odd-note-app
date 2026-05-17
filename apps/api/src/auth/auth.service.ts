@@ -126,10 +126,18 @@ export class AuthService {
     return this.authUserMapper.toProfile(user);
   }
 
-  async updateProfile(userId: string, input: { displayName: string }): Promise<AuthUserProfile> {
+  async updateProfile(userId: string, input: { displayName?: string; avatarUrl?: string | null }): Promise<AuthUserProfile> {
+    const data: Prisma.UserUpdateInput = {};
+    if (input.displayName !== undefined) {
+      data.displayName = input.displayName.trim();
+    }
+    if (input.avatarUrl !== undefined) {
+      data.avatarUrl = input.avatarUrl;
+    }
+
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: { displayName: input.displayName.trim() },
+      data,
     });
 
     return this.authUserMapper.toProfile(user);

@@ -11,6 +11,7 @@ export class AuthUserMapper {
       displayName: user.displayName,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
+      avatarUrl: user.avatarUrl,
     };
   }
 }

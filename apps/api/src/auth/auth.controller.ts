@@ -42,7 +42,7 @@ export class AuthController {
 
   @UseGuards(AccessTokenGuard)
   @Patch('profile')
-  async updateProfile(@CurrentUser() userId: string, @Body() input: { displayName: string }) {
+  async updateProfile(@CurrentUser() userId: string, @Body() input: { displayName?: string; avatarUrl?: string | null }) {
     return await this.authService.updateProfile(userId, input);
   }
 

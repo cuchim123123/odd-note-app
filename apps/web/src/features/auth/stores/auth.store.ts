@@ -7,6 +7,7 @@ export type UserProfile = {
   displayName: string;
   role: 'USER' | 'ADMIN';
   isEmailVerified: boolean;
+  avatarUrl: string | null;
 };
 
 export interface AuthState {

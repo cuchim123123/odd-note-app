@@ -29,6 +29,7 @@ model User {
   passwordHash      String
   role              UserRole @default(USER)
   isEmailVerified   Boolean  @default(false)
+  avatarUrl         String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   emailTokens       VerificationToken[] @relation("EmailVerificationTokens")

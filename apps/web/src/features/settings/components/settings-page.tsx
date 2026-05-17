@@ -10,6 +10,7 @@ import { Monitor, Palette, Sparkles, Sun, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRenameLabel, useDeleteLabel, useNotes } from '../../notes/api/notes.api';
 import { api } from '../../../lib/axios';
+import { AvatarUpload } from './avatar-upload';
 
 const noteFontSizeLabels: Record<NoteFontSize, string> = {
   sm: 'Compact',
@@ -105,7 +106,8 @@ export function SettingsPage() {
             <CardTitle className="flex items-center gap-2"><UserRound className="h-5 w-5 text-primary" />Profile</CardTitle>
             <CardDescription>Update your display name and review the account email.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            <AvatarUpload />
             <div className="space-y-2">
               <Label htmlFor="displayName">Display name</Label>
               <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />

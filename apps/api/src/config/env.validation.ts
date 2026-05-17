@@ -28,6 +28,7 @@ const envSchema = z.object({
   S3_SECRET_KEY: z.string(),
   S3_BUCKET: z.string(),
   S3_USE_SSL: z.coerce.boolean().default(false),
+  S3_PUBLIC_ENDPOINT: z.string().optional(),
   PASSWORD_SALT_ROUNDS: z.coerce.number().int().positive().default(12),
 });
 
