@@ -44,6 +44,7 @@ type UseYjsCollaborationOptions = {
     timestamp: number;
   }) => void;
   onNoteDeleted?: (noteId: string) => void;
+  onPermissionsUpdated?: () => void;
 };
 
 function getWsUrl(): string {
@@ -104,6 +105,7 @@ export function useYjsCollaboration({
   enabled,
   onRemoteContentUpdate,
   onNoteDeleted,
+  onPermissionsUpdated,
 }: UseYjsCollaborationOptions) {
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
@@ -122,9 +124,11 @@ export function useYjsCollaboration({
   const syncedSocketIdRef = useRef<string | null>(null);
   const onRemoteContentUpdateRef = useRef(onRemoteContentUpdate);
   const onNoteDeletedRef = useRef(onNoteDeleted);
+  const onPermissionsUpdatedRef = useRef(onPermissionsUpdated);
 
   onRemoteContentUpdateRef.current = onRemoteContentUpdate;
   onNoteDeletedRef.current = onNoteDeleted;
+  onPermissionsUpdatedRef.current = onPermissionsUpdated;
 
   useEffect(() => {
     if (!enabled || !noteId || !accessToken || !user) {
@@ -339,6 +343,10 @@ export function useYjsCollaboration({
 
     socket.on('note:deleted', (data: { noteId: string }) => {
       onNoteDeletedRef.current?.(data.noteId);
+    });
+ 
+    socket.on('note:permissions_updated', () => {
+      onPermissionsUpdatedRef.current?.();
     });
 
     socket.on('yjs:sync-step-2', (data: { noteId: string; update: number[]; stateVector?: number[] }) => {

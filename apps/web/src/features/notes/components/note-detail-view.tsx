@@ -71,7 +71,9 @@ function NoteDetailContent({
     // Owners can always edit/manage; recipients check their permission field
     const canEdit = owned || perm === 'EDIT';
     const canManage = owned;
-    const collaborative = Boolean(shared && canEdit);
+    
+    // Even READ-only users should be in collaboration mode to see real-time updates
+    const collaborative = shared;
 
     return { 
       isOwnedNote: owned, 
@@ -80,7 +82,7 @@ function NoteDetailContent({
       canManageShares: canManage,
       isCollaborativeNote: collaborative
     };
-  }, [note.id]); // ONLY re-calculate if the note ID changes (i.e. we switched notes)
+  }, [note.id, note.accessMode, note.sharedPermission, note.isShared]); // Re-calculate if permission fields change
 
   const { data: shares = [] } = useNoteShares(isOwnedNote ? noteId : null);
   const updateMutation = useUpdateNote(noteId);
@@ -311,6 +313,10 @@ function NoteDetailContent({
     onNoteDeleted: (id) => {
       console.warn('[NoteDetailView] Note deleted by owner, redirecting...', id);
       navigate('/notes');
+    },
+    onPermissionsUpdated: () => {
+      console.warn('[NoteDetailView] Permissions updated, refetching...');
+      queryClient.invalidateQueries({ queryKey: NOTES_KEYS.detail(noteId) });
     },
   });
 

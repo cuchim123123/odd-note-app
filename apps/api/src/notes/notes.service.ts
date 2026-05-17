@@ -240,6 +240,8 @@ export class NotesService {
       this.clearCollaborationSnapshot(noteId),
       this.clearYDocState(noteId),
     ]);
+
+    void this.notifyCollaborationChange(noteId, 'note_deleted');
   }
 
   async listShares(userId: string, noteId: string): Promise<NoteShareResponse[]> {
@@ -336,6 +338,8 @@ export class NotesService {
       // Don't fail the share operation if notification creation fails
     }
 
+    void this.notifyCollaborationChange(noteId, 'permissions_updated');
+
     return {
       id: share.id,
       recipientEmail: share.recipientEmail,
@@ -369,6 +373,8 @@ export class NotesService {
       include: { recipient: { select: { displayName: true } } },
     });
 
+    void this.notifyCollaborationChange(noteId, 'permissions_updated');
+
     return {
       id: updated.id,
       recipientEmail: updated.recipientEmail,
@@ -391,6 +397,7 @@ export class NotesService {
     }
 
     await this.prisma.noteShare.delete({ where: { id: shareId } });
+    void this.notifyCollaborationChange(noteId, 'permissions_updated');
     return { removed: true };
   }
 
@@ -602,6 +609,14 @@ export class NotesService {
       sharedBy: share.owner,
       sharedAt: share.createdAt.toISOString(),
     };
+  }
+
+  private async notifyCollaborationChange(noteId: string, type: 'permissions_updated' | 'note_deleted'): Promise<void> {
+    try {
+      await this.redis.getClient().publish('collaboration:events', JSON.stringify({ type, noteId }));
+    } catch (err) {
+      console.error('Failed to publish collaboration event', err);
+    }
   }
 
   private collaborationSnapshotKey(noteId: string): string {

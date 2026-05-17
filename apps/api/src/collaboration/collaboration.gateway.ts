@@ -55,6 +55,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   private readonly logger = new Logger(CollaborationGateway.name);
   private pubClient: Redis | null = null;
   private subClient: Redis | null = null;
+  private internalSubClient: Redis | null = null;
   private redisEnabled = false;
   private redisWarningLogged = false;
 
@@ -90,17 +91,37 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       try {
         this.pubClient = this.redis.createClient();
         this.subClient = this.redis.createClient();
+        this.internalSubClient = this.redis.createClient();
 
         // Ensure the underlying client (shared) is reachable and pub/sub clients respond.
         await Promise.all([
           this.redis.getClient().ping(),
           this.pubClient.ping(),
           this.subClient.ping(),
+          this.internalSubClient.ping(),
         ]);
 
         socketServer.adapter(createAdapter(this.pubClient, this.subClient));
+        
+        // Listen for internal events from NotesService
+        await this.internalSubClient.subscribe('collaboration:events');
+        this.internalSubClient.on('message', (channel, message) => {
+          if (channel === 'collaboration:events') {
+            try {
+              const event = JSON.parse(message) as { type: string; noteId: string };
+              if (event.type === 'permissions_updated') {
+                this.server.to(event.noteId).emit('note:permissions_updated', { noteId: event.noteId });
+              } else if (event.type === 'note_deleted') {
+                this.server.to(event.noteId).emit('note:deleted', { noteId: event.noteId });
+              }
+            } catch (err) {
+              this.logger.error('Failed to process internal collaboration event', err as Error);
+            }
+          }
+        });
+
         this.redisEnabled = true;
-        this.logger.log('Collaboration gateway initialized with Redis adapter');
+        this.logger.log('Collaboration gateway initialized with Redis adapter and internal events listener');
         return;
       } catch (error) {
         this.logger.warn(`Redis initialization attempt ${attempt} failed: ${String(error)}`);
