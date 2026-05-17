@@ -31,8 +31,7 @@ export function useNoteDraftAndAutoSave({
   markLocked,
 }: UseNoteDraftAndAutoSaveProps) {
   const queryClient = useQueryClient();
-  const getUnlockToken = useNoteProtectionStore((s) => s.getUnlockToken);
-  const unlockToken = noteId ? getUnlockToken(noteId) : undefined;
+  const unlockToken = useNoteProtectionStore((s) => noteId ? s.unlockTokens[noteId] : undefined);
 
   const [title, setTitle] = useState(note.title || '');
   const [content, setContent] = useState(note.content || '');
@@ -134,7 +133,7 @@ export function useNoteDraftAndAutoSave({
 
     writeLocalDraft(note.id!, title, normalized);
 
-    void saveNoteDraft(note.id!, title, normalized).catch(() => {
+    void saveNoteDraft(note.id!, title, normalized, unlockToken).catch(() => {
       console.warn('Draft save failed');
     });
 
@@ -155,7 +154,7 @@ export function useNoteDraftAndAutoSave({
           const upd = (await updateNote({ title, content: normalized })) as { updatedAt?: string } | null | undefined;
           setLastSavedAt(upd?.updatedAt || optTime);
           setIsDirty(false);
-          await clearNoteDraft(note.id!).catch(() => {
+          await clearNoteDraft(note.id!, unlockToken).catch(() => {
             console.warn('Failed to clear draft');
           });
           clearLocalDraft(note.id!);
@@ -175,7 +174,7 @@ export function useNoteDraftAndAutoSave({
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
       if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
     };
-  }, [content, note, title, updateNote, isCollaborativeNote, canEditContent]);
+  }, [content, note, title, updateNote, isCollaborativeNote, canEditContent, unlockToken]);
 
   useEffect(() => {
     if (!note || !canEditContent) return;

@@ -87,7 +87,7 @@ function NoteDetailContent({
   const deleteMutation = useDeleteNote(noteId);
 
   const imageInputRef = useRef<HTMLInputElement | null>(null);
-  const isUnlocked = useNoteProtectionStore((state) => state.isUnlocked(noteId));
+  const isUnlocked = useNoteProtectionStore((state) => state.unlockedNoteIds.includes(noteId));
   const markUnlocked = useNoteProtectionStore((state) => state.markUnlocked);
   const markLocked = useNoteProtectionStore((state) => state.markLocked);
 

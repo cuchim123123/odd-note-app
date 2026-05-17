@@ -18,9 +18,10 @@ export async function createNoteInApi(input: CreateNoteInput): Promise<Note> {
   return response.data;
 }
 
-export async function updateNoteInApi(id: string, input: UpdateNoteInput & { isProtected?: boolean }): Promise<Note> {
+export async function updateNoteInApi(id: string, input: UpdateNoteInput & { isProtected?: boolean }, unlockToken?: string): Promise<Note> {
   const { isProtected, ...payload } = input;
-  const response = await api.patch<Note>(`/notes/${id}`, payload);
+  const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
+  const response = await api.patch<Note>(`/notes/${id}`, payload, { headers });
   return { ...response.data, isProtected: isProtected ?? response.data.isProtected } as Note;
 }
 

@@ -10,8 +10,7 @@ interface UseNotePersistenceProps {
 }
 
 export function useNotePersistence({ note, canEditContent, updateNote }: UseNotePersistenceProps) {
-  const getUnlockToken = useNoteProtectionStore((s) => s.getUnlockToken);
-  const unlockToken = note?.id ? getUnlockToken(note.id) : undefined;
+  const unlockToken = useNoteProtectionStore((s) => note?.id ? s.unlockTokens[note.id] : undefined);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -174,12 +173,12 @@ export function useNotePersistence({ note, canEditContent, updateNote }: UseNote
 
     const timeoutId = window.setTimeout(() => {
       if (noteId === loadedNoteIdRef.current) {
-        void saveNoteDraft(noteId, title, content);
+        void saveNoteDraft(noteId, title, content, unlockToken);
       }
     }, 300);
 
     return () => window.clearTimeout(timeoutId);
-  }, [canEditContent, content, note, title]);
+  }, [canEditContent, content, note, title, unlockToken]);
 
   // Autosave Server
   useEffect(() => {
@@ -200,7 +199,7 @@ export function useNotePersistence({ note, canEditContent, updateNote }: UseNote
         if (noteId === loadedNoteIdRef.current) {
           setLastSavedAt(updated.updatedAt ?? new Date().toISOString());
           setIsDirty(false);
-          await clearNoteDraft(noteId);
+          await clearNoteDraft(noteId, unlockToken);
           clearLocalDraft(noteId);
         }
       } catch (error) {
@@ -209,7 +208,7 @@ export function useNotePersistence({ note, canEditContent, updateNote }: UseNote
     }, 2000);
 
     return () => window.clearTimeout(timeoutId);
-  }, [canEditContent, content, note, title, updateNote]);
+  }, [canEditContent, content, note, title, updateNote, unlockToken]);
 
   // Ensure localStorage contains latest draft on page unload (synchronous)
   useEffect(() => {

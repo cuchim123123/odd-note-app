@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/axios';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
@@ -244,7 +244,7 @@ export async function getNoteDraft(noteId: string, unlockToken?: string): Promis
   return response.data;
 }
 
-export async function saveNoteDraft(noteId: string, title: string, content: string): Promise<{ saved: true; updatedAt: string }> {
+export async function saveNoteDraft(noteId: string, title: string, content: string, unlockToken?: string): Promise<{ saved: true; updatedAt: string }> {
   if (!backendNotesAvailable()) {
     const updatedAt = now();
     try {
@@ -266,11 +266,12 @@ export async function saveNoteDraft(noteId: string, title: string, content: stri
     }
   }
 
-  const response = await api.post<{ saved: true; updatedAt: string }>(`/notes/${noteId}/draft`, { title, content });
+  const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
+  const response = await api.post<{ saved: true; updatedAt: string }>(`/notes/${noteId}/draft`, { title, content }, { headers });
   return response.data;
 }
 
-export async function clearNoteDraft(noteId: string): Promise<{ cleared: true }> {
+export async function clearNoteDraft(noteId: string, unlockToken?: string): Promise<{ cleared: true }> {
   if (!backendNotesAvailable()) {
     try {
       const db = await openNotesDb();
@@ -291,7 +292,8 @@ export async function clearNoteDraft(noteId: string): Promise<{ cleared: true }>
     }
   }
 
-  const response = await api.delete<{ cleared: true }>(`/notes/${noteId}/draft`);
+  const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
+  const response = await api.delete<{ cleared: true }>(`/notes/${noteId}/draft`, { headers });
   return response.data;
 }
 
@@ -324,12 +326,12 @@ export const useSharedNotes = () => {
 };
 
 export const useNote = (id: string | null) => {
-  const getUnlockToken = useNoteProtectionStore((s) => s.getUnlockToken);
-  const unlockToken = id ? getUnlockToken(id) : undefined;
+  const unlockToken = useNoteProtectionStore((s) => id ? s.unlockTokens[id] : undefined);
 
   return useQuery<NoteDetailItem>({
     queryKey: [...NOTES_KEYS.detail(id!), unlockToken],
     enabled: !!id,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       if (!backendNotesAvailable()) {
         return (await getOfflineNote(id!)) as NoteDetailItem;
@@ -454,16 +456,22 @@ export const useUpdateNote = (id: string) => {
         return updatedNote;
       }
 
-      const updatedNote = await updateNoteInApi(id, data);
+      const getUnlockToken = useNoteProtectionStore.getState().getUnlockToken;
+      const unlockToken = getUnlockToken(id);
+      const updatedNote = await updateNoteInApi(id, data, unlockToken);
       await upsertNoteInDb(updatedNote);
       return updatedNote;
     },
     onMutate: async (input) => {
+      const getUnlockToken = useNoteProtectionStore.getState().getUnlockToken;
+      const unlockToken = getUnlockToken(id);
+      const queryKey = [...NOTES_KEYS.detail(id), unlockToken];
+
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });
-      await queryClient.cancelQueries({ queryKey: NOTES_KEYS.detail(id) });
+      await queryClient.cancelQueries({ queryKey });
 
       const previousNotes = queryClient.getQueryData<Note[]>(NOTES_KEYS.all);
-      const previousDetailQueries = queryClient.getQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(id) });
+      const previousDetail = queryClient.getQueryData<NoteDetailItem>(queryKey);
 
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
         currentNotes.map((note) =>
@@ -481,7 +489,7 @@ export const useUpdateNote = (id: string) => {
         ),
       );
 
-      queryClient.setQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(id) }, (currentNote: NoteDetailItem | undefined) =>
+      queryClient.setQueryData<NoteDetailItem>(queryKey, (currentNote) =>
         currentNote
           ? ({
               ...currentNote,
@@ -495,26 +503,26 @@ export const useUpdateNote = (id: string) => {
           : currentNote,
       );
 
-      return { previousNotes, previousDetailQueries };
+      return { previousNotes, previousDetail, queryKey };
     },
     onError: (_error, _input, context) => {
       if (context?.previousNotes) {
         queryClient.setQueryData(NOTES_KEYS.all, context.previousNotes);
       }
 
-      if (context?.previousDetailQueries) {
-        context.previousDetailQueries.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
+      if (context?.previousDetail && context?.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousDetail);
       }
     },
-    onSuccess: (updatedNote) => {
+    onSuccess: (updatedNote, _variables, context) => {
       queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
         currentNotes.map((note) =>
           note.id === id ? { ...note, ...updatedNote } : note
         ),
       );
-      queryClient.setQueriesData<NoteDetailItem>({ queryKey: NOTES_KEYS.detail(id) }, (current) =>
+      
+      const queryKey = context?.queryKey ?? [...NOTES_KEYS.detail(id), useNoteProtectionStore.getState().getUnlockToken(id)];
+      queryClient.setQueryData<NoteDetailItem>(queryKey, (current) =>
         current ? { ...current, ...updatedNote } : updatedNote
       );
       void upsertNoteInDb(updatedNote);

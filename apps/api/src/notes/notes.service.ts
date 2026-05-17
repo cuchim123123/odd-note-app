@@ -174,6 +174,7 @@ export class NotesService {
     userId: string,
     noteId: string,
     input: { title?: string; content?: string; isPinned?: boolean; isShared?: boolean; labels?: string[] },
+    unlockToken?: string,
   ): Promise<NoteResponse> {
     const existing = await this.prisma.note.findFirst({
       where: {
@@ -220,7 +221,7 @@ export class NotesService {
     );
     const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
     const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
-    return await this.toResponse(noteWithShares, undefined, snapshot, yDocContent ?? undefined);
+     return await this.toResponse(noteWithShares, undefined, snapshot, yDocContent ?? undefined, userId, unlockToken);
   }
 
   async delete(userId: string, noteId: string): Promise<void> {

@@ -111,8 +111,7 @@ export function useYjsCollaboration({
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const refreshToken = useAuthStore((state) => state.refreshToken);
-  const getUnlockToken = useNoteProtectionStore((s) => s.getUnlockToken);
-  const unlockToken = noteId ? getUnlockToken(noteId) : undefined;
+  const unlockToken = useNoteProtectionStore((s) => noteId ? s.unlockTokens[noteId] : undefined);
 
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [presenceParticipants, setPresenceParticipants] = useState<PresenceParticipant[]>([]);

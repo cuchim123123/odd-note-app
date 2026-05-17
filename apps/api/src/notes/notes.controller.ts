@@ -86,9 +86,10 @@ export class NotesController {
       labels?: string[];
     },
     @Headers('authorization') authorizationHeader?: string,
+    @Headers('x-note-unlock-token') unlockToken?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.update(userId, this.parseNoteId(noteId), body);
+    return await this.notesService.update(userId, this.parseNoteId(noteId), body, unlockToken);
   }
 
   @Delete(':noteId')
