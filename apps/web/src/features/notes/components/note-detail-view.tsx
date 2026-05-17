@@ -156,7 +156,7 @@ function NoteDetailContent({
   const [labelManagementOpen, setLabelManagementOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc, sendDelete } = useYjsCollaboration({
+  const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc, sendDelete, isSynced } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
     enabled: Boolean(isCollaborativeNote),
     onRemoteContentUpdate: handleRemoteContentUpdate,
@@ -321,6 +321,7 @@ function NoteDetailContent({
             collaborative={Boolean(isCollaborativeNote)}
             yDoc={yDoc ?? undefined}
             isOwner={isOwnedNote}
+            isSynced={isSynced}
             onEditorInit={setEditor}
             {...(canEditContent ? {
               onChange: setContent,

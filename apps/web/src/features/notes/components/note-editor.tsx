@@ -29,6 +29,7 @@ type NoteEditorProps = {
   collaborative?: boolean;
   yDoc?: Y.Doc | undefined;
   isOwner?: boolean;
+  isSynced?: boolean;
   onEditorInit?: (editor: Editor) => void;
 };
 
@@ -41,6 +42,7 @@ export function NoteEditor({
   collaborative = false,
   yDoc,
   isOwner = false,
+  isSynced = false,
   onEditorInit,
 }: NoteEditorProps) {
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
@@ -80,14 +82,6 @@ export function NoteEditor({
     ...(yDoc ? {} : { content }),
     editable: !readOnly,
     onCreate: ({ editor: ed }) => {
-      // Seeding logic: ONLY the owner should seed to avoid conflicts
-      if (collaborative && isOwner && yDoc && content) {
-        const fragment = yDoc.getXmlFragment('prosemirror');
-        if (fragment.length === 0) {
-          console.warn('[NoteEditor] Owner seeding empty Yjs document');
-          ed.commands.setContent(content, false);
-        }
-      }
 
       const extensionNames = ed.extensionManager.extensions.map((extension) => extension.name);
       const pluginKeys = ed.state.plugins.map((plugin) => String((plugin as { key?: string }).key ?? ''));
@@ -117,6 +111,17 @@ export function NoteEditor({
       onEditorInit(editor);
     }
   }, [editor, onEditorInit]);
+
+  // Seeding logic: ONLY the owner should seed empty Yjs documents after initial sync is complete
+  useEffect(() => {
+    if (collaborative && isOwner && yDoc && content && isSynced && editor) {
+      const fragment = yDoc.getXmlFragment('prosemirror');
+      if (fragment.length === 0) {
+        console.warn('[NoteEditor] Owner seeding empty Yjs document after initial sync');
+        editor.commands.setContent(content, false);
+      }
+    }
+  }, [collaborative, isOwner, yDoc, content, isSynced, editor]);
 
   useEffect(() => {
     if (!editor || !editor.view?.dom) {

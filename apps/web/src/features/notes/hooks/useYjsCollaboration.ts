@@ -118,6 +118,7 @@ export function useYjsCollaboration({
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [yDoc, setYDoc] = useState<Y.Doc | null>(null);
+  const [isSynced, setIsSynced] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteUpdateRef = useRef(false);
@@ -142,6 +143,7 @@ export function useYjsCollaboration({
       setTypingParticipants([]);
       setIsConnected(false);
       setYDoc(null);
+      setIsSynced(false);
       return;
     }
 
@@ -355,6 +357,7 @@ export function useYjsCollaboration({
       if (data.noteId === noteId) {
         console.warn('[Yjs] received yjs:sync-step-2', data.update.length);
         handleRemoteUpdate(new Uint8Array(data.update));
+        setIsSynced(true);
 
         // If server sent its state vector, send back our missing updates (Step 3)
         if (data.stateVector) {
@@ -409,6 +412,7 @@ export function useYjsCollaboration({
       setPresenceParticipants([]);
       setTypingParticipants([]);
       setYDoc(null);
+      setIsSynced(false);
     };
   }, [accessToken, enabled, noteId, refreshToken, user, unlockToken]);
 
@@ -430,6 +434,7 @@ export function useYjsCollaboration({
     typingParticipants,
     isConnected,
     yDoc,
+    isSynced,
     sendContentUpdate,
     sendTypingState,
     sendDelete: () => {
