@@ -51,7 +51,7 @@ export function ChangePasswordForm() {
     } catch (err: unknown) {
       const errorResponse = err as { response?: { data?: { message?: string | string[] } } };
       const message = errorResponse.response?.data?.message || 'Failed to change password. Please check your credentials.';
-      setError(Array.isArray(message) ? message[0] : message);
+      setError(Array.isArray(message) ? (message[0] || 'Failed to change password.') : message);
     }
   };
 

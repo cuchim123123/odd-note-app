@@ -21,6 +21,7 @@ export function NoteToolbar({
   canEditContent,
   canManageShares,
   imageInputRef,
+  onImageFileChange,
   onOpenSharing,
   onOpenProtection,
   onPin,
@@ -43,6 +44,7 @@ export function NoteToolbar({
   canEditContent: boolean;
   canManageShares: boolean;
   imageInputRef: React.RefObject<HTMLInputElement>;
+  onImageFileChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenSharing: () => void;
   onOpenProtection: (mode: 'protect' | 'remove') => void;
   onPin: () => void;
@@ -138,7 +140,7 @@ export function NoteToolbar({
           />
           <div className="w-px h-6 bg-border/60 mx-1" />
           {canManageShares && <Button type="button" size="sm" variant="outline" onClick={onOpenSharing}><Share2 className="mr-2 h-4 w-4" />Share</Button>}
-          <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" />
+          <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onImageFileChange} />
           <Button size="sm" variant="ghost" onClick={() => imageInputRef.current?.click()} disabled={isSaving || !canEditContent}><ImagePlus className="w-4 h-4" /></Button>
           <Button size="sm" variant="ghost" onClick={() => onOpenProtection(note.isProtected ? 'remove' : 'protect')} disabled={isSaving || !canEditContent || !canManageShares}><Lock className="w-4 h-4" /></Button>
           <Button size="sm" variant="ghost" onClick={onPin} disabled={isSaving || !canEditContent || !canManageShares}><Pin className="w-4 h-4" /></Button>

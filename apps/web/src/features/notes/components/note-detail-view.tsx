@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Doc as YDoc } from 'yjs';
+import type { Editor } from '@tiptap/react';
 import {
   useNote,
   useUpdateNote,
@@ -14,6 +15,7 @@ import {
   clearNoteDraft,
   NOTES_KEYS,
   type NoteDetailItem,
+  useUploadNoteImage,
 } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { NoteEditor } from './note-editor';
@@ -94,6 +96,44 @@ function NoteDetailContent({
   const isUnlocked = useNoteProtectionStore((state) => state.isUnlocked(noteId));
   const markUnlocked = useNoteProtectionStore((state) => state.markUnlocked);
   const markLocked = useNoteProtectionStore((state) => state.markLocked);
+
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const uploadImageMutation = useUploadNoteImage();
+
+  const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0 || !editor) return;
+
+    setIsUploadingImage(true);
+    try {
+      const uploadPromises = files.map(async (file) => {
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error(`File ${file.name} is too large. Max size is 10MB.`);
+        }
+        const res = await uploadImageMutation.mutateAsync(file);
+        return res.url;
+      });
+      
+      const urls = await Promise.all(uploadPromises);
+
+      let chain = editor.chain().focus();
+      for (const url of urls) {
+        chain = chain.setImage({ src: url }).createParagraphNear();
+      }
+      chain.run();
+      
+      setContent(editor.getHTML());
+    } catch (err: unknown) {
+      console.error('Failed to upload image(s):', err);
+      alert(err instanceof Error ? err.message : 'Failed to upload one or more images.');
+    } finally {
+      setIsUploadingImage(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
+      }
+    }
+  };
 
   // INITIALIZE STATE DIRECTLY FROM NOTE
   const [title, setTitle] = useState(note.title || '');
@@ -381,7 +421,7 @@ function NoteDetailContent({
         title={title}
         onTitleChange={handleTitleChange}
         isDirty={isDirty}
-        isSaving={isSavingLocal || isSaving}
+        isSaving={isSavingLocal || isSaving || isUploadingImage}
         lastSavedAt={lastSavedAt}
         saveError={saveError}
         isCollaborativeNote={isCollaborativeNote}
@@ -390,6 +430,7 @@ function NoteDetailContent({
         canEditContent={canEditContent}
         canManageShares={canManageShares}
         imageInputRef={imageInputRef}
+        onImageFileChange={handleImageFileChange}
         onOpenSharing={() => setShareModalOpen(true)}
         onOpenProtection={(mode) => setProtectionMode(mode)}
         onPin={async () => {
@@ -486,6 +527,7 @@ function NoteDetailContent({
             collaborative={Boolean(isCollaborativeNote)}
             yDoc={yDoc ?? undefined}
             isOwner={isOwnedNote}
+            onEditorInit={setEditor}
             {...(canEditContent ? {
               onChange: (c: string) => {
                 setContent(c);

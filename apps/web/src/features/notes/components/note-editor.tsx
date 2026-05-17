@@ -3,6 +3,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import Image from '@tiptap/extension-image';
 import Collaboration from '@tiptap/extension-collaboration';
 import { useEffect, useMemo, useRef } from 'react';
 import * as Y from 'yjs';
@@ -17,6 +18,8 @@ import {
   NOTE_EDITOR_WRAPPER_CLASS,
 } from '../constants/note-editor.constants';
 
+import type { Editor } from '@tiptap/react';
+
 type NoteEditorProps = {
   content?: string | undefined;
   onChange?: (content: string) => void;
@@ -26,9 +29,20 @@ type NoteEditorProps = {
   collaborative?: boolean;
   yDoc?: Y.Doc | undefined;
   isOwner?: boolean;
+  onEditorInit?: (editor: Editor) => void;
 };
 
-export function NoteEditor({ content = '', onChange, readOnly = false, onInsertImage, syncKey, collaborative = false, yDoc, isOwner = false }: NoteEditorProps) {
+export function NoteEditor({
+  content = '',
+  onChange,
+  readOnly = false,
+  onInsertImage,
+  syncKey,
+  collaborative = false,
+  yDoc,
+  isOwner = false,
+  onEditorInit,
+}: NoteEditorProps) {
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -49,6 +63,7 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
     extensions: [
       starterKit,
       Underline,
+      Image,
       Link.configure({
         openOnClick: false,
         autolink: true,
@@ -96,6 +111,12 @@ export function NoteEditor({ content = '', onChange, readOnly = false, onInsertI
       },
     },
   });
+
+  useEffect(() => {
+    if (editor && onEditorInit) {
+      onEditorInit(editor);
+    }
+  }, [editor, onEditorInit]);
 
   useEffect(() => {
     if (!editor || !editor.view?.dom) {

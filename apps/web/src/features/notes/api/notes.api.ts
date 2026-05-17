@@ -765,3 +765,21 @@ export const useBulkAddLabel = () => {
     },
   });
 };
+
+/**
+ * Mutation hook to upload a note image to S3/MinIO.
+ */
+export const useUploadNoteImage = () => {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await api.post<{ url: string; signedUrl: string; key: string }>('/uploads', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    },
+  });
+};
