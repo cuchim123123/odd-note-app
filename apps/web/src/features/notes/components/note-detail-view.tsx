@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Doc as YDoc } from 'yjs';
@@ -9,15 +9,10 @@ import {
   useDeleteNote,
   useNoteShares,
   useCreateNoteShare,
-  getNoteProtectionStatus,
-  getNoteDraft,
-  saveNoteDraft,
-  clearNoteDraft,
   NOTES_KEYS,
   type NoteDetailItem,
   useUploadNoteImage,
 } from '../api/notes.api';
-import type { Note } from '@odd-note-app/validation';
 import { NoteEditor } from './note-editor';
 import { NoteToolbar } from './note-toolbar';
 import { ProtectionPanel, ProtectionUnlockPrompt } from './protection-panel';
@@ -27,8 +22,7 @@ import { Button } from '../../../components/ui/button';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
 import { useYjsCollaboration } from '../hooks/useYjsCollaboration';
 import { ProtectedNoteRoute, type ProtectedNote } from './protected-note-route';
-import { normalizeNoteHtml, safeTimestamp } from '../utils/note-html';
-import { clearLocalDraft, readLocalDraft, writeLocalDraft } from '../utils/note-draft.storage';
+import { useNoteDraftAndAutoSave } from '../hooks/use-note-draft-autosave';
 
 function getYDocDebugId(yDoc?: YDoc | null): string {
   const debugDoc = yDoc as YDoc & { guid?: string | number; clientID?: string | number };
@@ -135,223 +129,32 @@ function NoteDetailContent({
     }
   };
 
-  // INITIALIZE STATE DIRECTLY FROM NOTE
-  const [title, setTitle] = useState(note.title || '');
-  const [content, setContent] = useState(note.content || '');
-  const [isDirty, setIsDirty] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(note.updatedAt || null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [isSavingLocal, setIsSavingLocal] = useState(false);
+  const {
+    title,
+    content,
+    setContent,
+    isDirty,
+    lastSavedAt,
+    saveError,
+    isSavingLocal,
+    serverProtectionStatus,
+    setServerProtectionStatus,
+    handleTitleChange,
+    handleSaveTitle,
+    handleRemoteContentUpdate,
+  } = useNoteDraftAndAutoSave({
+    noteId,
+    note,
+    canEditContent,
+    isCollaborativeNote: Boolean(isCollaborativeNote),
+    updateNote,
+    markLocked,
+  });
+
   const [protectionMode, setProtectionMode] = useState<'idle' | 'protect' | 'remove'>('idle');
-  const [serverProtectionStatus, setServerProtectionStatus] = useState<boolean | null>(note.isProtected ?? null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [labelManagementOpen, setLabelManagementOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const isRemoteUpdateRef = useRef(false);
-  const draftTimeoutRef = useRef<NodeJS.Timeout>();
-  const serverTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // Sync server updates for the CURRENT note (e.g. from other tabs)
-  // Only sync if we are NOT dirty and NOT currently applying a remote update
-  useEffect(() => {
-    if (isDirty || isRemoteUpdateRef.current) return;
-    
-    // Sync title/content if they changed on server while we were idle
-    if (note.title !== title) setTitle(note.title || '');
-    if (normalizeNoteHtml(note.content) !== normalizeNoteHtml(content)) {
-      setContent(note.content || '');
-    }
-    setLastSavedAt(note.updatedAt || null);
-  }, [note.title, note.content, note.updatedAt]);
-
-  // Relock note when navigating away or unmounting (ensure E2E prompt on next enter)
-  useEffect(() => {
-    return () => {
-      markLocked(noteId);
-    };
-  }, [noteId, markLocked]);
-
-  // Sync protection status
-  useEffect(() => {
-    if (!note) return;
-    let canceled = false;
-    getNoteProtectionStatus(noteId)
-      .then((r) => {
-        if (!canceled) {
-          setServerProtectionStatus(r.isProtected);
-          if (!r.isProtected) markLocked(noteId);
-        }
-      })
-      .catch(() => {
-        if (!canceled) setServerProtectionStatus(note.isProtected ?? null);
-      });
-    return () => { canceled = true; };
-  }, [note?.id, noteId, markLocked, note?.isProtected]);
-
-  // Load draft - only if we have permission to edit
-  useEffect(() => {
-    if (!note || !canEditContent) return;
-    let canceled = false;
-    const localDraft = readLocalDraft(note.id!);
-    if (localDraft) {
-      const draftEmpty = !localDraft.title.trim() && !localDraft.content.trim();
-      const noteEmpty = !note.title?.trim() && !note.content?.trim();
-      if (!(draftEmpty && !noteEmpty)) {
-        const draftTime = safeTimestamp(localDraft.updatedAt);
-        const noteTime = safeTimestamp(note.updatedAt);
-        if (draftTime >= noteTime) {
-          setTitle(localDraft.title);
-          setContent(localDraft.content);
-          return () => { canceled = true; };
-        }
-      }
-    }
-
-    getNoteDraft(note.id!)
-      .then((d) => {
-        if (!d || canceled) return;
-        const draftEmpty = !d.title.trim() && !d.content.trim();
-        const noteEmpty = !note.title?.trim() && !note.content?.trim();
-        if (draftEmpty && !noteEmpty) return;
-        const draftTime = safeTimestamp(d.updatedAt);
-        const noteTime = safeTimestamp(note.updatedAt);
-        if (draftTime >= noteTime) {
-          setTitle(d.title);
-          setContent(d.content);
-        }
-      })
-      .catch(() => {});
-    return () => { canceled = true; };
-  }, [note?.id, canEditContent]);
-
-
-  // AGGRESSIVE AUTOSAVE: Always save immediately to IndexedDB, then to server
-  useEffect(() => {
-    if (!canEditContent) return;
-
-    const normalized = normalizeNoteHtml(content);
-    const changed = normalized !== normalizeNoteHtml(note.content || '');
-
-    if (!changed) {
-      setIsDirty(false);
-      return;
-    }
-
-    // Set dirty immediately
-    setIsDirty(true);
-    setSaveError(null);
-
-    // SAVE DRAFT TO INDEXEDDB IMMEDIATELY (no delay!)
-    writeLocalDraft(note.id!, title, normalized);
-
-    void saveNoteDraft(note.id!, title, normalized).catch(() => {
-      console.warn('Draft save failed');
-    });
-
-    // Clear previous timeouts
-    if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
-    if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
-
-    if (isCollaborativeNote) {
-      // Collaborative content is synced via Yjs updates from the editor.
-      // Do not send full-content `note:update` payloads here because that can
-      // reset selection/cursor positions on all clients.
-      serverTimeoutRef.current = setTimeout(() => {
-        setLastSavedAt(new Date().toISOString());
-      }, 300);
-    } else {
-      // For solo notes: save to server immediately with optimistic UI
-      serverTimeoutRef.current = setTimeout(async () => {
-        const optTime = new Date().toISOString();
-        setLastSavedAt(optTime);
-        setSaveError(null);
-        setIsSavingLocal(true);
-
-        try {
-          const upd = await updateNote({ title, content: normalized });
-          setLastSavedAt(upd.updatedAt || optTime);
-          setIsDirty(false);
-          // Only clear draft if server save succeeds
-          await clearNoteDraft(note.id!).catch(() => {
-            console.warn('Failed to clear draft');
-          });
-          clearLocalDraft(note.id!);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : 'Failed';
-          // Only show error if it's not a network error (those are expected when offline)
-          if (!msg.toLowerCase().includes('offline') && !msg.toLowerCase().includes('network') && !msg.toLowerCase().includes('connect')) {
-            setSaveError(msg);
-          }
-          // Keep draft in IndexedDB on any error - user can recover on reload
-          console.warn('Server save failed, draft preserved:', msg);
-        } finally {
-          setIsSavingLocal(false);
-        }
-      }, 300);
-    }
-
-    return () => {
-      if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
-      if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
-    };
-  }, [content, note, title, updateNote, isCollaborativeNote, canEditContent]);
-
-  useEffect(() => {
-    if (!note || !canEditContent) return;
-
-    const flushLocalDraft = () => {
-      writeLocalDraft(note.id!, title, content);
-    };
-
-    window.addEventListener('beforeunload', flushLocalDraft);
-    window.addEventListener('pagehide', flushLocalDraft);
-
-    return () => {
-      window.removeEventListener('beforeunload', flushLocalDraft);
-      window.removeEventListener('pagehide', flushLocalDraft);
-    };
-  }, [note?.id, canEditContent, title, content]);
-
-  const handleRemoteContentUpdate = useCallback((d: { userId: string; content: string; title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined; timestamp?: string | number }) => {
-    isRemoteUpdateRef.current = true;
-    if (d.title !== undefined && noteId) {
-      setTitle(d.title);
-      const ut = new Date().toISOString();
-      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
-        ns.map((n) => n.id === noteId ? { ...n, title: d.title, updatedAt: ut } as Note : n),
-      );
-      queryClient.setQueryData<NoteDetailItem>(NOTES_KEYS.detail(noteId), (n) =>
-        n ? ({ ...n, title: d.title, updatedAt: ut } as NoteDetailItem) : n,
-      );
-    }
-    if (d.isProtected !== undefined) setServerProtectionStatus(d.isProtected);
-    if (d.labels !== undefined && noteId) {
-      const ut = new Date().toISOString();
-      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
-        ns.map((n) => n.id === noteId ? { ...n, labels: d.labels ?? n.labels, updatedAt: ut } as Note : n),
-      );
-      queryClient.setQueryData<Note>(NOTES_KEYS.detail(noteId), (n) =>
-        n ? ({ ...n, labels: d.labels ?? n.labels, updatedAt: ut } as Note) : n,
-      );
-    }
-    if (d.isPinned !== undefined && noteId && note) {
-      const ut = new Date().toISOString();
-      queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (ns = []) =>
-        ns.map((n) => n.id === noteId ? { ...n, isPinned: d.isPinned ?? n.isPinned, updatedAt: ut } as Note : n),
-      );
-      queryClient.setQueryData<Note>(NOTES_KEYS.detail(noteId!), (n) =>
-        n ? ({ ...n, isPinned: (d.isPinned ?? n.isPinned) as boolean, updatedAt: ut } as Note) : n,
-      );
-    }
-    if (!isCollaborativeNote) {
-      setContent(d.content);
-    }
-    const ts = d.timestamp ? new Date(d.timestamp).toISOString() : new Date().toISOString();
-    setLastSavedAt(ts);
-    setIsDirty(false);
-    setSaveError(null);
-    requestAnimationFrame(() => { isRemoteUpdateRef.current = false; });
-  }, [isCollaborativeNote, noteId, note, queryClient]);
 
   const { presenceParticipants, isConnected: isWsConnected, sendContentUpdate, yDoc, sendDelete } = useYjsCollaboration({
     noteId: isCollaborativeNote ? noteId : null,
@@ -400,23 +203,9 @@ function NoteDetailContent({
     }
   };
 
-  const handleTitleChange = (newTitle: string) => {
-    setTitle(newTitle);
-    writeLocalDraft(note.id!, newTitle, content);
-  };
-
-  const handleSaveTitle = async () => {
-    if (!note || title === note.title || !title.trim()) return;
-    
-    try {
-      await updateNote({ title });
-      
-      // Broadcast to other participants in realtime
-      broadcast({ title });
-    } catch (e) {
-      console.error('Failed to save title', e);
-    }
-  };
+  const onTitleSave = useCallback(async () => {
+    await handleSaveTitle(broadcast);
+  }, [handleSaveTitle, broadcast]);
 
   const onUnauthorized = () => navigate('/notes');
 
@@ -452,7 +241,7 @@ function NoteDetailContent({
         isSharedNote={isSharedNote}
         onToggleLabel={handleToggleLabel}
         onOpenLabelManagement={() => setLabelManagementOpen(true)}
-        onSaveTitle={handleSaveTitle}
+        onSaveTitle={onTitleSave}
       />
 
       {deleteConfirmOpen && (
@@ -536,10 +325,7 @@ function NoteDetailContent({
             isOwner={isOwnedNote}
             onEditorInit={setEditor}
             {...(canEditContent ? {
-              onChange: (c: string) => {
-                setContent(c);
-                writeLocalDraft(note.id!, title, c);
-              },
+              onChange: setContent,
             } : {})}
           />
         </div>
