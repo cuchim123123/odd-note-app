@@ -15,7 +15,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: env.APP_URL ?? 'http://localhost:5173',
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-note-unlock-token', 'X-Note-Unlock-Token'],
     credentials: true,
   });
 
