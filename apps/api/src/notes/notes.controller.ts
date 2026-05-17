@@ -16,6 +16,7 @@ import { JwtConfigService } from '../config';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { createNoteSchema, createNoteShareSchema, updateNoteSchema, updateNoteShareSchema } from '@odd-note-app/validation';
 import { NotesService } from './notes.service';
+import { NotesShareService } from './notes-share.service';
 
 const noteIdSchema = z.string().trim().min(1, 'noteId is required');
 const notePasswordSchema = z.object({
@@ -36,6 +37,7 @@ type AccessTokenPayload = {
 export class NotesController {
   constructor(
     private readonly notesService: NotesService,
+    private readonly notesShareService: NotesShareService,
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
   ) {}
@@ -93,7 +95,7 @@ export class NotesController {
   @Get(':noteId/shares')
   async listShares(@Param('noteId') noteId: string, @Headers('authorization') authorizationHeader?: string) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.listShares(userId, this.parseNoteId(noteId));
+    return await this.notesShareService.listShares(userId, this.parseNoteId(noteId));
   }
 
   @Post(':noteId/shares')
@@ -103,7 +105,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.createShare(userId, this.parseNoteId(noteId), body);
+    return await this.notesShareService.createShare(userId, this.parseNoteId(noteId), body);
   }
 
   @Patch(':noteId/shares/:shareId')
@@ -114,7 +116,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.updateShare(userId, this.parseNoteId(noteId), this.parseNoteId(shareId), body);
+    return await this.notesShareService.updateShare(userId, this.parseNoteId(noteId), this.parseNoteId(shareId), body);
   }
 
   @Delete(':noteId/shares/:shareId')
@@ -124,7 +126,7 @@ export class NotesController {
     @Headers('authorization') authorizationHeader?: string,
   ) {
     const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.deleteShare(userId, this.parseNoteId(noteId), this.parseNoteId(shareId));
+    return await this.notesShareService.deleteShare(userId, this.parseNoteId(noteId), this.parseNoteId(shareId));
   }
 
   @Get(':noteId/protection-status')
