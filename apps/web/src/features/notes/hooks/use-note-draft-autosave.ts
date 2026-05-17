@@ -86,18 +86,34 @@ export function useNoteDraftAndAutoSave({
     let canceled = false;
 
     const loadDraft = async () => {
+      // 1. Try to read emergency synchronous recovery backup first (in case of page crashes / sudden reloads)
+      let backupDraft: { title: string; content: string; updatedAt: string } | null = null;
+      try {
+        const rawBackup = localStorage.getItem(`note-draft-backup:${note.id}`);
+        if (rawBackup) {
+          backupDraft = JSON.parse(rawBackup);
+          // Immediate cleanup to prevent stale draft pollution on next load
+          localStorage.removeItem(`note-draft-backup:${note.id}`);
+        }
+      } catch {
+        // Ignore backup parsing failures
+      }
+
+      // 2. Fall back to standard asynchronous IndexedDB draft store
       const localDraft = await readLocalDraft(note.id!);
       if (canceled) return;
 
-      if (localDraft) {
-        const draftEmpty = !localDraft.title.trim() && !localDraft.content.trim();
+      const primaryDraft = backupDraft || localDraft;
+
+      if (primaryDraft) {
+        const draftEmpty = !primaryDraft.title.trim() && !primaryDraft.content.trim();
         const noteEmpty = !note.title?.trim() && !note.content?.trim();
         if (!(draftEmpty && !noteEmpty)) {
-          const draftTime = safeTimestamp(localDraft.updatedAt);
+          const draftTime = safeTimestamp(primaryDraft.updatedAt);
           const noteTime = safeTimestamp(note.updatedAt);
           if (draftTime >= noteTime) {
-            setTitle(localDraft.title);
-            setContent(localDraft.content);
+            setTitle(primaryDraft.title);
+            setContent(primaryDraft.content);
             return;
           }
         }
@@ -175,6 +191,11 @@ export function useNoteDraftAndAutoSave({
             console.warn('Failed to clear remote draft');
           });
           await clearLocalDraft(note.id!);
+          try {
+            localStorage.removeItem(`note-draft-backup:${note.id}`);
+          } catch {
+            // Ignore storage cleanup errors
+          }
         } catch (e) {
           const msg = e instanceof Error ? e.message : 'Failed';
           if (!msg.toLowerCase().includes('offline') && !msg.toLowerCase().includes('network') && !msg.toLowerCase().includes('connect')) {
@@ -194,11 +215,40 @@ export function useNoteDraftAndAutoSave({
     };
   }, [content, note, title, updateNote, isCollaborativeNote, canEditContent, unlockToken]);
 
+  // Unload Event prompt listener: intercept reloads if active unsaved keystrokes remain
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ''; // Required by modern browsers
+      return '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isDirty]);
+
+  // Page Exit Sync: guaranteed synchronous localStorage dump & async IndexedDB flush on exit
   useEffect(() => {
     if (!note || !canEditContent) return;
 
     const flushLocalDraft = () => {
+      // Best effort async IndexedDB flush
       void writeLocalDraft(note.id!, title, content);
+
+      // Bulletproof synchronous emergency dump to prevent microtask termination on exit
+      try {
+        localStorage.setItem(`note-draft-backup:${note.id}`, JSON.stringify({
+          title,
+          content,
+          updatedAt: new Date().toISOString(),
+        }));
+      } catch {
+        // Ignore quota limits in private browsers
+      }
     };
 
     window.addEventListener('beforeunload', flushLocalDraft);
