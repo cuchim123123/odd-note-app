@@ -54,8 +54,10 @@ export function SharingModal({
       setError('');
       queryClient.invalidateQueries({ queryKey: ['notes', noteId, 'shares'] });
     },
-    onError: (err: Error) => {
-      setError(err.message || 'Failed to share note');
+    onError: (err: unknown) => {
+      const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
+      const serverMessage = axiosError.response?.data?.message;
+      setError(serverMessage || axiosError.message || 'Failed to share note');
     },
   });
 

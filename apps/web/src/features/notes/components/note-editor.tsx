@@ -96,6 +96,9 @@ export function NoteEditor({
       });
     },
     onUpdate: ({ editor: ed }) => {
+      if (collaborative && !isSynced) {
+        return;
+      }
       if (onChange) {
         onChange(ed.getHTML());
       }
