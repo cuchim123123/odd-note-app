@@ -125,3 +125,23 @@ export const deleteNoteFromDb = async (id: string): Promise<void> => {
     // Ignore offline cache write failures.
   }
 };
+
+export const clearAllOfflineData = async (): Promise<void> => {
+  try {
+    const db = await openNotesDb();
+    const stores = [NOTES_STORE_NAME, 'syncQueue', 'metadata', 'drafts'];
+    const tx = db.transaction(stores, 'readwrite');
+    for (const storeName of stores) {
+      if (db.objectStoreNames.contains(storeName)) {
+        tx.objectStore(storeName).clear();
+      }
+    }
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch (err) {
+    console.error('Failed to clear offline IndexedDB data:', err);
+  }
+};

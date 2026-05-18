@@ -301,7 +301,7 @@ export async function clearNoteDraft(noteId: string, unlockToken?: string): Prom
 let isSyncingBodies = false;
 
 export async function syncNoteBodiesInBackground(serverNotes: Note[], queryClient: QueryClient): Promise<void> {
-  if (isSyncingBodies || !backendNotesAvailable()) {
+  if (isSyncingBodies || !backendNotesAvailable() || !useAuthStore.getState().isAuthenticated) {
     return;
   }
 
@@ -342,6 +342,11 @@ export async function syncNoteBodiesInBackground(serverNotes: Note[], queryClien
 
     // Sequentially download note bodies in background to be friendly to network and DB
     for (const noteId of notesToDownload) {
+      // If the user logs out mid-sync, immediately stop the loop!
+      if (!useAuthStore.getState().isAuthenticated) {
+        break;
+      }
+
       // Re-verify dirty state before each individual request (highly defensive)
       const currentQueue = useOfflineSyncStore.getState().syncQueue || [];
       const isCurrentlyDirty = currentQueue.some((q) => q.noteId === noteId);

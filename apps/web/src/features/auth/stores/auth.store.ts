@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { clearAllOfflineData } from '../../notes/api/notes.storage';
 
 export type UserProfile = {
   id: string;
@@ -45,8 +46,10 @@ export const useAuthStore = create<AuthState>()(
           user: state.user ? { ...state.user, ...updates } : null,
         })),
 
-      logout: () =>
-        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
+      logout: () => {
+        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+        void clearAllOfflineData();
+      },
     }),
     {
       name: 'odd-note-auth',
