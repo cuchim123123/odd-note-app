@@ -104,6 +104,19 @@ export class NotesService {
     return map;
   }
 
+  private async getUserNotePinsMap(userId: string, noteIds: string[]): Promise<Record<string, boolean>> {
+    const userPins = await this.prisma.userNotePin.findMany({
+      where: { userId, noteId: { in: noteIds } },
+      select: { noteId: true, isPinned: true },
+    });
+
+    const map: Record<string, boolean> = {};
+    for (const record of userPins) {
+      map[record.noteId] = record.isPinned;
+    }
+    return map;
+  }
+
   async list(userId: string): Promise<NoteResponse[]> {
     const notes = await this.prisma.note.findMany({
       where: { userId },
@@ -111,17 +124,35 @@ export class NotesService {
         shares: { select: { id: true } },
         protection: { select: { id: true } },
       },
-      orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
     });
 
     const noteIds = notes.map((n) => n.id);
     const labelsMap = await this.getUserNoteLabelsMap(userId, noteIds);
+    const pinsMap = await this.getUserNotePinsMap(userId, noteIds);
+
+    const notesWithPersonalFields = notes.map((note) => {
+      const personalLabels = labelsMap[note.id] ?? [];
+      const personalIsPinned = pinsMap[note.id] ?? false;
+      return {
+        ...note,
+        isPinned: personalIsPinned,
+        labels: personalLabels,
+      };
+    });
+
+    // Sort in-memory: isPinned desc, then updatedAt desc
+    notesWithPersonalFields.sort((a, b) => {
+      const aPinned = a.isPinned ? 1 : 0;
+      const bPinned = b.isPinned ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return bPinned - aPinned;
+      }
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 
     return await Promise.all(
-      notes.map(async (note) => {
-        const personalLabels = labelsMap[note.id] ?? [];
-        const noteWithPersonalLabels = { ...note, labels: personalLabels };
-        return this.toResponse(noteWithPersonalLabels as NoteWithRelations, undefined, undefined, undefined, userId, undefined, true);
+      notesWithPersonalFields.map(async (note) => {
+        return this.toResponse(note as NoteWithRelations, undefined, undefined, undefined, userId, undefined, true);
       }),
     );
   }
@@ -144,13 +175,35 @@ export class NotesService {
 
     const noteIds = sharedNotes.map((s) => s.note.id);
     const labelsMap = await this.getUserNoteLabelsMap(userId, noteIds);
+    const pinsMap = await this.getUserNotePinsMap(userId, noteIds);
+
+    const sharedNotesWithPersonalFields = sharedNotes.map((share) => {
+      const personalLabels = labelsMap[share.note.id] ?? [];
+      const personalIsPinned = pinsMap[share.note.id] ?? false;
+      const noteWithPersonalFields = {
+        ...share.note,
+        isPinned: personalIsPinned,
+        labels: personalLabels,
+      };
+      return {
+        ...share,
+        note: noteWithPersonalFields,
+      };
+    });
+
+    // Sort shared notes: isPinned desc, then createdAt desc
+    sharedNotesWithPersonalFields.sort((a, b) => {
+      const aPinned = a.note.isPinned ? 1 : 0;
+      const bPinned = b.note.isPinned ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return bPinned - aPinned;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
     return await Promise.all(
-      sharedNotes.map(async (share) => {
-        const personalLabels = labelsMap[share.note.id] ?? [];
-        const noteWithPersonalLabels = { ...share.note, labels: personalLabels };
-        const shareWithPersonalLabels = { ...share, note: noteWithPersonalLabels };
-        return this.toSharedResponse(shareWithPersonalLabels as ShareRecordWithRelations, undefined, undefined, userId, undefined, true);
+      sharedNotesWithPersonalFields.map(async (share) => {
+        return this.toSharedResponse(share as ShareRecordWithRelations, undefined, undefined, userId, undefined, true);
       }),
     );
   }
@@ -184,10 +237,17 @@ export class NotesService {
       select: { labels: true },
     });
     const personalLabels = personalLabelRecord?.labels ?? [];
-    const noteWithPersonalLabels = { ...note, labels: personalLabels };
+
+    const personalPinRecord = await this.prisma.userNotePin.findUnique({
+      where: { userId_noteId: { userId, noteId } },
+      select: { isPinned: true },
+    });
+    const personalIsPinned = personalPinRecord?.isPinned ?? false;
+
+    const noteWithPersonalFields = { ...note, isPinned: personalIsPinned, labels: personalLabels };
 
     return await this.toResponse(
-      noteWithPersonalLabels as NoteWithRelations,
+      noteWithPersonalFields as NoteWithRelations,
       sharedAccess ? { permission: sharedAccess.permission, owner: sharedAccess.owner, createdAt: sharedAccess.createdAt } : undefined,
       snapshot,
       yDocContent ?? undefined,
@@ -222,7 +282,7 @@ export class NotesService {
       personalLabels = labelRecord.labels;
     }
 
-    const noteWithRelations = { ...note, labels: personalLabels } as NoteWithRelations;
+    const noteWithRelations = { ...note, labels: personalLabels, isPinned: false } as NoteWithRelations;
     const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
     const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
     return await this.toResponse(noteWithRelations, undefined, snapshot, yDocContent ?? undefined);
@@ -265,7 +325,6 @@ export class NotesService {
       data: {
         title: input.title?.trim() ?? existing.title,
         content: input.content ?? existing.content,
-        isPinned: input.isPinned ?? existing.isPinned,
         isShared: input.isShared ?? existing.isShared,
       },
       include: {
@@ -273,6 +332,27 @@ export class NotesService {
         protection: { select: { id: true } },
       },
     });
+
+    let personalIsPinned = false;
+    if (input.isPinned !== undefined) {
+      const upsertedPin = await this.prisma.userNotePin.upsert({
+        where: { userId_noteId: { userId, noteId } },
+        create: {
+          userId,
+          noteId,
+          isPinned: input.isPinned,
+        },
+        update: {
+          isPinned: input.isPinned,
+        },
+      });
+      personalIsPinned = upsertedPin.isPinned;
+    } else {
+      const existingPin = await this.prisma.userNotePin.findUnique({
+        where: { userId_noteId: { userId, noteId } },
+      });
+      personalIsPinned = existingPin?.isPinned ?? false;
+    }
 
     let personalLabels = existing.labels;
     if (input.labels !== undefined) {
@@ -296,7 +376,7 @@ export class NotesService {
       personalLabels = record?.labels ?? [];
     }
 
-    const noteWithRelations = { ...note, labels: personalLabels } as NoteWithRelations;
+    const noteWithRelations = { ...note, labels: personalLabels, isPinned: personalIsPinned } as NoteWithRelations;
     await this.notesCrdtService.persistCollaborationSnapshot(
       noteWithRelations.id,
       noteWithRelations.title,
@@ -318,6 +398,7 @@ export class NotesService {
     await this.prisma.$transaction([
       this.prisma.noteProtection.deleteMany({ where: { userId, noteId } }),
       this.prisma.userNoteLabel.deleteMany({ where: { noteId } }),
+      this.prisma.userNotePin.deleteMany({ where: { noteId } }),
       this.prisma.note.delete({ where: { id: noteId } }),
     ]);
 
