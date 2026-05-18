@@ -204,6 +204,17 @@ function NoteDetailContent({
     },
   });
 
+  // Debounce broadcasting collaborative content updates over WebSocket to update Redis snapshots
+  React.useEffect(() => {
+    if (!isCollaborativeNote || !isWsConnected || !isSynced) return;
+
+    const timer = setTimeout(() => {
+      sendContentUpdate(content);
+    }, 1000); // 1-second debounce to keep database previews fully aligned without flooding the network
+
+    return () => clearTimeout(timer);
+  }, [content, isCollaborativeNote, isWsConnected, isSynced, sendContentUpdate]);
+
 
   const broadcast = useCallback((s: { title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined } = {}) => {
     if (!isCollaborativeNote) return;

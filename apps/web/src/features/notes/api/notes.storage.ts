@@ -83,11 +83,11 @@ export const upsertNoteInDb = async (note: Note): Promise<void> => {
       req.onerror = () => resolve(null);
     });
 
-    // If the new record comes from a projected list query (content is empty),
+    // If the new record comes from a projected list query (content is omitted/undefined),
     // preserve the existing cached rich-text body.
     const mergedNote = {
       ...note,
-      content: ((note.content === '' || note.content === undefined) && existing?.content
+      content: (note.content === undefined && existing?.content
         ? existing.content
         : note.content) ?? '',
     };

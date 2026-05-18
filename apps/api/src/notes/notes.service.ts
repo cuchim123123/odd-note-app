@@ -152,7 +152,17 @@ export class NotesService {
 
     return await Promise.all(
       notesWithPersonalFields.map(async (note) => {
-        return this.toResponse(note as NoteWithRelations, undefined, undefined, undefined, userId, undefined, false);
+        const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
+        const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
+        return this.toResponse(
+          note as NoteWithRelations,
+          undefined,
+          snapshot,
+          yDocContent ?? undefined,
+          userId,
+          undefined,
+          false,
+        );
       }),
     );
   }
@@ -203,7 +213,16 @@ export class NotesService {
 
     return await Promise.all(
       sharedNotesWithPersonalFields.map(async (share) => {
-        return this.toSharedResponse(share as ShareRecordWithRelations, undefined, undefined, userId, undefined, false);
+        const yDocContent = await this.notesCrdtService.readYDocContent(share.note.id);
+        const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(share.note.id);
+        return this.toSharedResponse(
+          share as ShareRecordWithRelations,
+          snapshot,
+          yDocContent ?? undefined,
+          userId,
+          undefined,
+          false,
+        );
       }),
     );
   }

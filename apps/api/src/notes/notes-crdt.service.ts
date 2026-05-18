@@ -82,8 +82,8 @@ export class NotesCrdtService {
         }
       }
 
-      const yText = yDoc.getText('content');
-      return yText.toString();
+      const yXml = yDoc.getXmlFragment('prosemirror');
+      return yXml.toString();
     } catch {
       return null;
     }

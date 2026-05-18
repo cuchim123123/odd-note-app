@@ -66,6 +66,10 @@ export class NotesShareService {
       throw new BadRequestException('Recipient must already have an account');
     }
 
+    if (recipient.id === userId) {
+      throw new BadRequestException('You cannot share a note with yourself');
+    }
+
     const owner = await this.prisma.user.findUnique({ where: { id: userId } });
     const note = await this.prisma.note.findUnique({ where: { id: noteId } });
 
