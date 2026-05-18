@@ -11,7 +11,16 @@ function stripHtml(html: string | undefined): string {
   if (!html) {
     return '';
   }
-  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  // Cleanly identify images and extract alt attributes if available
+  let processed = html.replace(/<img[^>]*alt=["']([^"']*)["'][^>]*>/gi, ' 📷 [$1] ');
+  processed = processed.replace(/<img[^>]*>/gi, ' 📷 [Image] ');
+  
+  // Cleanly identify videos/iframes
+  processed = processed.replace(/<iframe[^>]*>/gi, ' 🎥 [Video] ');
+  processed = processed.replace(/<video[^>]*>/gi, ' 🎥 [Video] ');
+
+  return processed.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function formatPreview(noteContent: string | undefined): string {
@@ -19,7 +28,7 @@ function formatPreview(noteContent: string | undefined): string {
   if (!plainText) {
     return 'No content yet.';
   }
-  return plainText.length > 50 ? `${plainText.slice(0, 50)}…` : plainText;
+  return plainText.length > 80 ? `${plainText.slice(0, 80)}…` : plainText;
 }
 
 type NoteCardProps = {

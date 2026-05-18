@@ -310,10 +310,21 @@ export async function syncNoteBodiesInBackground(serverNotes: Note[], queryClien
     const localNotes = await readAllNotesFromDb();
     const localNotesMap = new Map(localNotes.map((n) => [n.id, n]));
 
+    // Fetch the list of pending offline mutations to prevent overwriting user edits
+    const syncQueue = useOfflineSyncStore.getState().syncQueue || [];
+    const dirtyNoteIds = new Set(
+      syncQueue
+        .map((item) => item.noteId)
+        .filter((id): id is string => typeof id === 'string')
+    );
+
     const notesToDownload: string[] = [];
 
     for (const serverNote of serverNotes) {
       if (!serverNote.id || serverNote.isProtected) continue;
+
+      // Skip dirty notes with pending offline changes to avoid staleness overwriting!
+      if (dirtyNoteIds.has(serverNote.id)) continue;
 
       const localNote = localNotesMap.get(serverNote.id);
 
@@ -331,6 +342,11 @@ export async function syncNoteBodiesInBackground(serverNotes: Note[], queryClien
 
     // Sequentially download note bodies in background to be friendly to network and DB
     for (const noteId of notesToDownload) {
+      // Re-verify dirty state before each individual request (highly defensive)
+      const currentQueue = useOfflineSyncStore.getState().syncQueue || [];
+      const isCurrentlyDirty = currentQueue.some((q) => q.noteId === noteId);
+      if (isCurrentlyDirty) continue;
+
       try {
         const fullNote = await fetchNoteFromApi(noteId);
         await upsertNoteInDb(fullNote);
@@ -365,6 +381,20 @@ export const useNotes = () => {
       
       // Trigger silent background body sync without blocking the main render
       void syncNoteBodiesInBackground(notes, queryClient);
+
+      // Garbage Collection Reconciliation:
+      // Purge any local IndexedDB records that are no longer present on the server.
+      try {
+        const serverIds = new Set(notes.map((n) => n.id).filter(Boolean));
+        const localNotes = await readAllNotesFromDb();
+        for (const localNote of localNotes) {
+          if (localNote.id && !serverIds.has(localNote.id)) {
+            await deleteNoteFromDb(localNote.id);
+          }
+        }
+      } catch (gcErr) {
+        console.warn('Background garbage collection failed:', gcErr);
+      }
       
       await upsertNotesInDb(notes);
 

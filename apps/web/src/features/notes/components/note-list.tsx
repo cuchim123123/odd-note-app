@@ -23,7 +23,15 @@ function stripHtml(html: string | undefined): string {
   const cached = htmlStripCache.get(html);
   if (cached !== undefined) return cached;
 
-  const stripped = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  // Cleanly identify images and extract alt attributes if available
+  let processed = html.replace(/<img[^>]*alt=["']([^"']*)["'][^>]*>/gi, ' 📷 [$1] ');
+  processed = processed.replace(/<img[^>]*>/gi, ' 📷 [Image] ');
+  
+  // Cleanly identify videos/iframes
+  processed = processed.replace(/<iframe[^>]*>/gi, ' 🎥 [Video] ');
+  processed = processed.replace(/<video[^>]*>/gi, ' 🎥 [Video] ');
+
+  const stripped = processed.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   
   // Throttle cache growth to 500 items max
   if (htmlStripCache.size > 500) {
