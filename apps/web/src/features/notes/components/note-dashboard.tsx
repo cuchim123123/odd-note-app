@@ -42,7 +42,7 @@ export function NoteDashboard() {
               </Button>
               <span className="ml-3 font-semibold text-sm text-foreground truncate">Note Editor</span>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
               <NoteDetailView
                 noteId={selectedNoteId}
                 onDeleted={() => {
