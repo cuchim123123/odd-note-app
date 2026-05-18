@@ -62,21 +62,38 @@ export class MailerService {
     recipientName: string;
     senderName: string;
     noteTitle: string;
+    noteId: string;
     permission: string;
     appUrl: string;
   }): Promise<void> {
-    const { to, recipientName, senderName, noteTitle, permission, appUrl } = params;
+    const { to, recipientName, senderName, noteTitle, noteId, permission, appUrl } = params;
 
     await this.transporter.sendMail({
       from: this.env.SMTP_FROM,
       to,
       subject: `${senderName} shared a note with you`,
       html: `
-        <p>Hello ${recipientName},</p>
-        <p><strong>${senderName}</strong> shared a note with you: <strong>${noteTitle}</strong></p>
-        <p>Permission level: <strong>${permission === 'READ' ? 'Read-only' : 'Can edit'}</strong></p>
-        <p><a href="${appUrl}/notes">View the shared note</a></p>
-        <p>If you did not expect this share, you can ignore this email or log in to manage your sharing settings.</p>
+        <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+          <h2 style="color: #0f172a; margin-top: 0; font-size: 20px; font-weight: 700; tracking: -0.02em;">Collaborative Note Share</h2>
+          <p style="color: #475569; font-size: 15px; line-height: 24px;">Hello ${recipientName},</p>
+          <p style="color: #475569; font-size: 15px; line-height: 24px;">
+            <strong>${senderName}</strong> has shared a note with you:
+          </p>
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: 600; color: #0f172a;">${noteTitle}</p>
+            <span style="display: inline-block; font-size: 12px; font-weight: 600; color: #4f46e5; background-color: #e0e7ff; padding: 4px 10px; border-radius: 9999px;">
+              ${permission === 'READ' ? 'Read-only access' : 'Can edit and collaborate'}
+            </span>
+          </div>
+          <div style="margin: 28px 0 20px 0; text-align: center;">
+            <a href="${appUrl}/notes/${noteId}" style="display: inline-block; font-weight: 600; text-decoration: none; color: #ffffff; background-color: #4f46e5; padding: 12px 24px; border-radius: 12px; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);">
+              Open in OddNote
+            </a>
+          </div>
+          <p style="color: #94a3b8; font-size: 12px; line-height: 18px; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+            If you did not expect this sharing notification, you can safely ignore this email.
+          </p>
+        </div>
       `,
     });
   }

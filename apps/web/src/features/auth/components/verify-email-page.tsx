@@ -64,37 +64,71 @@ export function VerifyEmailPage() {
   }, [token, navigate]);
 
   return (
-    <Card className="border-0 shadow-lg sm:border sm:shadow-sm">
-      <CardHeader className="space-y-2 text-center pb-8">
-        <CardTitle className="text-2xl font-bold tracking-tight">Email verification</CardTitle>
-        <CardDescription>We’re checking your account link right now.</CardDescription>
+    <Card className="relative overflow-hidden border border-border/40 bg-card/60 backdrop-blur-xl shadow-2xl shadow-indigo-500/5 rounded-2xl">
+      {/* Dynamic top gradient bar */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-violet-500 to-sky-500" />
+      
+      <CardHeader className="space-y-1.5 text-center pb-6 pt-8">
+        <CardTitle className="text-2xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/80 bg-clip-text text-transparent">
+          Email Verification
+        </CardTitle>
+        <CardDescription className="text-muted-foreground text-sm font-medium">
+          Securing and verifying your digital canvas
+        </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col items-center justify-center gap-6 py-8">
+
+      <CardContent className="flex flex-col items-center justify-center gap-6 py-6 px-6">
         {status === 'loading' && (
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-center text-muted-foreground">{message || 'Verifying your email...'}</p>
+          <div className="flex flex-col items-center gap-5 py-6">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute h-16 w-16 animate-ping rounded-full bg-primary/10" />
+              <div className="relative rounded-full bg-primary/10 p-4 text-primary">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            </div>
+            <p className="text-center font-semibold text-sm text-foreground/90 animate-pulse tracking-wide">
+              {message || 'Verifying your unique access link...'}
+            </p>
           </div>
         )}
+
         {status === 'success' && (
-          <div className="flex flex-col items-center gap-4">
-            <CheckCircle className="h-12 w-12 text-emerald-500" />
-            <p className="text-center font-medium text-foreground">{message}</p>
-            <p className="text-center text-sm text-muted-foreground">Redirecting to your dashboard...</p>
+          <div className="flex flex-col items-center gap-5 py-6">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute h-16 w-16 animate-pulse rounded-full bg-emerald-500/15" />
+              <div className="relative rounded-full bg-emerald-500/10 p-4 text-emerald-500 border border-emerald-500/20">
+                <CheckCircle className="h-8 w-8" />
+              </div>
+            </div>
+            <div className="space-y-1.5 text-center">
+              <p className="font-bold text-base text-foreground tracking-tight">{message}</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Preparing your private dashboard space...
+              </p>
+            </div>
           </div>
         )}
+
         {status === 'error' && (
-          <div className="flex flex-col items-center gap-4 w-full">
-            <AlertCircle className="h-12 w-12 text-destructive" />
-            <p className="text-center font-medium text-foreground">{message}</p>
+          <div className="flex flex-col items-center gap-5 w-full">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute h-16 w-16 animate-pulse rounded-full bg-destructive/15" />
+              <div className="relative rounded-full bg-destructive/10 p-4 text-destructive border border-destructive/20">
+                <AlertCircle className="h-8 w-8" />
+              </div>
+            </div>
             
-            <div className="w-full mt-4 rounded-2xl border border-border/60 bg-muted/30 p-5 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="text-center text-sm font-semibold text-foreground/90 leading-relaxed max-w-sm">
+              {message}
+            </p>
+            
+            <div className="w-full mt-2 rounded-2xl border border-border/50 bg-muted/40 p-5 shadow-sm space-y-3.5">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
                 <MailOpen className="h-4 w-4 text-primary" />
                 Resend verification link
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                If your verification link has expired, enter your email below to receive a new one.
+                If your link has expired, enter your email below to receive a new one instantly.
               </p>
               <div className="space-y-2">
                 <Input 
@@ -102,19 +136,19 @@ export function VerifyEmailPage() {
                   placeholder="name@example.com" 
                   value={resendEmail} 
                   onChange={(e) => setResendEmail(e.target.value)}
-                  className="rounded-xl border-border/60 bg-card focus-visible:border-primary"
+                  className="rounded-xl border-border/50 bg-background/50 focus-visible:ring-primary focus-visible:border-primary"
                 />
                 <Button 
                   type="button" 
                   onClick={handleResend}
                   disabled={resendMutation.isPending || !resendEmail.trim()}
-                  className="w-full rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99] font-semibold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10"
                 >
-                  {resendMutation.isPending ? 'Sending...' : 'Send Link'}
+                  {resendMutation.isPending ? 'Sending Link...' : 'Send Activation Link'}
                 </Button>
               </div>
               {resendResult && (
-                <p className="text-center text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                <p className="text-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 animate-fade-in mt-1">
                   {resendResult}
                 </p>
               )}
@@ -122,17 +156,18 @@ export function VerifyEmailPage() {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col gap-3">
+
+      <CardFooter className="flex flex-col gap-2.5 px-6 pb-8 pt-2">
         {status === 'error' && (
           <>
             <Link to="/" className="w-full">
-              <Button variant="outline" className="w-full rounded-xl">
-                Go to home
+              <Button variant="outline" className="w-full rounded-xl hover:bg-accent/80 font-medium">
+                Go to Home
               </Button>
             </Link>
             <Link to="/login" className="w-full">
-              <Button variant="outline" className="w-full rounded-xl">
-                Back to login
+              <Button variant="outline" className="w-full rounded-xl hover:bg-accent/80 font-medium">
+                Back to Login
               </Button>
             </Link>
           </>

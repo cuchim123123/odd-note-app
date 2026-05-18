@@ -97,6 +97,7 @@ export class NotesShareService {
         recipientName: recipient.displayName,
         senderName: owner.displayName,
         noteTitle: note.title,
+        noteId: note.id,
         permission: input.permission,
         appUrl,
       });
