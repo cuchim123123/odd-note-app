@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, X, CheckCheck, Sparkles, Share2 } from 'lucide-react';
+import { Bell, X, CheckCheck, Share2 } from 'lucide-react';
 import { useNotifications, useMarkNotificationAsRead, useDeleteNotification, useMarkAllNotificationsAsRead } from '../hooks/useNotifications';
 import type { Notification } from '../types/notification';
 import { Button } from './ui/button';
@@ -54,7 +54,7 @@ export const NotificationCenter = () => {
           <div className="flex items-center justify-between border-b bg-gradient-to-r from-muted/30 to-card px-4 py-3">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <Bell className="h-3.5 w-3.5 text-primary" />
                 Activity
               </div>
               <h3 className="text-lg font-semibold tracking-tight text-foreground">Notifications</h3>

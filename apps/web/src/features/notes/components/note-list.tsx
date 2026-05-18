@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { useNotes, useSharedNotes, useCreateNote, useBulkDeleteNotes, useBulkAddLabel } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { Button } from '../../../components/ui/button';
-import { Plus, Search, Share2, Sparkles, Trash, Grid2x2, List, Tag } from 'lucide-react';
+import { Plus, Search, Share2, FileText, Trash, Grid2x2, List, Tag } from 'lucide-react';
 import { LabelSelector } from './label-selector';
 import { Input } from '../../../components/ui/input';
 import { cn } from '../../../lib/utils';
@@ -177,7 +177,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <FileText className="h-3.5 w-3.5 text-primary" />
               Notes
             </div>
             <h2 className="mt-1 text-lg font-semibold tracking-tight">All notes</h2>

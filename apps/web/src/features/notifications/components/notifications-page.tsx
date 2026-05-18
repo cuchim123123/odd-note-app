@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, Sparkles, Share2, ArrowLeft, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Share2, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNotifications, useMarkNotificationAsRead, useDeleteNotification, useMarkAllNotificationsAsRead } from '../../../hooks/useNotifications';
 import { Button } from '../../../components/ui/button';
 import { cn } from '../../../lib/utils';
@@ -56,7 +56,7 @@ export const NotificationsPage: React.FC = () => {
           </Button>
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
+              <Bell className="h-3.5 w-3.5" />
               Inbox
             </div>
             <h1 className="text-3xl font-bold tracking-tight mt-0.5">Notifications</h1>

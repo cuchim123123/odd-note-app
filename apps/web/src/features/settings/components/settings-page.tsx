@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Label } from '../../../components/ui/label';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { Monitor, Palette, Sparkles, Sun, UserRound } from 'lucide-react';
+import { Monitor, Palette, Settings, Sun, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRenameLabel, useDeleteLabel, useNotes } from '../../notes/api/notes.api';
 import { api } from '../../../lib/axios';
@@ -92,7 +92,7 @@ export function SettingsPage() {
       <div className="rounded-3xl border bg-card p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)] backdrop-blur">
         <div className="flex items-start gap-4">
           <div className="rounded-2xl bg-primary/10 p-3 text-primary shadow-sm">
-            <Sparkles className="h-6 w-6" />
+            <Settings className="h-6 w-6" />
           </div>
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Settings</h1>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { X, Sparkles, Bell, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Info, Bell, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export type ToastAction = {
@@ -75,7 +75,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 {t.icon ? t.icon : (
                   t.type === 'success' ? <CheckCircle2 className="h-4.5 w-4.5" /> :
                   t.type === 'error' ? <AlertCircle className="h-4.5 w-4.5" /> :
-                  t.type === 'info' ? <Sparkles className="h-4.5 w-4.5" /> :
+                  t.type === 'info' ? <Info className="h-4.5 w-4.5" /> :
                   <Bell className="h-4.5 w-4.5" />
                 )}
               </div>
