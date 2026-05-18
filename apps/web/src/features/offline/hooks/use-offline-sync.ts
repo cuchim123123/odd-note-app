@@ -37,10 +37,39 @@ export function useOfflineSync() {
       const retryableItems: SyncQueueItem[] = [];
       let discardedCount = 0;
 
+      // Copy the queue to allow dynamic mutations of subsequent payloads (e.g. mapping client UUIDs to database UUIDs)
+      const processingQueue = syncQueue.map((item) => ({
+        ...item,
+        payload: { ...item.payload },
+      })) as SyncQueueItem[];
+
       try {
-        for (const item of syncQueue) {
+        for (let idx = 0; idx < processingQueue.length; idx++) {
+          const item = processingQueue[idx];
+          if (!item) continue;
           try {
-            await syncItem(item, api);
+            const res = await syncItem(item, api);
+
+            // Handle client-side to server-side ID mapping for sequentially generated offline notes
+            if (item.type === 'create' && res && res.data) {
+              const tempId = item.payload.noteId;
+              const serverId = res.data.id;
+
+              if (tempId && serverId && tempId !== serverId) {
+                // Map tempId to serverId in all subsequent processing queue items
+                for (let i = idx + 1; i < processingQueue.length; i++) {
+                  const nextItem = processingQueue[i];
+                  if (nextItem && nextItem.payload) {
+                    if (nextItem.payload.noteId === tempId) {
+                      nextItem.payload.noteId = serverId;
+                    }
+                    if (nextItem.payload.id === tempId) {
+                      nextItem.payload.id = serverId;
+                    }
+                  }
+                }
+              }
+            }
           } catch (error) {
             const nextRetryCount = item.retries + 1;
             if (nextRetryCount >= MAX_SYNC_RETRIES) {
@@ -52,7 +81,7 @@ export function useOfflineSync() {
               ...item,
               retries: nextRetryCount,
               error: error instanceof Error ? error.message : 'Unknown error',
-            });
+            } as SyncQueueItem);
           }
         }
 

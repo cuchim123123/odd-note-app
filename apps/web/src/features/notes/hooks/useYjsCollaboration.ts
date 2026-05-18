@@ -186,7 +186,7 @@ export function useYjsCollaboration({
           refreshAttemptedRef.current = false;
         } catch (refreshError) {
           console.error('[Yjs] Failed to refresh access token before connect', refreshError);
-          useAuthStore.getState().logout();
+          useAuthStore.getState().logout(false);
         } finally {
           refreshInFlightRef.current = false;
         }
@@ -291,7 +291,7 @@ export function useYjsCollaboration({
           refreshAttemptedRef.current = false;
         } catch (refreshError) {
           console.error('[Yjs] Failed to refresh socket token', refreshError);
-          useAuthStore.getState().logout();
+          useAuthStore.getState().logout(false);
         }
       })();
     });

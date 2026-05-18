@@ -44,10 +44,11 @@ export function useNoteDraftAndAutoSave({
   const isRemoteUpdateRef = useRef(false);
   const draftTimeoutRef = useRef<NodeJS.Timeout>();
   const serverTimeoutRef = useRef<NodeJS.Timeout>();
+  const isInitializingRef = useRef(true);
 
   // Sync server updates for the CURRENT note (e.g. from other tabs)
   useEffect(() => {
-    if (isDirty || isRemoteUpdateRef.current) return;
+    if (isDirty || isRemoteUpdateRef.current || isInitializingRef.current) return;
     
     if (note.title !== title) setTitle(note.title || '');
     if (normalizeNoteHtml(note.content) !== normalizeNoteHtml(content)) {
@@ -58,6 +59,7 @@ export function useNoteDraftAndAutoSave({
 
   // Reset state variables immediately when switching notes to avoid cross-note pollution
   useEffect(() => {
+    isInitializingRef.current = true;
     setIsDirty(false);
     setSaveError(null);
     setTitle(note.title || '');
@@ -91,57 +93,71 @@ export function useNoteDraftAndAutoSave({
 
   // Load draft - only if we have permission to edit
   useEffect(() => {
-    if (!note || !canEditContent) return;
+    if (!note || !canEditContent) {
+      isInitializingRef.current = false;
+      return;
+    }
     let canceled = false;
 
     const loadDraft = async () => {
-      // 1. Try to read emergency synchronous recovery backup first (in case of page crashes / sudden reloads)
-      let backupDraft: { title: string; content: string; updatedAt: string } | null = null;
       try {
-        const rawBackup = localStorage.getItem(`note-draft-backup:${note.id}`);
-        if (rawBackup) {
-          backupDraft = JSON.parse(rawBackup);
-          // Immediate cleanup to prevent stale draft pollution on next load
-          localStorage.removeItem(`note-draft-backup:${note.id}`);
+        // 1. Try to read emergency synchronous recovery backup first (in case of page crashes / sudden reloads)
+        let backupDraft: { title: string; content: string; updatedAt: string } | null = null;
+        try {
+          const rawBackup = localStorage.getItem(`note-draft-backup:${note.id}`);
+          if (rawBackup) {
+            backupDraft = JSON.parse(rawBackup);
+            // Immediate cleanup to prevent stale draft pollution on next load
+            localStorage.removeItem(`note-draft-backup:${note.id}`);
+          }
+        } catch {
+          // Ignore backup parsing failures
         }
-      } catch {
-        // Ignore backup parsing failures
-      }
 
-      // 2. Fall back to standard asynchronous IndexedDB draft store
-      const localDraft = await readLocalDraft(note.id!);
-      if (canceled) return;
+        // 2. Fall back to standard asynchronous IndexedDB draft store
+        const localDraft = await readLocalDraft(note.id!);
+        if (canceled) return;
 
-      const primaryDraft = backupDraft || localDraft;
+        const primaryDraft = backupDraft || localDraft;
 
-      if (primaryDraft) {
-        const draftEmpty = !primaryDraft.title.trim() && !primaryDraft.content.trim();
-        const noteEmpty = !note.title?.trim() && !note.content?.trim();
-        if (!(draftEmpty && !noteEmpty)) {
-          const draftTime = safeTimestamp(primaryDraft.updatedAt);
-          const noteTime = safeTimestamp(note.updatedAt);
-          if (draftTime >= noteTime) {
-            setTitle(primaryDraft.title);
-            setContent(primaryDraft.content);
-            return;
+        if (primaryDraft) {
+          const draftEmpty = !primaryDraft.title.trim() && !primaryDraft.content.trim();
+          const noteEmpty = !note.title?.trim() && !note.content?.trim();
+          if (!(draftEmpty && !noteEmpty)) {
+            const draftTime = safeTimestamp(primaryDraft.updatedAt);
+            const noteTime = safeTimestamp(note.updatedAt);
+            if (draftTime >= noteTime) {
+              setTitle(primaryDraft.title);
+              setContent(primaryDraft.content);
+              return;
+            }
           }
         }
-      }
 
-      try {
-        const d = await getNoteDraft(note.id!, unlockToken);
-        if (!d || canceled) return;
-        const draftEmpty = !d.title.trim() && !d.content.trim();
-        const noteEmpty = !note.title?.trim() && !note.content?.trim();
-        if (draftEmpty && !noteEmpty) return;
-        const draftTime = safeTimestamp(d.updatedAt);
-        const noteTime = safeTimestamp(note.updatedAt);
-        if (draftTime >= noteTime) {
-          setTitle(d.title);
-          setContent(d.content);
+        try {
+          const d = await getNoteDraft(note.id!, unlockToken);
+          if (!d || canceled) return;
+          const draftEmpty = !d.title.trim() && !d.content.trim();
+          const noteEmpty = !note.title?.trim() && !note.content?.trim();
+          if (draftEmpty && !noteEmpty) return;
+          const draftTime = safeTimestamp(d.updatedAt);
+          const noteTime = safeTimestamp(note.updatedAt);
+          if (draftTime >= noteTime) {
+            setTitle(d.title);
+            setContent(d.content);
+          }
+        } catch {
+          // Ignore loading errors.
         }
-      } catch {
-        // Ignore loading errors.
+      } finally {
+        if (!canceled) {
+          // Brief timeout to ensure state updates flush before enabling auto-save
+          setTimeout(() => {
+            if (!canceled) {
+              isInitializingRef.current = false;
+            }
+          }, 50);
+        }
       }
     };
 
@@ -151,7 +167,7 @@ export function useNoteDraftAndAutoSave({
 
   // HIGH-PERFORMANCE DEBOUNCED AUTOSAVE: Debounce IndexedDB to 150ms and API/Server to 1000ms
   useEffect(() => {
-    if (!canEditContent) return;
+    if (!canEditContent || isInitializingRef.current) return;
 
     const normalized = normalizeNoteHtml(content);
     const changed = (normalized !== normalizeNoteHtml(note.content || ''));

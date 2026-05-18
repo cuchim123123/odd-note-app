@@ -20,7 +20,7 @@ export interface AuthState {
   setAuth: (user: UserProfile, accessToken: string, refreshToken: string) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   updateUser: (user: Partial<UserProfile>) => void;
-  logout: () => void;
+  logout: (clearOffline?: boolean) => void;
   setHasHydrated: (hasHydrated: boolean) => void;
 }
 
@@ -46,9 +46,11 @@ export const useAuthStore = create<AuthState>()(
           user: state.user ? { ...state.user, ...updates } : null,
         })),
 
-      logout: () => {
+      logout: (clearOffline = true) => {
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
-        void clearAllOfflineData();
+        if (clearOffline) {
+          void clearAllOfflineData();
+        }
       },
     }),
     {
