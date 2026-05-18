@@ -76,8 +76,24 @@ export const upsertNoteInDb = async (note: Note): Promise<void> => {
     const tx = db.transaction(NOTES_STORE_NAME, 'readwrite');
     const store = tx.objectStore(NOTES_STORE_NAME);
 
+    // Smart merge: Fetch the existing cached record first
+    const existing = await new Promise<Note | null>((resolve) => {
+      const req = store.get(note.id || '');
+      req.onsuccess = () => resolve(req.result ? cloneNote(req.result as Note) : null);
+      req.onerror = () => resolve(null);
+    });
+
+    // If the new record comes from a projected list query (content is empty),
+    // preserve the existing cached rich-text body.
+    const mergedNote = {
+      ...note,
+      content: ((note.content === '' || note.content === undefined) && existing?.content
+        ? existing.content
+        : note.content) ?? '',
+    };
+
     await new Promise<void>((resolve, reject) => {
-      const request = store.put(note);
+      const request = store.put(mergedNote);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });

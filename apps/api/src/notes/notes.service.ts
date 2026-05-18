@@ -103,9 +103,7 @@ export class NotesService {
 
     return await Promise.all(
       notes.map(async (note) => {
-        const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
-        const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
-        return this.toResponse(note as NoteWithRelations, undefined, snapshot, yDocContent ?? undefined, userId);
+        return this.toResponse(note as NoteWithRelations, undefined, undefined, undefined, userId, undefined, true);
       }),
     );
   }
@@ -128,9 +126,7 @@ export class NotesService {
 
     return await Promise.all(
       sharedNotes.map(async (share) => {
-        const yDocContent = await this.notesCrdtService.readYDocContent(share.note.id);
-        const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(share.note.id);
-        return this.toSharedResponse(share as ShareRecordWithRelations, snapshot, yDocContent ?? undefined, userId);
+        return this.toSharedResponse(share as ShareRecordWithRelations, undefined, undefined, userId, undefined, true);
       }),
     );
   }
@@ -412,9 +408,10 @@ export class NotesService {
     yDocContent?: string,
     requestingUserId?: string,
     unlockToken?: string,
+    excludeContent = false,
   ): Promise<NoteResponse> {
-    const effectiveNote = this.mergeNoteWithSnapshot(note, snapshot);
-    const effectiveContent = yDocContent !== undefined ? yDocContent : effectiveNote.content ?? '';
+    const effectiveNote = excludeContent ? note : this.mergeNoteWithSnapshot(note, snapshot);
+    const effectiveContent = excludeContent ? '' : (yDocContent !== undefined ? yDocContent : effectiveNote.content ?? '');
 
     let isProtected = false;
     if (effectiveNote.protection !== undefined) {
@@ -429,7 +426,7 @@ export class NotesService {
 
     let content = effectiveContent;
 
-    if (isProtected && requestingUserId) {
+    if (!excludeContent && isProtected && requestingUserId) {
       const isUnlocked = await this.notesProtectionService.verifyUnlockToken(requestingUserId, effectiveNote.id, unlockToken);
       if (!isUnlocked) {
         content = ''; // Plaintext protection enforcement on the server!
@@ -459,12 +456,13 @@ export class NotesService {
     yDocContent?: string,
     requestingUserId?: string,
     unlockToken?: string,
+    excludeContent = false,
   ): Promise<SharedNoteResponse> {
     const note = await this.toResponse(share.note, {
       permission: share.permission,
       owner: share.owner,
       createdAt: share.createdAt,
-    }, snapshot, yDocContent, requestingUserId, unlockToken);
+    }, snapshot, yDocContent, requestingUserId, unlockToken, excludeContent);
 
     return {
       ...note,

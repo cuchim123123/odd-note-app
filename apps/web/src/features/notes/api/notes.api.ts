@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/axios';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
@@ -297,7 +298,62 @@ export async function clearNoteDraft(noteId: string, unlockToken?: string): Prom
   return response.data;
 }
 
+let isSyncingBodies = false;
+
+export async function syncNoteBodiesInBackground(serverNotes: Note[], queryClient: QueryClient): Promise<void> {
+  if (isSyncingBodies || !backendNotesAvailable()) {
+    return;
+  }
+
+  isSyncingBodies = true;
+  try {
+    const localNotes = await readAllNotesFromDb();
+    const localNotesMap = new Map(localNotes.map((n) => [n.id, n]));
+
+    const notesToDownload: string[] = [];
+
+    for (const serverNote of serverNotes) {
+      if (!serverNote.id || serverNote.isProtected) continue;
+
+      const localNote = localNotesMap.get(serverNote.id);
+
+      const isMissing = !localNote || localNote.content === '' || localNote.content === undefined;
+      const isStale = localNote && new Date(serverNote.updatedAt || 0).getTime() > new Date(localNote.updatedAt || 0).getTime();
+
+      if (isMissing || isStale) {
+        notesToDownload.push(serverNote.id);
+      }
+    }
+
+    if (notesToDownload.length === 0) {
+      return;
+    }
+
+    // Sequentially download note bodies in background to be friendly to network and DB
+    for (const noteId of notesToDownload) {
+      try {
+        const fullNote = await fetchNoteFromApi(noteId);
+        await upsertNoteInDb(fullNote);
+
+        // Optimistically insert the downloaded content into react-query's memory cache
+        // to immediately trigger preview card re-renders without full page reloads!
+        queryClient.setQueryData<Note[]>(NOTES_KEYS.all, (currentNotes = []) =>
+          currentNotes.map((n) => (n.id === noteId ? { ...n, content: fullNote.content ?? '' } : n))
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      } catch (err) {
+        console.warn(`Failed to background sync body for note ${noteId}:`, err);
+      }
+    }
+  } finally {
+    isSyncingBodies = false;
+  }
+}
+
 export const useNotes = () => {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: NOTES_KEYS.all,
     queryFn: async () => {
@@ -306,8 +362,15 @@ export const useNotes = () => {
       }
 
       const notes = await fetchNotesFromApi();
+      
+      // Trigger silent background body sync without blocking the main render
+      void syncNoteBodiesInBackground(notes, queryClient);
+      
       await upsertNotesInDb(notes);
-      return notes;
+
+      // Return the merged notes from IndexedDB. This instantly pulls full cached note
+      // bodies into the React state rather than resolving the empty projected content!
+      return await readAllNotesFromDb();
     },
   });
 };
