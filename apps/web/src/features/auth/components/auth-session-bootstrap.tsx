@@ -28,8 +28,16 @@ export function AuthSessionBootstrap() {
 
     void syncUser();
 
+    // Listen for tab focus to instantly update verification / profile state (e.g. after verifying in another tab or device)
+    const handleFocus = () => {
+      void syncUser();
+    };
+
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', handleFocus);
     };
   }, [accessToken, hasHydrated, isAuthenticated, updateUser]);
 
