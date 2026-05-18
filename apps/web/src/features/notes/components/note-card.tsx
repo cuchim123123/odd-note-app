@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { useUpdateNote } from '../api/notes.api';
 import type { SharedNoteItem } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
-import { FileText, Lock, Pin, Check } from 'lucide-react';
+import { FileText, Lock, Pin, Share2, Check } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useNotePreferencesStore, noteColorClasses } from '../../settings/stores/note-preferences.store';
 
