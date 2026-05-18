@@ -294,12 +294,15 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
         </div>
 
         {/* Scrollable Results Container */}
-        <div className="flex-1 overflow-y-auto pr-0.5">
+        <div className="flex-1 overflow-y-auto pr-0.5 flex flex-col">
           {isLoading ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-white/80 p-6 text-center text-sm text-muted-foreground animate-pulse">Loading notes...</div>
           ) : filteredNotes.length === 0 && filteredSharedNotes.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-card/80 p-8 text-center text-sm text-muted-foreground">
-              {search || selectedLabels.length > 0 ? 'No notes found matching your search.' : 'No notes yet. Create your first one.'}
+            <div className="flex-1 min-h-[300px] flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-card/40 p-8 text-center text-sm text-muted-foreground shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)]">
+              <FileText className="mb-4.5 h-12 w-12 text-muted-foreground/30 animate-pulse" />
+              <span className="font-medium tracking-tight text-muted-foreground/80">
+                {search || selectedLabels.length > 0 ? 'No notes found matching your search.' : 'No notes yet. Create your first one.'}
+              </span>
             </div>
           ) : (
             <div className="space-y-4">
