@@ -59,18 +59,18 @@ export function DashboardLayout() {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-2 text-sm font-medium">
-            <Link to="/notes" className="flex items-center gap-2 rounded-full px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
+          <nav className="flex items-center gap-1 sm:gap-2 text-sm font-medium">
+            <Link to="/notes" className="flex items-center gap-2 rounded-full px-2.5 sm:px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" title="Notes">
               <BookOpen className="h-4 w-4" />
-              Notes
+              <span className="hidden sm:inline">Notes</span>
             </Link>
-            <Link to="/settings" className="flex items-center gap-2 rounded-full px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <Link to="/settings" className="flex items-center gap-2 rounded-full px-2.5 sm:px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" title="Settings">
               <SettingsIcon className="h-4 w-4" />
-              Settings
+              <span className="hidden sm:inline">Settings</span>
             </Link>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <NotificationCenter />
             <div className="hidden items-center gap-2 rounded-full border bg-card pl-2 pr-3 py-1 text-sm shadow-sm sm:flex">
               {user?.avatarUrl ? (
@@ -89,9 +89,9 @@ export function DashboardLayout() {
                 <span className="font-medium">{user?.displayName || user?.email}</span>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} disabled={logoutMutation.isPending} aria-label="Logout from your account" className="rounded-full">
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
+            <Button variant="ghost" size="sm" onClick={handleLogout} disabled={logoutMutation.isPending} aria-label="Logout from your account" className="rounded-full px-2.5 sm:px-4 h-9 flex items-center justify-center" title="Logout">
+              <LogOut className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
