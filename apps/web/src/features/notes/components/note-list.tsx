@@ -218,7 +218,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+      <div className="flex-1 flex flex-col gap-4 p-4 min-h-0 overflow-hidden">
         {/* Sticky Filters Header */}
         <div className="flex items-center justify-between gap-3 pb-1 border-b border-border/10 shrink-0">
           {/* Left Side: Label Row with 3 limit */}
