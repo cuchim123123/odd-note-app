@@ -154,7 +154,7 @@ export function useNoteDraftAndAutoSave({
     if (!canEditContent) return;
 
     const normalized = normalizeNoteHtml(content);
-    const changed = (normalized !== normalizeNoteHtml(note.content || '')) || (title !== (note.title || ''));
+    const changed = (normalized !== normalizeNoteHtml(note.content || ''));
 
     if (!changed) {
       setIsDirty(false);
@@ -193,7 +193,7 @@ export function useNoteDraftAndAutoSave({
         setSaveError(null);
         setIsSavingLocal(true);
         try {
-          const upd = (await updateNote({ title, content: normalized })) as { updatedAt?: string } | null | undefined;
+          const upd = (await updateNote({ content: normalized })) as { updatedAt?: string } | null | undefined;
           setLastSavedAt(upd?.updatedAt || optTime);
           setIsDirty(false);
           await clearNoteDraft(note.id!, unlockToken).catch(() => {
