@@ -33,11 +33,11 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: this-is-a-long-dev-access-secret-at-least-32-chars
       JWT_REFRESH_SECRET: this-is-a-long-dev-refresh-secret-at-least-32-chars
-      SMTP_HOST: smtp.gmail.com
-      SMTP_PORT: 465
-      SMTP_USER: nchau4033@gmail.com
-      SMTP_PASS: gdxd fzuu xund jxio
-      SMTP_FROM: nchau4033@gmail.com
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       S3_ENDPOINT: minio
       S3_PORT: 9000
       S3_ACCESS_KEY: minioadmin
