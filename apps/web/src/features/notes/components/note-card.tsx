@@ -90,108 +90,106 @@ const NoteCardComponent = function NoteCard({
         'p-4 animate-in fade-in slide-in-from-bottom-2 duration-300',
       )}
     >
-      <div className="flex flex-col gap-2.5 h-full justify-between">
-        <div className="space-y-2">
-          {/* Header row: Icon & Title & Badges */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
-                isSelected ? 'bg-primary/20 text-primary' : 'bg-primary/5 text-primary/80 group-hover:bg-primary/10 group-hover:text-primary'
-              )}>
-                {isSelectionMode ? (
-                  <div className={cn("h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors", isSelectedForBulk ? "bg-primary border-primary" : "border-primary/50")}>
-                    {isSelectedForBulk && <Check className="h-3 w-3 text-primary-foreground" />}
-                  </div>
-                ) : (
-                  <FileText className="h-4.5 w-4.5" />
-                )}
-              </div>
-              
-              <span className={cn(
-                'font-semibold text-foreground line-clamp-2 whitespace-normal break-words text-sm tracking-tight flex-1',
-                isSelected && 'text-primary'
-              )}>
-                {note.title || 'Untitled Note'}
-              </span>
-            </div>
-
-            {/* Float actions on hover */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              {isSharedAccess ? null : (
-                <button
-                  type="button"
-                  aria-label={note.isShared ? 'Unshare note' : 'Share note'}
-                  aria-pressed={note.isShared}
-                  onClick={handleToggleShare}
-                  className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                </button>
+      <div className="space-y-2 flex-1">
+        {/* Header row: Icon & Title & Badges */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className={cn(
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
+              isSelected ? 'bg-primary/20 text-primary' : 'bg-primary/5 text-primary/80 group-hover:bg-primary/10 group-hover:text-primary'
+            )}>
+              {isSelectionMode ? (
+                <div className={cn("h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors", isSelectedForBulk ? "bg-primary border-primary" : "border-primary/50")}>
+                  {isSelectedForBulk && <Check className="h-3 w-3 text-primary-foreground" />}
+                </div>
+              ) : (
+                <FileText className="h-4.5 w-4.5" />
               )}
-              <button
-                type="button"
-                aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}
-                aria-pressed={note.isPinned}
-                onClick={handleTogglePin}
-                className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
-                disabled={isSharedAccess}
-              >
-                <Pin className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Subtext description preview */}
-          <p className={cn(
-            "text-xs leading-relaxed line-clamp-2 overflow-hidden",
-            hasContent ? "text-muted-foreground/90 group-hover:text-slate-300 transition-colors duration-200" : "text-muted-foreground/30 italic font-light"
-          )}>
-            {formatPreview(note.content)}
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          {/* Label Pills */}
-          {(note.labels || []).length > 0 && (
-            <div className="flex max-w-full flex-wrap gap-1">
-              {(note.labels || []).slice(0, 3).map((label: string) => (
-                <span 
-                  key={label} 
-                  className="max-w-[7.5rem] truncate rounded-lg border border-primary/10 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary/90 tracking-wide"
-                >
-                  {label}
-                </span>
-              ))}
-              {(note.labels || []).length > 3 && (
-                <span className="rounded-lg border border-border/30 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground/80">
-                  +{(note.labels || []).length - 3}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Access status overlay for shared notes */}
-          {isSharedAccess && (
-            <div className="text-[10px] text-muted-foreground border-t border-border/10 pt-1.5 truncate">
-              Shared by <span className="font-semibold text-foreground/80">{(note as SharedNoteItem).sharedBy.displayName}</span>
-            </div>
-          )}
-
-          {/* Footer Metadata */}
-          <div className="flex items-center justify-between border-t border-border/10 pt-2 text-[10px] font-medium text-muted-foreground/50 shrink-0">
-            <div className="flex items-center gap-1.5">
-              <span>{new Date(note.updatedAt || 0).toLocaleDateString()}</span>
-              <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-              <span>{new Date(note.updatedAt || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             
-            {/* Corner Badge Icons */}
-            <div className="flex items-center gap-1">
-              {note.isPinned && <Pin className="h-3 w-3 text-amber-500 fill-amber-500/20" />}
-              {note.isProtected && <Lock className="h-3 w-3 text-rose-500" />}
-              {note.isShared && !isSharedAccess && <Share2 className="h-3 w-3 text-sky-500" />}
-            </div>
+            <span className={cn(
+              'font-semibold text-foreground line-clamp-2 whitespace-normal break-words text-sm tracking-tight flex-1',
+              isSelected && 'text-primary'
+            )}>
+              {note.title || 'Untitled Note'}
+            </span>
+          </div>
+
+          {/* Float actions on hover */}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {isSharedAccess ? null : (
+              <button
+                type="button"
+                aria-label={note.isShared ? 'Unshare note' : 'Share note'}
+                aria-pressed={note.isShared}
+                onClick={handleToggleShare}
+                className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}
+              aria-pressed={note.isPinned}
+              onClick={handleTogglePin}
+              className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+              disabled={isSharedAccess}
+            >
+              <Pin className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Subtext description preview */}
+        <p className={cn(
+          "text-xs leading-relaxed line-clamp-2 overflow-hidden",
+          hasContent ? "text-muted-foreground/90 group-hover:text-slate-300 transition-colors duration-200" : "text-muted-foreground/30 italic font-light"
+        )}>
+          {formatPreview(note.content)}
+        </p>
+      </div>
+
+      <div className="mt-3 space-y-2 shrink-0">
+        {/* Label Pills */}
+        {(note.labels || []).length > 0 && (
+          <div className="flex max-w-full flex-wrap gap-1">
+            {(note.labels || []).slice(0, 3).map((label: string) => (
+              <span 
+                key={label} 
+                className="max-w-[7.5rem] truncate rounded-lg border border-primary/10 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary/90 tracking-wide"
+              >
+                {label}
+              </span>
+            ))}
+            {(note.labels || []).length > 3 && (
+              <span className="rounded-lg border border-border/30 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground/80">
+                +{(note.labels || []).length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Access status overlay for shared notes */}
+        {isSharedAccess && (
+          <div className="text-[10px] text-muted-foreground border-t border-border/10 pt-1.5 truncate">
+            Shared by <span className="font-semibold text-foreground/80">{(note as SharedNoteItem).sharedBy.displayName}</span>
+          </div>
+        )}
+
+        {/* Footer Metadata */}
+        <div className="flex items-center justify-between border-t border-border/10 pt-2 text-[10px] font-medium text-muted-foreground/50 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span>{new Date(note.updatedAt || 0).toLocaleDateString()}</span>
+            <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+            <span>{new Date(note.updatedAt || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          
+          {/* Corner Badge Icons */}
+          <div className="flex items-center gap-1">
+            {note.isPinned && <Pin className="h-3 w-3 text-amber-500 fill-amber-500/20" />}
+            {note.isProtected && <Lock className="h-3 w-3 text-rose-500" />}
+            {note.isShared && !isSharedAccess && <Share2 className="h-3 w-3 text-sky-500" />}
           </div>
         </div>
       </div>
