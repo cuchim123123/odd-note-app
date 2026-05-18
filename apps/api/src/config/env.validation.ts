@@ -21,7 +21,7 @@ const envSchema = z.object({
   SMTP_USER: z.string().default(''),
   SMTP_PASS: z.string().default(''),
   SMTP_FROM: z.string().email(),
-  EMAIL_VERIFICATION_TOKEN_EXPIRES_IN: durationSchema.default('24h'),
+  EMAIL_VERIFICATION_TOKEN_EXPIRES_IN: durationSchema.default('5m'),
   S3_ENDPOINT: z.string(),
   S3_PORT: z.coerce.number(),
   S3_ACCESS_KEY: z.string(),
