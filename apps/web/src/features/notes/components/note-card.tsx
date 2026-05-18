@@ -2,8 +2,9 @@ import { memo } from 'react';
 import { useUpdateNote } from '../api/notes.api';
 import type { SharedNoteItem } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
-import { FileText, Lock, Pin, Share2, Check } from 'lucide-react';
+import { FileText, Lock, Pin, Check } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { useNotePreferencesStore, noteColorClasses } from '../../settings/stores/note-preferences.store';
 
 type DisplayNote = Note | SharedNoteItem;
 
@@ -50,6 +51,7 @@ const NoteCardComponent = function NoteCard({
 }: NoteCardProps) {
   const update = useUpdateNote(note.id || '');
   const isSharedAccess = 'accessMode' in note && note.accessMode === 'shared';
+  const noteColor = useNotePreferencesStore((state) => state.noteColor);
 
   const handleTogglePin = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -60,14 +62,7 @@ const NoteCardComponent = function NoteCard({
     }
   };
 
-  const handleToggleShare = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await update.mutateAsync({ isShared: !note.isShared });
-    } catch {
-      // noop
-    }
-  };
+
 
   const handleSelect = () => {
     if (note.id) {
@@ -94,8 +89,8 @@ const NoteCardComponent = function NoteCard({
         'group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/20',
         isGridView ? 'w-full min-h-[11rem] flex flex-col justify-between' : 'w-full flex flex-col justify-between min-h-[6.5rem]',
         isSelected
-          ? 'border-primary bg-primary/10 shadow-lg shadow-primary/5 ring-1 ring-primary/20 scale-[1.01]'
-          : 'border-border/30 bg-card hover:bg-card/90 hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
+          ? cn(noteColorClasses[noteColor].selected, 'shadow-lg shadow-primary/5 ring-1 ring-primary/20 scale-[1.01]')
+          : cn(noteColorClasses[noteColor].card, noteColorClasses[noteColor].hover, 'hover:shadow-lg hover:-translate-y-0.5'),
         'p-4 animate-in fade-in slide-in-from-bottom-2 duration-300',
       )}
     >
@@ -134,26 +129,15 @@ const NoteCardComponent = function NoteCard({
 
             {/* Float actions on hover */}
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              {isSharedAccess ? null : (
-                <button
-                  type="button"
-                  aria-label={note.isShared ? 'Unshare note' : 'Share note'}
-                  aria-pressed={note.isShared}
-                  onClick={handleToggleShare}
-                  className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                </button>
-              )}
               <button
                 type="button"
                 aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}
                 aria-pressed={note.isPinned}
                 onClick={handleTogglePin}
-                className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+                className="rounded-full p-1.5 text-muted-foreground/60 transition-all hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground hover:scale-105 active:scale-95"
                 disabled={isSharedAccess}
               >
-                <Pin className="h-3.5 w-3.5" />
+                <Pin className="h-4.5 w-4.5" />
               </button>
             </div>
           </div>
