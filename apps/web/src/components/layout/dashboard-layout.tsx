@@ -4,7 +4,7 @@ import { useAuthStore } from '../../features/auth/stores/auth.store';
 import { useLogout, useResendVerification } from '../../features/auth/api/auth.api';
 import { Button } from '../ui/button';
 import { NotificationCenter } from '../NotificationCenter';
-import { LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck, ChevronRight } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck } from 'lucide-react';
 import { useRealtimeNotifications } from '../../features/notifications/hooks/useRealtimeNotifications';
 
 export function DashboardLayout() {
@@ -99,7 +99,7 @@ export function DashboardLayout() {
 
       {isUnverified ? (
         <div className="border-b bg-amber-500/10 text-amber-700 dark:text-amber-400">
-          <div className="container flex flex-col gap-2 py-3 text-sm font-medium sm:flex-row sm:items-center sm:justify-between">
+          <div className="container flex items-center justify-between py-3 text-sm font-medium">
             <div className="flex flex-wrap items-center gap-2">
               <BadgeCheck className="h-4 w-4 text-amber-600" />
               <span>Your account is not verified yet. Check your email to unlock all features.</span>
@@ -117,10 +117,6 @@ export function DashboardLayout() {
                 </span>
               )}
             </div>
-            <Link to="/auth/login" className="inline-flex items-center gap-1 text-amber-700 hover:text-amber-900 transition-colors self-start sm:self-auto">
-              <span>Back to login</span>
-              <ChevronRight className="h-4 w-4" />
-            </Link>
           </div>
         </div>
       ) : null}

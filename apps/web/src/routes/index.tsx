@@ -3,6 +3,7 @@ import { AuthLayout } from '../features/auth/components/auth-layout';
 import { LoginPage } from '../features/auth/components/login-page';
 import { RegisterPage } from '../features/auth/components/register-page';
 import { ProtectedRoute } from '../features/auth/components/protected-route';
+import { GuestRoute } from '../features/auth/components/guest-route';
 import { ForgotPasswordPage } from '../features/auth/components/forgot-password-page';
 import { ResetPasswordPage } from '../features/auth/components/reset-password-page';
 import { VerifyEmailPage } from '../features/auth/components/verify-email-page';
@@ -48,19 +49,35 @@ export const router = createBrowserRouter([
     children: [
       {
         path: 'login',
-        element: <LoginPage />,
+        element: (
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        ),
       },
       {
         path: 'register',
-        element: <RegisterPage />,
+        element: (
+          <GuestRoute>
+            <RegisterPage />
+          </GuestRoute>
+        ),
       },
       {
         path: 'forgot-password',
-        element: <ForgotPasswordPage />,
+        element: (
+          <GuestRoute>
+            <ForgotPasswordPage />
+          </GuestRoute>
+        ),
       },
       {
         path: 'reset-password',
-        element: <ResetPasswordPage />,
+        element: (
+          <GuestRoute>
+            <ResetPasswordPage />
+          </GuestRoute>
+        ),
       },
       {
         path: 'verify-email/:token',
