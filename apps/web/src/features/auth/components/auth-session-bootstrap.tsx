@@ -17,9 +17,9 @@ export function AuthSessionBootstrap() {
 
     const syncUser = async () => {
       try {
-        const response = await api.get<{ user: { id: string; email: string; displayName: string; role: 'USER' | 'ADMIN'; isEmailVerified: boolean } }>('/auth/me');
+        const response = await api.get<{ id: string; email: string; displayName: string; role: 'USER' | 'ADMIN'; isEmailVerified: boolean }>('/auth/me');
         if (!cancelled) {
-          updateUser(response.data.user);
+          updateUser(response.data);
         }
       } catch {
         // The axios interceptor handles refresh/logout on auth failures.
