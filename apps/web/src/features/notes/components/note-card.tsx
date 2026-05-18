@@ -75,7 +75,7 @@ const NoteCardComponent = function NoteCard({
     }
   };
 
-  const hasContent = !!stripHtml(note.content);
+  const hasContent = !!stripHtml(note.content) || note.isProtected;
 
   return (
     <div
@@ -143,9 +143,10 @@ const NoteCardComponent = function NoteCard({
           {/* Subtext description preview */}
           <p className={cn(
             "text-xs leading-relaxed line-clamp-2 overflow-hidden",
-            hasContent ? "text-muted-foreground/90 group-hover:text-slate-300 transition-colors duration-200" : "text-muted-foreground/30 italic font-light"
+            hasContent ? "text-muted-foreground/90 group-hover:text-slate-300 transition-colors duration-200" : "text-muted-foreground/30 italic font-light",
+            note.isProtected && "italic text-rose-500/80 group-hover:text-rose-400 font-medium"
           )}>
-            {formatPreview(note.content)}
+            {note.isProtected ? '[Content locked]' : formatPreview(note.content)}
           </p>
         </div>
 
