@@ -91,6 +91,19 @@ export class NotesService {
     private readonly notesProtectionService: NotesProtectionService,
   ) {}
 
+  private async getUserNoteLabelsMap(userId: string, noteIds: string[]): Promise<Record<string, string[]>> {
+    const userLabels = await this.prisma.userNoteLabel.findMany({
+      where: { userId, noteId: { in: noteIds } },
+      select: { noteId: true, labels: true },
+    });
+
+    const map: Record<string, string[]> = {};
+    for (const record of userLabels) {
+      map[record.noteId] = record.labels;
+    }
+    return map;
+  }
+
   async list(userId: string): Promise<NoteResponse[]> {
     const notes = await this.prisma.note.findMany({
       where: { userId },
@@ -101,9 +114,14 @@ export class NotesService {
       orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
     });
 
+    const noteIds = notes.map((n) => n.id);
+    const labelsMap = await this.getUserNoteLabelsMap(userId, noteIds);
+
     return await Promise.all(
       notes.map(async (note) => {
-        return this.toResponse(note as NoteWithRelations, undefined, undefined, undefined, userId, undefined, true);
+        const personalLabels = labelsMap[note.id] ?? [];
+        const noteWithPersonalLabels = { ...note, labels: personalLabels };
+        return this.toResponse(noteWithPersonalLabels as NoteWithRelations, undefined, undefined, undefined, userId, undefined, true);
       }),
     );
   }
@@ -124,9 +142,15 @@ export class NotesService {
       orderBy: { createdAt: 'desc' },
     });
 
+    const noteIds = sharedNotes.map((s) => s.note.id);
+    const labelsMap = await this.getUserNoteLabelsMap(userId, noteIds);
+
     return await Promise.all(
       sharedNotes.map(async (share) => {
-        return this.toSharedResponse(share as ShareRecordWithRelations, undefined, undefined, userId, undefined, true);
+        const personalLabels = labelsMap[share.note.id] ?? [];
+        const noteWithPersonalLabels = { ...share.note, labels: personalLabels };
+        const shareWithPersonalLabels = { ...share, note: noteWithPersonalLabels };
+        return this.toSharedResponse(shareWithPersonalLabels as ShareRecordWithRelations, undefined, undefined, userId, undefined, true);
       }),
     );
   }
@@ -155,8 +179,15 @@ export class NotesService {
     const yDocContent = await this.notesCrdtService.readYDocContent(noteId);
     const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(noteId);
 
+    const personalLabelRecord = await this.prisma.userNoteLabel.findUnique({
+      where: { userId_noteId: { userId, noteId } },
+      select: { labels: true },
+    });
+    const personalLabels = personalLabelRecord?.labels ?? [];
+    const noteWithPersonalLabels = { ...note, labels: personalLabels };
+
     return await this.toResponse(
-      note as NoteWithRelations,
+      noteWithPersonalLabels as NoteWithRelations,
       sharedAccess ? { permission: sharedAccess.permission, owner: sharedAccess.owner, createdAt: sharedAccess.createdAt } : undefined,
       snapshot,
       yDocContent ?? undefined,
@@ -171,7 +202,7 @@ export class NotesService {
         userId,
         title: input.title.trim(),
         content: input.content ?? null,
-        labels: input.labels ?? [],
+        labels: [],
       },
       include: {
         shares: { select: { id: true } },
@@ -179,7 +210,19 @@ export class NotesService {
       },
     });
 
-    const noteWithRelations = note as NoteWithRelations;
+    let personalLabels: string[] = [];
+    if (input.labels && input.labels.length > 0) {
+      const labelRecord = await this.prisma.userNoteLabel.create({
+        data: {
+          userId,
+          noteId: note.id,
+          labels: input.labels,
+        },
+      });
+      personalLabels = labelRecord.labels;
+    }
+
+    const noteWithRelations = { ...note, labels: personalLabels } as NoteWithRelations;
     const yDocContent = await this.notesCrdtService.readYDocContent(note.id);
     const snapshot = yDocContent !== null ? null : await this.notesCrdtService.readCollaborationSnapshot(note.id);
     return await this.toResponse(noteWithRelations, undefined, snapshot, yDocContent ?? undefined);
@@ -224,7 +267,6 @@ export class NotesService {
         content: input.content ?? existing.content,
         isPinned: input.isPinned ?? existing.isPinned,
         isShared: input.isShared ?? existing.isShared,
-        labels: input.labels ?? existing.labels,
       },
       include: {
         shares: { select: { id: true } },
@@ -232,7 +274,29 @@ export class NotesService {
       },
     });
 
-    const noteWithRelations = note as NoteWithRelations;
+    let personalLabels = existing.labels;
+    if (input.labels !== undefined) {
+      const upserted = await this.prisma.userNoteLabel.upsert({
+        where: { userId_noteId: { userId, noteId } },
+        create: {
+          userId,
+          noteId,
+          labels: input.labels,
+        },
+        update: {
+          labels: input.labels,
+        },
+      });
+      personalLabels = upserted.labels;
+    } else {
+      const record = await this.prisma.userNoteLabel.findUnique({
+        where: { userId_noteId: { userId, noteId } },
+        select: { labels: true },
+      });
+      personalLabels = record?.labels ?? [];
+    }
+
+    const noteWithRelations = { ...note, labels: personalLabels } as NoteWithRelations;
     await this.notesCrdtService.persistCollaborationSnapshot(
       noteWithRelations.id,
       noteWithRelations.title,
@@ -253,6 +317,7 @@ export class NotesService {
 
     await this.prisma.$transaction([
       this.prisma.noteProtection.deleteMany({ where: { userId, noteId } }),
+      this.prisma.userNoteLabel.deleteMany({ where: { noteId } }),
       this.prisma.note.delete({ where: { id: noteId } }),
     ]);
 
@@ -337,9 +402,8 @@ export class NotesService {
       return { updatedCount: 0 };
     }
 
-    // High-performance atomic update for PostgreSQL string arrays
     const result = await this.prisma.$executeRaw`
-      UPDATE "Note" 
+      UPDATE "UserNoteLabel" 
       SET labels = array_replace(labels, ${oldLabel}, ${newLabel}) 
       WHERE "userId" = ${userId} AND ${oldLabel} = ANY(labels)
     `;
@@ -353,9 +417,8 @@ export class NotesService {
       throw new BadRequestException('Label name cannot be empty');
     }
 
-    // High-performance atomic removal for PostgreSQL string arrays
     const result = await this.prisma.$executeRaw`
-      UPDATE "Note" 
+      UPDATE "UserNoteLabel" 
       SET labels = array_remove(labels, ${label}) 
       WHERE "userId" = ${userId} AND ${label} = ANY(labels)
     `;
