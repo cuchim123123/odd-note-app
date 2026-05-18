@@ -4,7 +4,6 @@ import type { SharedNoteItem } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { FileText, Lock, Pin, Share2, Check } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { useNotePreferencesStore, noteColorClasses } from '../../settings/stores/note-preferences.store';
 
 type DisplayNote = Note | SharedNoteItem;
 
@@ -51,7 +50,6 @@ const NoteCardComponent = function NoteCard({
 }: NoteCardProps) {
   const update = useUpdateNote(note.id || '');
   const isSharedAccess = 'accessMode' in note && note.accessMode === 'shared';
-  const noteColor = useNotePreferencesStore((state) => state.noteColor);
 
   const handleTogglePin = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -89,8 +87,8 @@ const NoteCardComponent = function NoteCard({
         'group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/20',
         isGridView ? 'w-full min-h-[11rem] flex flex-col justify-between' : 'w-full flex flex-col justify-between min-h-[6.5rem]',
         isSelected
-          ? cn(noteColorClasses[noteColor].selected, 'shadow-lg shadow-primary/5 ring-1 ring-primary/20 scale-[1.01]')
-          : cn(noteColorClasses[noteColor].card, noteColorClasses[noteColor].hover, 'hover:shadow-lg hover:-translate-y-0.5'),
+          ? 'border-primary bg-primary/10 shadow-lg shadow-primary/5 ring-1 ring-primary/20 scale-[1.01]'
+          : 'border-border/30 bg-card hover:bg-card/90 hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
         'p-4 animate-in fade-in slide-in-from-bottom-2 duration-300',
       )}
     >

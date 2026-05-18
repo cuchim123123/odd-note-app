@@ -1,5 +1,5 @@
 export const NOTE_EDITOR_PLACEHOLDER = 'Start writing your note here...';
-export const NOTE_EDITOR_WRAPPER_CLASS = 'relative overflow-hidden rounded-3xl border bg-card shadow-[0_20px_60px_rgba(15,23,42,0.12)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)]';
+export const NOTE_EDITOR_WRAPPER_CLASS = 'relative overflow-hidden rounded-3xl border shadow-[0_20px_60px_rgba(15,23,42,0.12)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)]';
 export const NOTE_EDITOR_HEADER_CLASS = 'border-b bg-gradient-to-r from-muted/30 to-card px-3 py-3 sm:px-4';
 export const NOTE_EDITOR_TOOLBAR_CLASS = 'flex items-center gap-1.5 overflow-x-auto pb-1 pr-1 sm:flex-wrap sm:overflow-visible sm:pb-0';
 export const NOTE_EDITOR_CONTENT_CLASS = 'prose focus:outline-none max-w-none px-4 py-4 sm:px-5';
