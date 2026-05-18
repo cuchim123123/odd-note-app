@@ -15,8 +15,11 @@ COPY . .
 WORKDIR /workspace/apps/web
 
 # Set the API URL for the production build
-ARG VITE_API_URL=http://localhost:4000/api
+ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
+
+# Prevent development .env file from overriding build-arg environment variables
+RUN rm -f /workspace/.env
 
 RUN pnpm build
 
