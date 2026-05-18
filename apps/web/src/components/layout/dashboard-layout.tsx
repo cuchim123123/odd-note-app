@@ -1,10 +1,9 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../features/auth/stores/auth.store';
 import { useLogout, useResendVerification } from '../../features/auth/api/auth.api';
-import { Button } from '../ui/button';
 import { NotificationCenter } from '../NotificationCenter';
-import { LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck, ChevronDown } from 'lucide-react';
 import { useRealtimeNotifications } from '../../features/notifications/hooks/useRealtimeNotifications';
 
 export function DashboardLayout() {
@@ -19,6 +18,8 @@ export function DashboardLayout() {
   
   const [resendStatus, setResendStatus] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -27,6 +28,18 @@ export function DashboardLayout() {
     }, 1000);
     return () => clearInterval(interval);
   }, [countdown]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleResendBanner = async () => {
     if (!user?.email || countdown > 0) return;
@@ -59,40 +72,76 @@ export function DashboardLayout() {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1 sm:gap-2 text-sm font-medium">
-            <Link to="/notes" className="flex items-center gap-2 rounded-full px-2.5 sm:px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" title="Notes">
-              <BookOpen className="h-4 w-4" />
-              <span className="hidden sm:inline">Notes</span>
-            </Link>
-            <Link to="/settings" className="flex items-center gap-2 rounded-full px-2.5 sm:px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" title="Settings">
-              <SettingsIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </Link>
-          </nav>
-
           <div className="flex items-center gap-2 sm:gap-3">
             <NotificationCenter />
-            <div className="hidden items-center gap-2 rounded-full border bg-card pl-2 pr-3 py-1 text-sm shadow-sm sm:flex">
-              {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.displayName}
-                  className="h-6 w-6 rounded-full object-cover border border-border"
-                />
-              ) : (
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {user ? user.displayName.trim().charAt(0).toUpperCase() : 'U'}
+            
+            {/* Premium Profile Dropdown Menu */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 rounded-full border bg-card pl-2 pr-3 py-1.5 text-sm shadow-sm transition-all hover:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                aria-expanded={isDropdownOpen}
+                aria-haspopup="true"
+              >
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.displayName}
+                    className="h-6 w-6 rounded-full object-cover border border-border"
+                  />
+                ) : (
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    {user ? user.displayName.trim().charAt(0).toUpperCase() : 'U'}
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground hidden sm:inline">Logged in as </span>
+                  <span className="font-semibold text-foreground max-w-[120px] truncate">{user?.displayName || user?.email}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/75 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl border border-border/80 bg-popover p-2 text-popover-foreground shadow-xl shadow-black/10 backdrop-blur-md animate-in fade-in slide-in-from-top-3 duration-200 z-50">
+                  <div className="px-3 py-2.5">
+                    <p className="text-xs font-semibold text-muted-foreground">Signed in as</p>
+                    <p className="truncate text-sm font-bold text-foreground mt-0.5">{user?.displayName}</p>
+                    <p className="truncate text-[11px] text-muted-foreground mt-0.5">{user?.email}</p>
+                  </div>
+                  <div className="h-px bg-border/60 my-1.5" />
+                  <div className="space-y-0.5">
+                    <Link
+                      to="/notes"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all hover:bg-accent hover:text-foreground font-medium"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Notes
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all hover:bg-accent hover:text-foreground font-medium"
+                    >
+                      <SettingsIcon className="h-4 w-4" />
+                      Settings
+                    </Link>
+                  </div>
+                  <div className="h-px bg-border/60 my-1.5" />
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      handleLogout();
+                    }}
+                    disabled={logoutMutation.isPending}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/10 transition-all"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
                 </div>
               )}
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">Logged in as </span>
-                <span className="font-medium">{user?.displayName || user?.email}</span>
-              </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} disabled={logoutMutation.isPending} aria-label="Logout from your account" className="rounded-full px-2.5 sm:px-4 h-9 flex items-center justify-center" title="Logout">
-              <LogOut className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
           </div>
         </div>
       </header>

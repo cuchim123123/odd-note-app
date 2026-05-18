@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { useResendVerification } from '../api/auth.api';
+import { useAuthStore } from '../stores/auth.store';
 
 export function VerifyEmailPage() {
   const { token } = useParams<{ token: string }>();
@@ -42,6 +43,10 @@ export function VerifyEmailPage() {
         await api.get(`/auth/verify-email/${token}`);
         setStatus('success');
         setMessage('Your email has been verified successfully!');
+        
+        // Update user state so the unverified email banner disappears immediately
+        useAuthStore.getState().updateUser({ isEmailVerified: true });
+
         setTimeout(() => {
           navigate('/', { replace: true });
         }, 2000);

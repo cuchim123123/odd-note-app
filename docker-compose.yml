@@ -25,8 +25,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - '9000:9000' # S3 API
-      - '9001:9001' # MinIO console
+      - '9009:9000' # S3 API
+      - '9019:9001' # MinIO console
     volumes:
       - minio-data:/data
 
@@ -40,16 +40,18 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: this-is-a-long-dev-access-secret-at-least-32-chars
       JWT_REFRESH_SECRET: this-is-a-long-dev-refresh-secret-at-least-32-chars
-      SMTP_HOST: localhost
-      SMTP_PORT: 1025
-      SMTP_FROM: noreply@oddnote.local
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 465
+      SMTP_USER: nchau4033@gmail.com
+      SMTP_PASS: gdxd fzuu xund jxio
+      SMTP_FROM: nchau4033@gmail.com
       S3_ENDPOINT: minio
       S3_PORT: 9000
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_BUCKET: oddnote-uploads
       S3_USE_SSL: false
-      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9009
       API_PORT: 4000
       ALLOW_TEST_ENDPOINTS: '1'
     restart: always

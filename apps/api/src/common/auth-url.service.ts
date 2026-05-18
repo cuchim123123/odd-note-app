@@ -7,11 +7,11 @@ export class AuthUrlService {
 
   buildVerificationEmailUrl(token: string): string {
     const baseUrl = this.env.APP_URL.replace(/\/$/, '');
-    return `${baseUrl}/auth/verify-email/${token}`;
+    return `${baseUrl}/verify-email/${token}`;
   }
 
   buildResetPasswordUrl(token: string): string {
     const baseUrl = this.env.APP_URL.replace(/\/$/, '');
-    return `${baseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
+    return `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
   }
 }
