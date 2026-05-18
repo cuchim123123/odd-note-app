@@ -4,7 +4,7 @@ import { useAuthStore } from '../../features/auth/stores/auth.store';
 import { useLogout, useResendVerification } from '../../features/auth/api/auth.api';
 import { Button } from '../ui/button';
 import { NotificationCenter } from '../NotificationCenter';
-import { Sparkles, LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck, ChevronRight } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck, ChevronRight } from 'lucide-react';
 import { useRealtimeNotifications } from '../../features/notifications/hooks/useRealtimeNotifications';
 
 export function DashboardLayout() {
@@ -53,14 +53,10 @@ export function DashboardLayout() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 border-b bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
         <div className="container flex h-16 items-center justify-between gap-4">
-          <Link to="/notes" className="flex shrink-0 items-center gap-3 rounded-full border bg-card px-3 py-2 shadow-sm transition-transform hover:-translate-y-0.5">
-            <div className="flex shrink-0 h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div className="hidden sm:flex sm:flex-col sm:leading-tight">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Odd Note</span>
-              <span className="font-bold tracking-tight">Write with calm focus</span>
-            </div>
+          <Link to="/notes" className="flex shrink-0 items-center transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg px-1.5 py-1">
+            <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-primary via-primary/95 to-primary/85 bg-clip-text text-transparent">
+              OddNote
+            </span>
           </Link>
 
           <nav className="flex items-center gap-2 text-sm font-medium">
