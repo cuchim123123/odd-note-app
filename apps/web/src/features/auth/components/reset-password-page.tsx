@@ -30,7 +30,7 @@ export function ResetPasswordPage() {
         </CardHeader>
         <CardContent className="text-center">
           <Button asChild className="w-full">
-            <Link to="/auth/forgot-password">Request new link</Link>
+            <Link to="/forgot-password">Request new link</Link>
           </Button>
         </CardContent>
       </Card>
@@ -42,7 +42,7 @@ export function ResetPasswordPage() {
     try {
       // Assuming a backend endpoint POST /auth/reset-password exists
       await api.post('/auth/reset-password', { token, password: data.password });
-      navigate('/auth/login', { replace: true, state: { message: 'Password reset successfully. You can now login.' } });
+      navigate('/login', { replace: true, state: { message: 'Password reset successfully. You can now login.' } });
     } catch (error) {
       if (error instanceof AxiosError) {
         setErrorMsg(error.response?.data?.message || 'Failed to reset password. The link might be expired.');

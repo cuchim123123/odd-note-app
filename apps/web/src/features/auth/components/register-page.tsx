@@ -97,7 +97,7 @@ export function RegisterPage() {
       </CardContent>
       <CardFooter className="flex justify-center text-sm">
         <span className="text-muted-foreground">Already have an account?</span>
-        <Link to="/auth/login" className="ml-1 text-primary hover:underline font-medium">
+        <Link to="/login" className="ml-1 text-primary hover:underline font-medium">
           Sign in
         </Link>
       </CardFooter>

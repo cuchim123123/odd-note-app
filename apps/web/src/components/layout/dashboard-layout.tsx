@@ -46,7 +46,7 @@ export function DashboardLayout() {
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
-    navigate('/auth/login');
+    navigate('/login');
   };
 
   return (

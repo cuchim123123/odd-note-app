@@ -44,11 +44,10 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: '/auth',
     element: <AuthLayout />,
     children: [
       {
-        path: 'login',
+        path: '/login',
         element: (
           <GuestRoute>
             <LoginPage />
@@ -56,7 +55,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'register',
+        path: '/register',
         element: (
           <GuestRoute>
             <RegisterPage />
@@ -64,7 +63,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'forgot-password',
+        path: '/forgot-password',
         element: (
           <GuestRoute>
             <ForgotPasswordPage />
@@ -72,7 +71,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'reset-password',
+        path: '/reset-password',
         element: (
           <GuestRoute>
             <ResetPasswordPage />
@@ -80,7 +79,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'verify-email/:token',
+        path: '/verify-email/:token',
         element: <VerifyEmailPage />,
       },
     ],

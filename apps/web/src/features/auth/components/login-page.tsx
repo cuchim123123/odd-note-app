@@ -55,7 +55,7 @@ export function LoginPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              <Link to="/auth/forgot-password" className="text-sm text-primary hover:underline font-medium">
+              <Link to="/forgot-password" className="text-sm text-primary hover:underline font-medium">
                 Forgot password?
               </Link>
             </div>
@@ -83,7 +83,7 @@ export function LoginPage() {
       </CardContent>
       <CardFooter className="flex justify-center text-sm">
         <span className="text-muted-foreground">Don't have an account?</span>
-        <Link to="/auth/register" className="ml-1 text-primary hover:underline font-medium">
+        <Link to="/register" className="ml-1 text-primary hover:underline font-medium">
           Create an account
         </Link>
       </CardFooter>

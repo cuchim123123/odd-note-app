@@ -48,7 +48,7 @@ export function ForgotPasswordPage() {
               <p className="text-sm mt-1">We've sent a password reset link to your email address.</p>
             </div>
             <Button asChild variant="outline" className="w-full">
-              <Link to="/auth/login">Return to login</Link>
+              <Link to="/login">Return to login</Link>
             </Button>
           </div>
         ) : (
@@ -80,7 +80,7 @@ export function ForgotPasswordPage() {
       </CardContent>
       {!isSuccess && (
         <CardFooter className="flex justify-center text-sm">
-          <Link to="/auth/login" className="text-primary hover:underline font-medium">
+          <Link to="/login" className="text-primary hover:underline font-medium">
             Back to login
           </Link>
         </CardFooter>

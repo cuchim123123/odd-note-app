@@ -127,7 +127,7 @@ export function VerifyEmailPage() {
                   Go to home
                 </Button>
               </Link>
-              <Link to="/auth/login" className="w-full">
+              <Link to="/login" className="w-full">
                 <Button variant="outline" className="w-full rounded-xl">
                   Back to login
                 </Button>
