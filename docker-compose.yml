@@ -2,8 +2,6 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
-    ports:
-      - '6379:6379'
     volumes:
       - redis-data:/data
 
@@ -13,8 +11,6 @@ services:
       POSTGRES_DB: oddnote
       POSTGRES_USER: oddnote
       POSTGRES_PASSWORD: oddnotepass
-    ports:
-      - '54320:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
 
@@ -24,9 +20,6 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - '9009:9000' # S3 API
-      - '9019:9001' # MinIO console
     volumes:
       - minio-data:/data
 
@@ -36,7 +29,7 @@ services:
       dockerfile: ./apps/api/Dockerfile
     environment:
       DATABASE_URL: postgres://oddnote:oddnotepass@db:5432/oddnote
-      APP_URL: http://localhost:5173
+      APP_URL: http://localhost
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: this-is-a-long-dev-access-secret-at-least-32-chars
       JWT_REFRESH_SECRET: this-is-a-long-dev-refresh-secret-at-least-32-chars
@@ -51,7 +44,7 @@ services:
       S3_SECRET_KEY: minioadmin
       S3_BUCKET: oddnote-uploads
       S3_USE_SSL: false
-      S3_PUBLIC_ENDPOINT: http://localhost:9009
+      S3_PUBLIC_ENDPOINT: http://localhost/uploads
       API_PORT: 4000
       ALLOW_TEST_ENDPOINTS: '1'
     restart: always
@@ -59,17 +52,15 @@ services:
       - redis
       - db
       - minio
-    ports:
-      - '4000:4000'
 
   web:
     build:
       context: .
       dockerfile: ./apps/web/Dockerfile
       args:
-        VITE_API_URL: http://localhost:4000/api
+        VITE_API_URL: /api
     ports:
-      - '5173:80'
+      - '80:80'
     depends_on:
       - api
 
