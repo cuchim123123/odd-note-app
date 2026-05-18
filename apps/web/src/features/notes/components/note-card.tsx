@@ -83,7 +83,7 @@ const NoteCardComponent = function NoteCard({
       onClick={handleSelect}
       className={cn(
         'group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/20',
-        isGridView ? 'w-full h-[11rem] flex flex-col justify-between' : 'w-full flex flex-col justify-between min-h-[6.5rem]',
+        isGridView ? 'w-full min-h-[11rem] flex flex-col justify-between' : 'w-full flex flex-col justify-between min-h-[6.5rem]',
         isSelected
           ? 'border-primary bg-primary/10 shadow-lg shadow-primary/5 ring-1 ring-primary/20 scale-[1.01]'
           : 'border-border/30 bg-card hover:bg-card/90 hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
@@ -109,7 +109,7 @@ const NoteCardComponent = function NoteCard({
               </div>
               
               <span className={cn(
-                'font-semibold text-foreground truncate text-sm tracking-tight flex-1',
+                'font-semibold text-foreground line-clamp-2 whitespace-normal break-words text-sm tracking-tight flex-1',
                 isSelected && 'text-primary'
               )}>
                 {note.title || 'Untitled Note'}
