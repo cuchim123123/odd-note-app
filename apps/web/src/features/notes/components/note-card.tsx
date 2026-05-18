@@ -95,13 +95,20 @@ const NoteCardComponent = function NoteCard({
           {/* Header row: Icon & Title & Badges */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              {/* Render icon/checkbox container. Hidden on mobile if not in selection mode to maximize title text width */}
               <div className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
-                isSelected ? 'bg-primary/20 text-primary' : 'bg-primary/5 text-primary/80 group-hover:bg-primary/10 group-hover:text-primary'
+                'flex shrink-0 items-center justify-center rounded-xl transition-all duration-300',
+                isSelectionMode 
+                  ? 'h-6 w-6 rounded-md bg-transparent border-0' 
+                  : 'hidden sm:flex h-9 w-9 bg-primary/5 text-primary/80 group-hover:bg-primary/10 group-hover:text-primary',
+                isSelected && !isSelectionMode && 'bg-primary/20 text-primary'
               )}>
                 {isSelectionMode ? (
-                  <div className={cn("h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors", isSelectedForBulk ? "bg-primary border-primary" : "border-primary/50")}>
-                    {isSelectedForBulk && <Check className="h-3 w-3 text-primary-foreground" />}
+                  <div className={cn(
+                    "h-5 w-5 rounded-md border flex items-center justify-center transition-colors", 
+                    isSelectedForBulk ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/45 bg-background"
+                  )}>
+                    {isSelectedForBulk && <Check className="h-3.5 w-3.5" />}
                   </div>
                 ) : (
                   <FileText className="h-4.5 w-4.5" />
