@@ -171,7 +171,7 @@ export function useYjsCollaboration({
         try {
           console.warn('[Yjs] Access token is expired; refreshing before socket connect');
           const response = await axios.post(
-            `${getWsUrl()}/auth/refresh`,
+            `${getWsUrl()}/api/auth/refresh`,
             { refreshToken },
             { withCredentials: true },
           );
@@ -276,7 +276,7 @@ export function useYjsCollaboration({
         try {
           console.warn('[Yjs] Refreshing expired access token before reconnect');
           const response = await axios.post(
-            `${getWsUrl()}/auth/refresh`,
+            `${getWsUrl()}/api/auth/refresh`,
             { refreshToken },
             { withCredentials: true },
           );

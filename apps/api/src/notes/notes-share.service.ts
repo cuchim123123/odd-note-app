@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../common/mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
 import { REDIS_CHANNELS, REDIS_EVENT_TYPES } from '../collaboration/collaboration.constants';
+import type { EnvConfig } from '../config/config.module';
 
 export type SharePermission = 'READ' | 'EDIT';
 
@@ -21,6 +22,7 @@ export class NotesShareService {
     private readonly prisma: PrismaService,
     private readonly mailer: MailerService,
     private readonly redis: RedisService,
+    @Inject('ENV_CONFIG') private readonly env: EnvConfig,
   ) {}
 
   async ensureOwnedNote(userId: string, noteId: string): Promise<void> {
@@ -94,7 +96,7 @@ export class NotesShareService {
       include: { recipient: { select: { displayName: true } } },
     });
 
-    const appUrl = process.env.APP_URL || 'http://localhost:5173';
+    const appUrl = this.env.APP_URL;
     try {
       await this.mailer.sendNoteSharedEmail({
         to: recipientEmail,
