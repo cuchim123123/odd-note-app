@@ -33,6 +33,9 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-this-is-a-long-dev-access-secret-at-least-32-chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-this-is-a-long-dev-refresh-secret-at-least-32-chars}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      EMAIL_VERIFICATION_TOKEN_EXPIRES_IN: ${EMAIL_VERIFICATION_TOKEN_EXPIRES_IN:-5m}
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-465}
       SMTP_USER: ${SMTP_USER:-}
