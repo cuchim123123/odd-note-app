@@ -186,7 +186,11 @@ export function useYjsCollaboration({
           refreshAttemptedRef.current = false;
         } catch (refreshError) {
           console.error('[Yjs] Failed to refresh access token before connect', refreshError);
-          useAuthStore.getState().logout();
+          // Only log out if the server explicitly rejected the token (e.g., 400/401/403/405).
+          // Do not log out if it is a network connectivity error (e.g., offline).
+          if (axios.isAxiosError(refreshError) && refreshError.response) {
+            useAuthStore.getState().logout();
+          }
         } finally {
           refreshInFlightRef.current = false;
         }
@@ -291,7 +295,11 @@ export function useYjsCollaboration({
           refreshAttemptedRef.current = false;
         } catch (refreshError) {
           console.error('[Yjs] Failed to refresh socket token', refreshError);
-          useAuthStore.getState().logout();
+          // Only log out if the server explicitly rejected the token (e.g., 400/401/403/405).
+          // Do not log out if it is a network connectivity error (e.g., offline).
+          if (axios.isAxiosError(refreshError) && refreshError.response) {
+            useAuthStore.getState().logout();
+          }
         }
       })();
     });
