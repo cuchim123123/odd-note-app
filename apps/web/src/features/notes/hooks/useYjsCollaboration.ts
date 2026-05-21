@@ -67,6 +67,9 @@ function getWsUrl(): string {
 
   const apiBaseUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_URL;
   if (apiBaseUrl) {
+    if (apiBaseUrl.startsWith('/')) {
+      return window.location.origin;
+    }
     try {
       return new URL(apiBaseUrl).origin;
     } catch {
@@ -74,7 +77,10 @@ function getWsUrl(): string {
     }
   }
 
-  return `${window.location.protocol === 'https:' ? 'https' : 'http'}://${window.location.hostname}:4000`;
+  if (window.location.port === '5173') {
+    return `${window.location.protocol === 'https:' ? 'https' : 'http'}://${window.location.hostname}:4000`;
+  }
+  return window.location.origin;
 }
 
 function isJwtExpired(token: string, skewSeconds = 30): boolean {
