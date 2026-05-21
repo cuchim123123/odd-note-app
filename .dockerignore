@@ -27,3 +27,9 @@ build
 .env.*.local
 *.pem
 *.key
+.husky
+e2e
+playwright.config.ts
+playwright-report
+test-results
+api-logs.txt

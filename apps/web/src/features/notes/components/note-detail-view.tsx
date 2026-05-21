@@ -30,49 +30,15 @@ function getYDocDebugId(yDoc?: YDoc | null): string {
 }
 
 export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
-  const { data: note, isLoading, isError } = useNote(noteId);
-  const navigate = useNavigate();
+  const { data: note, isLoading } = useNote(noteId);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center p-8 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading note content…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !note) {
-    return (
-      <div className="flex h-full items-center justify-center p-8 bg-gradient-to-br from-background via-muted/10 to-background">
-        <div className="w-full max-w-md rounded-3xl border bg-card p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.08)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.4)] animate-in fade-in zoom-in-95 duration-300">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive shadow-inner">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-8 w-8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-xl font-bold tracking-tight text-foreground">Note Not Found</h2>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            The note you are trying to access does not exist, has been deleted, or you do not have permission to view it.
-          </p>
-          <div className="mt-8 flex flex-col gap-2">
-            <Button 
-              type="button" 
-              className="w-full rounded-full bg-primary py-2.5 font-medium shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/30" 
-              onClick={() => navigate('/notes')}
-            >
-              Back to notes
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+  if (isLoading || !note) {
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading…</div>;
   }
 
   return (
     <NoteDetailContent 
+      key={note.id}
       note={note} 
       noteId={noteId} 
       onDeleted={onDeleted} 
@@ -204,17 +170,6 @@ function NoteDetailContent({
     },
   });
 
-  // Debounce broadcasting collaborative content updates over WebSocket to update Redis snapshots
-  React.useEffect(() => {
-    if (!isCollaborativeNote || !isWsConnected || !isSynced) return;
-
-    const timer = setTimeout(() => {
-      sendContentUpdate(content);
-    }, 1000); // 1-second debounce to keep database previews fully aligned without flooding the network
-
-    return () => clearTimeout(timer);
-  }, [content, isCollaborativeNote, isWsConnected, isSynced, sendContentUpdate]);
-
 
   const broadcast = useCallback((s: { title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined } = {}) => {
     if (!isCollaborativeNote) return;
@@ -254,7 +209,7 @@ function NoteDetailContent({
 
   return (
     <ProtectedNoteRoute note={note as ProtectedNote | null} isLoading={false} onUnauthorized={onUnauthorized}>
-      <div className="flex h-full flex-col overflow-hidden bg-transparent">
+      <div className="flex h-full flex-col overflow-hidden rounded-3xl border bg-card shadow-[0_24px_80px_rgba(15,23,42,0.12)] dark:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
       <NoteToolbar
         note={note}
         title={title}

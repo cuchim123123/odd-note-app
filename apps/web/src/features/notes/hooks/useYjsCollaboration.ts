@@ -67,9 +67,6 @@ function getWsUrl(): string {
 
   const apiBaseUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_URL;
   if (apiBaseUrl) {
-    if (apiBaseUrl.startsWith('/')) {
-      return window.location.origin;
-    }
     try {
       return new URL(apiBaseUrl).origin;
     } catch {
@@ -77,10 +74,7 @@ function getWsUrl(): string {
     }
   }
 
-  if (window.location.port === '5173') {
-    return `${window.location.protocol === 'https:' ? 'https' : 'http'}://${window.location.hostname}:4000`;
-  }
-  return window.location.origin;
+  return `${window.location.protocol === 'https:' ? 'https' : 'http'}://${window.location.hostname}:4000`;
 }
 
 function isJwtExpired(token: string, skewSeconds = 30): boolean {
@@ -186,7 +180,7 @@ export function useYjsCollaboration({
           refreshAttemptedRef.current = false;
         } catch (refreshError) {
           console.error('[Yjs] Failed to refresh access token before connect', refreshError);
-          useAuthStore.getState().logout(false);
+          useAuthStore.getState().logout();
         } finally {
           refreshInFlightRef.current = false;
         }
@@ -291,7 +285,7 @@ export function useYjsCollaboration({
           refreshAttemptedRef.current = false;
         } catch (refreshError) {
           console.error('[Yjs] Failed to refresh socket token', refreshError);
-          useAuthStore.getState().logout(false);
+          useAuthStore.getState().logout();
         }
       })();
     });
