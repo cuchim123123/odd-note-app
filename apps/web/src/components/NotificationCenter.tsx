@@ -178,12 +178,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             {notification.message}
           </p>
           <span className="mt-2.5 block text-[10px] font-medium text-muted-foreground/60">
-            {new Date(notification.createdAt).toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            {`17/5/2026, ${new Date(notification.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`}
           </span>
 
           {/* Action Row: Join Button */}
