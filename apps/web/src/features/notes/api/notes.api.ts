@@ -153,7 +153,7 @@ export {
 
 const hasAccessToken = () => Boolean(useAuthStore.getState().accessToken);
 
-const backendNotesAvailable = () => hasAccessToken();
+const backendNotesAvailable = () => hasAccessToken() && useOfflineSyncStore.getState().isOnline;
 
 const currentUserProfile = (): SharedByProfile | null => {
   const user = useAuthStore.getState().user;
