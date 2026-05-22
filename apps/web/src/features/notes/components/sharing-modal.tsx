@@ -181,7 +181,7 @@ export function SharingModal({
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm break-all">{share.recipientEmail}</div>
                         <div className="text-xs text-muted-foreground">
-                          17/5/2026
+                          18/5/2026
                         </div>
                       </div>
                       <button

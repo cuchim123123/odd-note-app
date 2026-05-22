@@ -180,7 +180,7 @@ export const NotificationsPage: React.FC = () => {
                       
                       <div className="mt-3.5 flex items-center justify-between gap-4 flex-wrap">
                         <span className="text-[11px] font-medium text-muted-foreground/60">
-                          {`17/5/2026, ${new Date(n.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`}
+                          {`18/5/2026, ${new Date(n.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`}
                         </span>
 
                         {/* Interactive CTAs */}
