@@ -7,7 +7,7 @@ import Image from '@tiptap/extension-image';
 import Collaboration from '@tiptap/extension-collaboration';
 import { useEffect, useMemo, useRef } from 'react';
 import * as Y from 'yjs';
-import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
+import { useNotePreferencesStore, noteColorClasses } from '../../settings/stores/note-preferences.store';
 import { cn } from '../../../lib/utils';
 import { NoteEditorToolbar } from './note-editor-toolbar';
 import {
@@ -46,6 +46,8 @@ export function NoteEditor({
   onEditorInit,
 }: NoteEditorProps) {
   const noteFontSize = useNotePreferencesStore((state) => state.noteFontSize);
+  const noteColor = useNotePreferencesStore((state) => state.noteColor);
+  const colorStyles = noteColorClasses[noteColor] || noteColorClasses.default;
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
   const starterKit = useMemo(
@@ -158,14 +160,14 @@ export function NoteEditor({
       data-note-font-size={noteFontSize}
       aria-readonly={readOnly}
       ref={editorContainerRef}
-      className={NOTE_EDITOR_WRAPPER_CLASS}
+      className={cn(NOTE_EDITOR_WRAPPER_CLASS, colorStyles.editor)}
     >
       <div className={NOTE_EDITOR_HEADER_CLASS}>
         <NoteEditorToolbar editor={editor} readOnly={readOnly} onInsertImage={onInsertImage} />
       </div>
       <EditorContent
         editor={editor}
-        className={cn(NOTE_EDITOR_CONTENT_CLASS, 'min-h-[240px]', 'sm:min-h-[320px]', 'bg-[hsl(var(--editor-surface))]')}
+        className={cn(NOTE_EDITOR_CONTENT_CLASS, 'min-h-[240px]', 'sm:min-h-[320px]', colorStyles.editorContent)}
       />
     </div>
   );
