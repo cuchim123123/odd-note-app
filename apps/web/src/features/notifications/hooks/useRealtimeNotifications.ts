@@ -110,6 +110,31 @@ export function useRealtimeNotifications() {
       addToast(toastPayload);
     });
 
+    socket.on('note:deleted', (data: { noteId: string }) => {
+      console.warn('[RealtimeNotifications] Note deleted globally:', data.noteId);
+      // Invalidate queries to instantly update the list on the dashboard
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      
+      // If currently on this note's page, push back to dashboard immediately
+      const currentPath = window.location.pathname;
+      if (currentPath === `/notes/${data.noteId}` || currentPath === `/notes/${data.noteId}/`) {
+        addToast({
+          title: 'Note Deleted',
+          message: 'This note was deleted by the owner.',
+          type: 'info',
+          duration: 5000,
+        });
+        navigate('/notes');
+      }
+    });
+
+    socket.on('note:permissions_updated', (data: { noteId: string }) => {
+      console.warn('[RealtimeNotifications] Permissions updated globally:', data.noteId);
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      queryClient.invalidateQueries({ queryKey: ['notes', data.noteId] });
+      queryClient.invalidateQueries({ queryKey: ['note', data.noteId] });
+    });
+
     socket.on('disconnect', () => {
       console.warn('[RealtimeNotifications] Disconnected from websocket gateway');
     });

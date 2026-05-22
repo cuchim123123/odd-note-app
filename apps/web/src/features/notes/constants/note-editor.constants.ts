@@ -4,6 +4,6 @@ export const NOTE_EDITOR_HEADER_CLASS = 'border-b bg-gradient-to-r from-muted/30
 export const NOTE_EDITOR_TOOLBAR_CLASS = 'flex items-center gap-1.5 overflow-x-auto pb-1 pr-1 sm:flex-wrap sm:overflow-visible sm:pb-0';
 export const NOTE_EDITOR_CONTENT_CLASS = 'prose focus:outline-none max-w-none px-4 py-4 sm:px-5';
 export const NOTE_EDITOR_MIN_HEIGHT_CLASS = 'min-h-[240px] sm:min-h-[320px]';
-export const NOTE_EDITOR_EDITABLE_CLASS = 'prose prose-sm sm:prose-base focus:outline-none max-w-none min-h-[320px] prose-headings:tracking-tight prose-p:leading-7 prose-li:leading-7 prose-blockquote:border-primary/20 prose-blockquote:text-foreground prose-pre:bg-slate-950 prose-pre:text-slate-50';
+export const NOTE_EDITOR_EDITABLE_CLASS = 'prose focus:outline-none max-w-none min-h-[320px] prose-headings:tracking-tight prose-p:leading-7 prose-li:leading-7 prose-blockquote:border-primary/20 prose-blockquote:text-foreground prose-pre:bg-slate-950 prose-pre:text-slate-50';
 export const NOTE_EDITOR_TOOLBAR_BUTTON_CLASS = 'h-10 w-10 rounded-full';
 export const NOTE_EDITOR_BUTTON_SPACER_CLASS = 'mx-1 h-6 w-px bg-border';

@@ -16,7 +16,7 @@ import { NotesProtectionService } from '../notes/notes-protection.service';
 import { Server, Socket } from 'socket.io';
 import type Redis from 'ioredis';
 import * as Y from 'yjs';
-import { COLLABORATION_NAMESPACE, COLLABORATION_TYPING_STALE_AFTER_MS, COLLABORATOR_COLORS } from './collaboration.constants';
+import { COLLABORATION_NAMESPACE, COLLABORATION_TYPING_STALE_AFTER_MS, COLLABORATOR_COLORS, REDIS_EVENT_TYPES } from './collaboration.constants';
 
 type CollaboratorInfo = {
   userId: string;
@@ -112,11 +112,14 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
         this.internalSubClient.on('message', (channel, message) => {
           if (channel === 'collaboration:events') {
             try {
-              const event = JSON.parse(message) as { type: string; noteId: string };
-              if (event.type === 'permissions_updated') {
-                this.server.to(event.noteId).emit('note:permissions_updated', { noteId: event.noteId });
-              } else if (event.type === 'note_deleted') {
-                this.server.to(event.noteId).emit('note:deleted', { noteId: event.noteId });
+              const event = JSON.parse(message) as { type: string; noteId?: string };
+              if (event.type === 'permissions_updated' && event.noteId) {
+                this.server.emit('note:permissions_updated', { noteId: event.noteId });
+              } else if (event.type === 'note_deleted' && event.noteId) {
+                this.server.emit('note:deleted', { noteId: event.noteId });
+              } else if (event.type === REDIS_EVENT_TYPES.NOTIFICATION_CREATED) {
+                const notifEvent = JSON.parse(message) as { userId: string; notification: unknown };
+                this.server.to(`user:${notifEvent.userId}`).emit('notification:new', notifEvent.notification);
               }
             } catch (err) {
               this.logger.error('Failed to process internal collaboration event', err as Error);
@@ -184,7 +187,10 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
         displayName: payload.displayName ?? 'Anonymous',
       };
 
-      this.logger.log(`Client ${client.id} authenticated as user ${payload.sub}`);
+      // Place authenticated user socket in a user-specific private room
+      void client.join(`user:${payload.sub}`);
+
+      this.logger.log(`Client ${client.id} authenticated as user ${payload.sub} and joined room user:${payload.sub}`);
     } catch (error) {
       this.logger.warn(`Client ${client.id} failed auth: ${error}`);
       client.disconnect();
@@ -346,10 +352,10 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
       return;
     }
 
-    this.logger.log(`User ${client.data.userId} deleted note ${data.noteId} - broadcasting to room`);
+    this.logger.log(`User ${client.data.userId} deleted note ${data.noteId} - broadcasting globally`);
 
-    // Notify ALL clients in the room (including the one who deleted it)
-    this.server.to(data.noteId).emit('note:deleted', { noteId: data.noteId });
+    // Notify ALL clients globally (including the one who deleted it)
+    this.server.emit('note:deleted', { noteId: data.noteId });
 
     // Cleanup Redis state for this note
     await Promise.all([

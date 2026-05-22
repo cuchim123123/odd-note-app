@@ -2,9 +2,10 @@ import { memo } from 'react';
 import { useUpdateNote } from '../api/notes.api';
 import type { SharedNoteItem } from '../api/notes.api';
 import type { Note } from '@odd-note-app/validation';
-import { FileText, Lock, Pin, Share2, Check } from 'lucide-react';
+import { FileText, Lock, Pin, Check } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useNotePreferencesStore, noteColorClasses } from '../../settings/stores/note-preferences.store';
+import type { NoteColor } from '../../settings/stores/note-preferences.store';
 
 type DisplayNote = Note | SharedNoteItem;
 
@@ -39,6 +40,7 @@ type NoteCardProps = {
   isGridView: boolean;
   isSelectionMode?: boolean;
   isSelectedForBulk?: boolean;
+  noteColor?: string;
 };
 
 const NoteCardComponent = function NoteCard({
@@ -48,12 +50,14 @@ const NoteCardComponent = function NoteCard({
   isGridView,
   isSelectionMode,
   isSelectedForBulk,
+  noteColor: noteColorProp,
 }: NoteCardProps) {
   const update = useUpdateNote(note.id || '');
   const isSharedAccess = 'accessMode' in note && note.accessMode === 'shared';
   
-  const noteColor = useNotePreferencesStore((state) => state.noteColor);
-  const colorStyles = noteColorClasses[noteColor] || noteColorClasses.default;
+  const noteColorStore = useNotePreferencesStore((state) => state.noteColor);
+  const noteColor = noteColorProp || noteColorStore;
+  const colorStyles = noteColorClasses[noteColor as NoteColor] || noteColorClasses.default;
 
   const handleTogglePin = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -134,10 +138,10 @@ const NoteCardComponent = function NoteCard({
                 aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}
                 aria-pressed={note.isPinned}
                 onClick={handleTogglePin}
-                className="rounded-full p-1.5 text-muted-foreground/60 transition-all hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground hover:scale-105 active:scale-95"
+                className="rounded-full p-2 text-muted-foreground/60 transition-all hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground hover:scale-110 active:scale-95"
                 disabled={isSharedAccess}
               >
-                <Pin className="h-4.5 w-4.5" />
+                <Pin className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -191,7 +195,6 @@ const NoteCardComponent = function NoteCard({
             <div className="flex items-center gap-1">
               {note.isPinned && <Pin className="h-3 w-3 text-amber-500 fill-amber-500/20" />}
               {note.isProtected && <Lock className="h-3 w-3 text-rose-500" />}
-              {note.isShared && !isSharedAccess && <Share2 className="h-3 w-3 text-sky-500" />}
             </div>
           </div>
         </div>
@@ -206,6 +209,7 @@ const noteCardAreEqual = (prevProps: NoteCardProps, nextProps: NoteCardProps) =>
     prevProps.isGridView === nextProps.isGridView &&
     prevProps.isSelectionMode === nextProps.isSelectionMode &&
     prevProps.isSelectedForBulk === nextProps.isSelectedForBulk &&
+    prevProps.noteColor === nextProps.noteColor &&
     prevProps.note.id === nextProps.note.id &&
     prevProps.note.title === nextProps.note.title &&
     prevProps.note.content === nextProps.note.content &&

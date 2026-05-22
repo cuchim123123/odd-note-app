@@ -50,6 +50,15 @@ export function NoteEditor({
   const colorStyles = noteColorClasses[noteColor] || noteColorClasses.default;
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const collaborativeRef = useRef(collaborative);
+  collaborativeRef.current = collaborative;
+
+  const isSyncedRef = useRef(isSynced);
+  isSyncedRef.current = isSynced;
+
   const starterKit = useMemo(
     () => StarterKit.configure(collaborative && Boolean(yDoc) ? { history: false } : {}),
     [collaborative, yDoc],
@@ -97,8 +106,12 @@ export function NoteEditor({
       });
     },
     onUpdate: ({ editor: ed }) => {
-      if (onChange) {
-        onChange(ed.getHTML());
+      if (collaborativeRef.current && !isSyncedRef.current) {
+        console.warn('[NoteEditor] Ignoring onUpdate before initial Yjs sync is complete');
+        return;
+      }
+      if (onChangeRef.current) {
+        onChangeRef.current(ed.getHTML());
       }
     },
     editorProps: {

@@ -24,16 +24,32 @@ import { useYjsCollaboration } from '../hooks/useYjsCollaboration';
 import { ProtectedNoteRoute, type ProtectedNote } from './protected-note-route';
 import { useNoteDraftAndAutoSave } from '../hooks/use-note-draft-autosave';
 
+import { cn } from '../../../lib/utils';
+import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
+
 function getYDocDebugId(yDoc?: YDoc | null): string {
   const debugDoc = yDoc as YDoc & { guid?: string | number; clientID?: string | number };
   return String(debugDoc?.guid ?? debugDoc?.clientID ?? 'unknown');
 }
 
 export function NoteDetailView({ noteId, onDeleted }: { noteId: string; onDeleted: () => void }) {
-  const { data: note, isLoading } = useNote(noteId);
+  const { data: note, isLoading, isError } = useNote(noteId);
+  const navigate = useNavigate();
 
-  if (isLoading || !note) {
+  if (isLoading) {
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading…</div>;
+  }
+
+  if (isError || !note) {
+    return (
+      <ProtectedNoteRoute
+        note={null}
+        isLoading={false}
+        onUnauthorized={() => navigate('/notes')}
+      >
+        <div />
+      </ProtectedNoteRoute>
+    );
   }
 
   return (
@@ -57,6 +73,17 @@ function NoteDetailContent({
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  const noteColor = useNotePreferencesStore((state) => state.noteColor);
+  
+  const noteColorBgMap: Record<string, string> = {
+    default: 'bg-gradient-to-b from-muted/20 to-card',
+    yellow: 'bg-gradient-to-b from-amber-50/20 to-amber-100/10 dark:from-amber-950/10 dark:to-amber-950/20',
+    green: 'bg-gradient-to-b from-emerald-50/20 to-emerald-100/10 dark:from-emerald-950/10 dark:to-emerald-950/20',
+    blue: 'bg-gradient-to-b from-sky-50/20 to-sky-100/10 dark:from-sky-950/10 dark:to-sky-950/20',
+    pink: 'bg-gradient-to-b from-rose-50/20 to-rose-100/10 dark:from-rose-950/10 dark:to-rose-950/20',
+    purple: 'bg-gradient-to-b from-violet-50/20 to-violet-100/10 dark:from-violet-950/10 dark:to-violet-950/20',
+  };
   
   // Stabilize permissions to prevent UI flickering during cache updates
   const { isOwnedNote, isSharedNote, canEditContent, canManageShares, isCollaborativeNote } = React.useMemo(() => {
@@ -310,7 +337,7 @@ function NoteDetailContent({
         />
       )}
 
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-muted/20 to-card p-4 sm:p-8">
+      <div className={cn("flex-1 overflow-y-auto p-4 sm:p-8 transition-colors duration-300", noteColorBgMap[noteColor] || noteColorBgMap.default)}>
         <div className="mx-auto max-w-4xl">
           <NoteEditor
             key={yDoc ? `y-${getYDocDebugId(yDoc)}` : `no-y-${noteId ?? 'none'}`}

@@ -8,6 +8,7 @@ import { LabelSelector } from './label-selector';
 import { Input } from '../../../components/ui/input';
 import { cn } from '../../../lib/utils';
 import { useLabelManagementStore } from '../../settings/stores/label-management.store';
+import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
 import { NoteCard } from './note-card';
 import type { SharedNoteItem } from '../api/notes.api';
 import { LabelFilterModal } from './label-filter-modal';
@@ -64,6 +65,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const labels = useLabelManagementStore((state) => state.labels);
   const syncLabels = useLabelManagementStore((state) => state.syncLabels);
+  const noteColor = useNotePreferencesStore((state) => state.noteColor);
 
   const bulkDeleteMutation = useBulkDeleteNotes();
   const bulkAddLabelMutation = useBulkAddLabel();
@@ -321,6 +323,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
                       isGridView={isGridView}
                       isSelectionMode={isSelectionMode}
                       isSelectedForBulk={isSelectedForBulk}
+                      noteColor={noteColor}
                     />
                   );
                 })}
@@ -348,6 +351,7 @@ export function NoteList({ selectedNoteId, onSelectNote, viewMode, onViewModeCha
                           isGridView={isGridView}
                           isSelectionMode={isSelectionMode}
                           isSelectedForBulk={isSelectedForBulk}
+                          noteColor={noteColor}
                         />
                       );
                     })}
