@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Input } from '../../../components/ui/input';
+import { PasswordInput } from '../../../components/ui/password-input';
 import { Button } from '../../../components/ui/button';
 import { Lock, Loader2, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
@@ -18,7 +18,7 @@ export function ProtectionUnlockPrompt({ noteId, onUnlock }: { noteId: string; o
           <div><h2 className="text-lg font-semibold">Protected</h2><p className="text-sm text-muted-foreground">Enter password.</p></div>
         </div>
         <div className="space-y-3">
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
           {message && <p className="text-sm text-destructive">{message}</p>}
           <div className="flex gap-2">
             <Button type="button" className="flex-1" onClick={async () => {
@@ -69,8 +69,8 @@ export function ProtectionPanel({
         <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
           <h3 className="font-semibold">Protect this note</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <Input type="password" placeholder="Confirm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            <PasswordInput placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput placeholder="Confirm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
           </div>
           {message && <p className="text-sm text-destructive">{message}</p>}
           <div className="flex gap-2">
@@ -182,7 +182,7 @@ export function ProtectionPanel({
         {subMode === 'disable' ? (
           <>
             <h3 className="font-semibold text-sm">Remove protection</h3>
-            <Input type="password" placeholder="Enter current password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput placeholder="Enter current password" value={password} onChange={(e) => setPassword(e.target.value)} />
             {message && <p className="text-sm text-destructive">{message}</p>}
             <div className="flex gap-2">
               <Button type="button" onClick={async () => {
@@ -200,10 +200,10 @@ export function ProtectionPanel({
           <>
             <h3 className="font-semibold text-sm">Change password</h3>
             <div className="space-y-3">
-              <Input type="password" placeholder="Current password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isUpdating} />
+              <PasswordInput placeholder="Current password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isUpdating} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <Input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isUpdating} />
-                <Input type="password" placeholder="Confirm new password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} disabled={isUpdating} />
+                <PasswordInput placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isUpdating} />
+                <PasswordInput placeholder="Confirm new password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} disabled={isUpdating} />
               </div>
             </div>
             

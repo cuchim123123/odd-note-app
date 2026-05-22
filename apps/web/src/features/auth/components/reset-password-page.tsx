@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { resetPasswordSchema, type ResetPasswordInput } from '@odd-note-app/validation';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
+import { PasswordInput } from '../../../components/ui/password-input';
 import { Label } from '../../../components/ui/label';
 import { Button } from '../../../components/ui/button';
 import { api } from '../../../lib/axios';
@@ -62,9 +62,8 @@ export function ResetPasswordPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="password">New Password</Label>
-            <Input 
+            <PasswordInput 
               id="password" 
-              type="password" 
               placeholder="••••••••" 
               autoComplete="new-password"
               {...register('password')}
@@ -74,9 +73,8 @@ export function ResetPasswordPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm New Password</Label>
-            <Input 
+            <PasswordInput 
               id="confirmPassword" 
-              type="password" 
               placeholder="••••••••" 
               autoComplete="new-password"
               {...register('confirmPassword')}
