@@ -14,7 +14,7 @@ export interface OfflineNote {
 
 export interface SyncQueueItem {
   id: string;
-  type: 'create' | 'update' | 'delete' | 'share';
+  type: 'create' | 'update' | 'delete' | 'share' | 'rename-label' | 'delete-label';
   noteId?: string;
   payload: Record<string, unknown>;
   timestamp: number;

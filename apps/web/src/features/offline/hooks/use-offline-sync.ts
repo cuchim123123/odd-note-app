@@ -169,6 +169,16 @@ async function syncItem(item: SyncQueueItem, apiClient: typeof api) {
       });
     }
 
+    case 'rename-label': {
+      const { oldName, newName } = item.payload;
+      return apiClient.post('/notes/labels/rename', { oldName, newName });
+    }
+
+    case 'delete-label': {
+      const { labelName } = item.payload;
+      return apiClient.delete(`/notes/labels/${labelName}`);
+    }
+
     default:
       throw new Error(`Unknown sync type: ${item.type}`);
   }

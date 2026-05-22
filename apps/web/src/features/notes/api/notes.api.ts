@@ -56,7 +56,7 @@ const now = () => new Date().toISOString();
 
 import { openNotesDb, readAllNotesFromDb, readNoteFromDb, upsertNoteInDb, upsertNotesInDb, deleteNoteFromDb } from './notes.storage';
 
-const queueOfflineMutation = (item: { type: 'create' | 'update' | 'delete' | 'share'; noteId?: string; payload: Record<string, unknown> }) => {
+const queueOfflineMutation = (item: { type: 'create' | 'update' | 'delete' | 'share' | 'rename-label' | 'delete-label'; noteId?: string; payload: Record<string, unknown> }) => {
   useOfflineSyncStore.getState().addToSyncQueue({
     id: createId(),
     type: item.type,
@@ -116,6 +116,7 @@ import {
   updateNote,
   deleteNote,
   renameLabelInNotes,
+  deleteLabelInNotes,
   resetMockNotes,
   syncNoteShareFlag,
   toSharedNoteItem,
@@ -139,6 +140,7 @@ export {
   updateNote,
   deleteNote,
   renameLabelInNotes,
+  deleteLabelInNotes,
   resetMockNotes,
   syncNoteShareFlag,
   toSharedNoteItem,
@@ -699,6 +701,24 @@ export const useRenameLabel = () => {
     mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
       if (!backendNotesAvailable()) {
         renameLabelInNotes(oldName, newName);
+        
+        // Persist renamed labels in all cached notes in IndexedDB
+        const offlineNotes = await readAllNotesFromDb();
+        const trimmedOld = oldName.trim().toLowerCase();
+        const trimmedNew = newName.trim().toLowerCase();
+        
+        for (const note of offlineNotes) {
+          if (note.labels && note.labels.includes(trimmedOld)) {
+            const nextLabels = note.labels.map((l) => (l === trimmedOld ? trimmedNew : l));
+            await upsertNoteInDb({ ...note, labels: nextLabels });
+          }
+        }
+
+        queueOfflineMutation({
+          type: 'rename-label',
+          payload: { oldName, newName },
+        });
+
         return { updatedCount: 0 };
       }
 
@@ -716,6 +736,24 @@ export const useDeleteLabel = () => {
   return useMutation({
     mutationFn: async (labelName: string) => {
       if (!backendNotesAvailable()) {
+        deleteLabelInNotes(labelName);
+
+        // Persist deleted label in all cached notes inside IndexedDB
+        const offlineNotes = await readAllNotesFromDb();
+        const trimmed = labelName.trim().toLowerCase();
+
+        for (const note of offlineNotes) {
+          if (note.labels && note.labels.includes(trimmed)) {
+            const nextLabels = note.labels.filter((l) => l !== trimmed);
+            await upsertNoteInDb({ ...note, labels: nextLabels });
+          }
+        }
+
+        queueOfflineMutation({
+          type: 'delete-label',
+          payload: { labelName },
+        });
+
         return { updatedCount: 0 };
       }
 

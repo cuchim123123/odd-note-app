@@ -154,6 +154,16 @@ export function renameLabelInNotes(oldLabel: string, newLabel: string): void {
   }));
 }
 
+export function deleteLabelInNotes(labelName: string): void {
+  const trimmedLabel = normalizeLabel(labelName);
+  if (!trimmedLabel) return;
+
+  mockNotes = mockNotes.map((note) => ({
+    ...note,
+    labels: (note.labels || []).filter((label) => label !== trimmedLabel),
+  }));
+}
+
 export function deleteNote(id: string): void {
   mockNotes = mockNotes.filter((entry) => entry.id !== id);
   mockNoteShares = mockNoteShares.filter((share) => share.noteId !== id);
