@@ -16,8 +16,8 @@ export const updateNoteShareSchema = z.object({
 export type UpdateNoteShareInput = z.infer<typeof updateNoteShareSchema>;
 
 export const noteShareSchema = z.object({
-  id: z.string().min(1),
-  recipientEmail: z.string().email(),
+  id: z.string().min(1, 'ID is required'),
+  recipientEmail: z.string().email('Please enter a valid email address'),
   recipientDisplayName: z.string().optional(),
   permission: sharePermissionSchema,
   createdAt: z.string().datetime(),

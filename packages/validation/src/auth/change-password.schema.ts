@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(72),
-  confirmNewPassword: z.string().min(8).max(72),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(72, 'Password cannot exceed 72 characters'),
+  confirmNewPassword: z.string().min(8, 'Confirm new password must be at least 8 characters').max(72, 'Confirm new password cannot exceed 72 characters'),
 }).superRefine((data, ctx) => {
   if (data.newPassword !== data.confirmNewPassword) {
     ctx.addIssue({

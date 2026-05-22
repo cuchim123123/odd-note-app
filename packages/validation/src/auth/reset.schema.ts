@@ -7,8 +7,8 @@ export const forgotPasswordSchema = z.object({
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters").max(72),
-  confirmPassword: z.string().min(8).max(72),
+  password: z.string().min(8, "Password must be at least 8 characters").max(72, "Password cannot exceed 72 characters"),
+  confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters").max(72, "Confirm password cannot exceed 72 characters"),
 }).superRefine((data, ctx) => {
   if (data.password !== data.confirmPassword) {
     ctx.addIssue({
