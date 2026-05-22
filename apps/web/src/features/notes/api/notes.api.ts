@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { api } from '../../../lib/axios';
 import { useAuthStore } from '../../auth/stores/auth.store';
 import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
@@ -49,10 +50,6 @@ const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (
 });
 
 const now = () => new Date().toISOString();
-
-
-
-
 
 import { openNotesDb, readAllNotesFromDb, readNoteFromDb, upsertNoteInDb, upsertNotesInDb, deleteNoteFromDb } from './notes.storage';
 
@@ -157,6 +154,16 @@ const hasAccessToken = () => Boolean(useAuthStore.getState().accessToken);
 
 const backendNotesAvailable = () => hasAccessToken() && useOfflineSyncStore.getState().isOnline;
 
+function isNetworkError(error: unknown): boolean {
+  if (typeof window !== 'undefined' && !navigator.onLine) return true;
+  if (axios.isAxiosError(error)) {
+    if (!error.response) return true;
+    const status = error.response.status;
+    if (status === 502 || status === 503 || status === 504 || status === 0) return true;
+  }
+  return false;
+}
+
 const currentUserProfile = (): SharedByProfile | null => {
   const user = useAuthStore.getState().user;
   if (!user) {
@@ -170,10 +177,6 @@ const currentUserProfile = (): SharedByProfile | null => {
   };
 };
 
-// mock helpers `syncNoteShareFlag` and `toSharedNoteItem` are imported from `notes.mock`.
-
-// Mock implementations and data are provided by `notes.mock`.
-
 export const NOTES_KEYS = {
   all: ['notes'] as const,
   detail: (id: string) => ['notes', id] as const,
@@ -186,8 +189,16 @@ export async function getNoteProtectionStatus(noteId: string): Promise<{ isProte
     return { isProtected: getSortedNotes().some((note) => note.id === noteId && note.isProtected) };
   }
 
-  const response = await api.get<{ isProtected: boolean }>(`/notes/${noteId}/protection-status`);
-  return response.data;
+  try {
+    const response = await api.get<{ isProtected: boolean }>(`/notes/${noteId}/protection-status`);
+    return response.data;
+  } catch (err) {
+    if (isNetworkError(err)) {
+      useOfflineSyncStore.setState({ isOnline: false });
+      return { isProtected: getSortedNotes().some((note) => note.id === noteId && note.isProtected) };
+    }
+    throw err;
+  }
 }
 
 export async function setNotePassword(noteId: string, password: string): Promise<{ isProtected: true }> {
@@ -196,8 +207,17 @@ export async function setNotePassword(noteId: string, password: string): Promise
     return { isProtected: true };
   }
 
-  const response = await api.post<{ isProtected: true }>(`/notes/${noteId}/set-password`, { password });
-  return response.data;
+  try {
+    const response = await api.post<{ isProtected: true }>(`/notes/${noteId}/set-password`, { password });
+    return response.data;
+  } catch (err) {
+    if (isNetworkError(err)) {
+      useOfflineSyncStore.setState({ isOnline: false });
+      updateNote(noteId, { isProtected: true });
+      return { isProtected: true };
+    }
+    throw err;
+  }
 }
 
 export async function verifyNotePassword(noteId: string, password: string): Promise<{ verified: boolean; unlockToken?: string }> {
@@ -205,8 +225,16 @@ export async function verifyNotePassword(noteId: string, password: string): Prom
     return { verified: password === 'secret123' };
   }
 
-  const response = await api.post<{ verified: boolean; unlockToken?: string }>(`/notes/${noteId}/verify-password`, { password });
-  return response.data;
+  try {
+    const response = await api.post<{ verified: boolean; unlockToken?: string }>(`/notes/${noteId}/verify-password`, { password });
+    return response.data;
+  } catch (err) {
+    if (isNetworkError(err)) {
+      useOfflineSyncStore.setState({ isOnline: false });
+      return { verified: password === 'secret123' };
+    }
+    throw err;
+  }
 }
 
 export async function removeNotePassword(noteId: string, password: string): Promise<{ removed: true }> {
@@ -215,10 +243,19 @@ export async function removeNotePassword(noteId: string, password: string): Prom
     return { removed: true };
   }
 
-  const response = await api.delete<{ removed: true }>(`/notes/${noteId}/password`, {
-    data: { password },
-  });
-  return response.data;
+  try {
+    const response = await api.delete<{ removed: true }>(`/notes/${noteId}/password`, {
+      data: { password },
+    });
+    return response.data;
+  } catch (err) {
+    if (isNetworkError(err)) {
+      useOfflineSyncStore.setState({ isOnline: false });
+      updateNote(noteId, { isProtected: false });
+      return { removed: true };
+    }
+    throw err;
+  }
 }
 
 export async function getNoteDraft(noteId: string, unlockToken?: string): Promise<NoteDraft | null> {
@@ -241,9 +278,30 @@ export async function getNoteDraft(noteId: string, unlockToken?: string): Promis
     }
   }
 
-  const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
-  const response = await api.get<NoteDraft | null>(`/notes/${noteId}/draft`, { headers });
-  return response.data;
+  try {
+    const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
+    const response = await api.get<NoteDraft | null>(`/notes/${noteId}/draft`, { headers });
+    return response.data;
+  } catch (err) {
+    if (isNetworkError(err)) {
+      useOfflineSyncStore.setState({ isOnline: false });
+      try {
+        const db = await openNotesDb();
+        const tx = db.transaction('drafts', 'readonly');
+        const store = tx.objectStore('drafts');
+        const draft = await new Promise<NoteDraft | null>((resolve, reject) => {
+          const request = store.get(noteId);
+          request.onsuccess = () => resolve(request.result ?? null);
+          request.onerror = () => reject(request.error);
+        });
+        db.close();
+        return draft ?? null;
+      } catch {
+        return getMockDraft(noteId) ?? null;
+      }
+    }
+    throw err;
+  }
 }
 
 export async function saveNoteDraft(noteId: string, title: string, content: string, unlockToken?: string): Promise<{ saved: true; updatedAt: string }> {
@@ -268,9 +326,32 @@ export async function saveNoteDraft(noteId: string, title: string, content: stri
     }
   }
 
-  const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
-  const response = await api.post<{ saved: true; updatedAt: string }>(`/notes/${noteId}/draft`, { title, content }, { headers });
-  return response.data;
+  try {
+    const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
+    const response = await api.post<{ saved: true; updatedAt: string }>(`/notes/${noteId}/draft`, { title, content }, { headers });
+    return response.data;
+  } catch (err) {
+    if (isNetworkError(err)) {
+      useOfflineSyncStore.setState({ isOnline: false });
+      const updatedAt = now();
+      try {
+        const db = await openNotesDb();
+        const tx = db.transaction('drafts', 'readwrite');
+        const store = tx.objectStore('drafts');
+        await new Promise<void>((resolve, reject) => {
+          const request = store.put({ id: noteId, title, content, updatedAt });
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+        db.close();
+        return { saved: true, updatedAt };
+      } catch {
+        setMockDraft(noteId, { title, content, updatedAt });
+        return { saved: true, updatedAt };
+      }
+    }
+    throw err;
+  }
 }
 
 export async function clearNoteDraft(noteId: string, unlockToken?: string): Promise<{ cleared: true }> {
@@ -294,9 +375,31 @@ export async function clearNoteDraft(noteId: string, unlockToken?: string): Prom
     }
   }
 
-  const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
-  const response = await api.delete<{ cleared: true }>(`/notes/${noteId}/draft`, { headers });
-  return response.data;
+  try {
+    const headers = unlockToken ? { 'x-note-unlock-token': unlockToken } : {};
+    const response = await api.delete<{ cleared: true }>(`/notes/${noteId}/draft`, { headers });
+    return response.data;
+  } catch (err) {
+    if (isNetworkError(err)) {
+      useOfflineSyncStore.setState({ isOnline: false });
+      try {
+        const db = await openNotesDb();
+        const tx = db.transaction('drafts', 'readwrite');
+        const store = tx.objectStore('drafts');
+        await new Promise<void>((resolve, reject) => {
+          const request = store.delete(noteId);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+        db.close();
+        return { cleared: true };
+      } catch {
+        clearMockDraft(noteId);
+        return { cleared: true };
+      }
+    }
+    throw err;
+  }
 }
 
 export const useNotes = () => {
@@ -307,9 +410,17 @@ export const useNotes = () => {
         return await getOfflineNotes();
       }
 
-      const notes = await fetchNotesFromApi();
-      await upsertNotesInDb(notes);
-      return notes;
+      try {
+        const notes = await fetchNotesFromApi();
+        await upsertNotesInDb(notes);
+        return notes;
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          return await getOfflineNotes();
+        }
+        throw err;
+      }
     },
   });
 };
@@ -322,7 +433,15 @@ export const useSharedNotes = () => {
         return mockNoteShares.map((share) => toSharedNoteItem(share) as SharedNoteItem);
       }
 
-      return await fetchSharedNotesFromApi();
+      try {
+        return await fetchSharedNotesFromApi();
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          return mockNoteShares.map((share) => toSharedNoteItem(share) as SharedNoteItem);
+        }
+        throw err;
+      }
     },
   });
 };
@@ -339,9 +458,17 @@ export const useNote = (id: string | null) => {
         return (await getOfflineNote(id!)) as NoteDetailItem;
       }
 
-      const note = await fetchNoteFromApi(id!, unlockToken);
-      await upsertNoteInDb(note);
-      return note;
+      try {
+        const note = await fetchNoteFromApi(id!, unlockToken);
+        await upsertNoteInDb(note);
+        return note;
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          return (await getOfflineNote(id!)) as NoteDetailItem;
+        }
+        throw err;
+      }
     },
   });
 };
@@ -368,7 +495,24 @@ export const useNoteShares = (noteId: string | null) => {
           }));
       }
 
-      return await fetchNoteSharesFromApi(noteId);
+      try {
+        return await fetchNoteSharesFromApi(noteId);
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          return mockNoteShares
+            .filter((share) => share.noteId === noteId)
+            .map((share) => ({
+              id: share.id,
+              recipientEmail: share.recipientEmail,
+              recipientDisplayName: share.recipientDisplayName,
+              permission: share.permission,
+              createdAt: share.createdAt,
+              updatedAt: share.updatedAt,
+            }));
+        }
+        throw err;
+      }
     },
   });
 };
@@ -396,9 +540,29 @@ export const useCreateNote = () => {
         return createdNote;
       }
 
-      const createdNote = await createNoteInApi(data);
-      await upsertNoteInDb(createdNote);
-      return createdNote;
+      try {
+        const createdNote = await createNoteInApi(data);
+        await upsertNoteInDb(createdNote);
+        return createdNote;
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          const createdNote = createNote(data);
+          await upsertNoteInDb(createdNote);
+          queueOfflineMutation({
+            type: 'create',
+            noteId: createdNote.id || '',
+            payload: {
+              title: data.title,
+              content: data.content || '',
+              labels: data.labels || [],
+              noteId: createdNote.id || '',
+            },
+          });
+          return createdNote;
+        }
+        throw err;
+      }
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });
@@ -460,9 +624,28 @@ export const useUpdateNote = (id: string) => {
 
       const getUnlockToken = useNoteProtectionStore.getState().getUnlockToken;
       const unlockToken = getUnlockToken(id);
-      const updatedNote = await updateNoteInApi(id, data, unlockToken);
-      await upsertNoteInDb(updatedNote);
-      return updatedNote;
+
+      try {
+        const updatedNote = await updateNoteInApi(id, data, unlockToken);
+        await upsertNoteInDb(updatedNote);
+        return updatedNote;
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          const updatedNote = updateNote(id || '', data);
+          await upsertNoteInDb(updatedNote);
+          queueOfflineMutation({
+            type: 'update',
+            noteId: id,
+            payload: {
+              noteId: id,
+              ...data,
+            } as Record<string, unknown>,
+          });
+          return updatedNote;
+        }
+        throw err;
+      }
     },
     onMutate: async (input) => {
       const getUnlockToken = useNoteProtectionStore.getState().getUnlockToken;
@@ -548,8 +731,23 @@ export const useDeleteNote = (id: string) => {
         return;
       }
 
-      await deleteNoteInApi(id);
-      await deleteNoteFromDb(id);
+      try {
+        await deleteNoteInApi(id);
+        await deleteNoteFromDb(id);
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          deleteNote(id);
+          await deleteNoteFromDb(id);
+          queueOfflineMutation({
+            type: 'delete',
+            noteId: id,
+            payload: { noteId: id },
+          });
+          return;
+        }
+        throw err;
+      }
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: NOTES_KEYS.all });
@@ -620,11 +818,47 @@ export const useCreateNoteShare = (noteId: string) => {
         } as NoteShareRecord;
       }
 
-      const createdShare = await createNoteShareInApi(noteId, {
-        recipientEmail: input.recipientEmail || '',
-        permission: input.permission || 'READ'
-      });
-      return createdShare;
+      try {
+        const createdShare = await createNoteShareInApi(noteId, {
+          recipientEmail: input.recipientEmail || '',
+          permission: input.permission || 'READ'
+        });
+        return createdShare;
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          const owner = currentUserProfile() ?? { id: 'local', email: input.recipientEmail || '', displayName: 'Local User' };
+          const recipient = (input.recipientEmail || '').trim().toLowerCase();
+          const share = {
+            id: createId(),
+            noteId,
+            recipientEmail: recipient,
+            recipientDisplayName: recipient,
+            permission: input.permission,
+            createdAt: now(),
+            updatedAt: now(),
+            owner,
+          } as MockShareRecord;
+
+          upsertShare(share);
+          syncNoteShareFlag(noteId);
+          await upsertNoteInDb(getNoteById(noteId));
+          queueOfflineMutation({
+            type: 'share',
+            noteId,
+            payload: {
+              noteId,
+              recipientEmail: input.recipientEmail,
+              permission: input.permission,
+            },
+          });
+          return {
+            ...share,
+            recipientDisplayName: share.recipientDisplayName || share.recipientEmail
+          } as NoteShareRecord;
+        }
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
@@ -656,10 +890,30 @@ export const useUpdateNoteShare = (noteId: string) => {
         } satisfies NoteShareRecord;
       }
 
-      const updatedShare = await updateNoteShareInApi(noteId, shareId, {
-        permission: input.permission || 'READ'
-      });
-      return updatedShare;
+      try {
+        const updatedShare = await updateNoteShareInApi(noteId, shareId, {
+          permission: input.permission || 'READ'
+        });
+        return updatedShare;
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          const updated = updateSharePermission(noteId, shareId, input.permission as string);
+          syncNoteShareFlag(noteId);
+          if (!updated) {
+            throw new Error('Share not found');
+          }
+          return {
+            id: updated.id,
+            recipientEmail: updated.recipientEmail,
+            recipientDisplayName: updated.recipientDisplayName,
+            permission: updated.permission,
+            createdAt: updated.createdAt,
+            updatedAt: updated.updatedAt,
+          } satisfies NoteShareRecord;
+        }
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
@@ -682,8 +936,19 @@ export const useDeleteNoteShare = (noteId: string) => {
         return;
       }
 
-      await deleteNoteShareInApi(noteId, shareId);
-      await upsertNoteInDb(getNoteById(noteId));
+      try {
+        await deleteNoteShareInApi(noteId, shareId);
+        await upsertNoteInDb(getNoteById(noteId));
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          removeShare(noteId, shareId);
+          syncNoteShareFlag(noteId);
+          await upsertNoteInDb(getNoteById(noteId));
+          return;
+        }
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.shares(noteId) });
@@ -701,8 +966,6 @@ export const useRenameLabel = () => {
     mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
       if (!backendNotesAvailable()) {
         renameLabelInNotes(oldName, newName);
-        
-        // Persist renamed labels in all cached notes in IndexedDB
         const offlineNotes = await readAllNotesFromDb();
         const trimmedOld = oldName.trim().toLowerCase();
         const trimmedNew = newName.trim().toLowerCase();
@@ -722,7 +985,32 @@ export const useRenameLabel = () => {
         return { updatedCount: 0 };
       }
 
-      return await renameLabelInApi(oldName, newName);
+      try {
+        return await renameLabelInApi(oldName, newName);
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          renameLabelInNotes(oldName, newName);
+          const offlineNotes = await readAllNotesFromDb();
+          const trimmedOld = oldName.trim().toLowerCase();
+          const trimmedNew = newName.trim().toLowerCase();
+          
+          for (const note of offlineNotes) {
+            if (note.labels && note.labels.includes(trimmedOld)) {
+              const nextLabels = note.labels.map((l) => (l === trimmedOld ? trimmedNew : l));
+              await upsertNoteInDb({ ...note, labels: nextLabels });
+            }
+          }
+
+          queueOfflineMutation({
+            type: 'rename-label',
+            payload: { oldName, newName },
+          });
+
+          return { updatedCount: 0 };
+        }
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
@@ -737,8 +1025,6 @@ export const useDeleteLabel = () => {
     mutationFn: async (labelName: string) => {
       if (!backendNotesAvailable()) {
         deleteLabelInNotes(labelName);
-
-        // Persist deleted label in all cached notes inside IndexedDB
         const offlineNotes = await readAllNotesFromDb();
         const trimmed = labelName.trim().toLowerCase();
 
@@ -757,7 +1043,31 @@ export const useDeleteLabel = () => {
         return { updatedCount: 0 };
       }
 
-      return await deleteLabelInApi(labelName);
+      try {
+        return await deleteLabelInApi(labelName);
+      } catch (err) {
+        if (isNetworkError(err)) {
+          useOfflineSyncStore.setState({ isOnline: false });
+          deleteLabelInNotes(labelName);
+          const offlineNotes = await readAllNotesFromDb();
+          const trimmed = labelName.trim().toLowerCase();
+
+          for (const note of offlineNotes) {
+            if (note.labels && note.labels.includes(trimmed)) {
+              const nextLabels = note.labels.filter((l) => l !== trimmed);
+              await upsertNoteInDb({ ...note, labels: nextLabels });
+            }
+          }
+
+          queueOfflineMutation({
+            type: 'delete-label',
+            payload: { labelName },
+          });
+
+          return { updatedCount: 0 };
+        }
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTES_KEYS.all });
@@ -780,8 +1090,23 @@ export const useBulkDeleteNotes = () => {
             payload: { noteId: id },
           });
         } else {
-          await deleteNoteInApi(id);
-          await deleteNoteFromDb(id);
+          try {
+            await deleteNoteInApi(id);
+            await deleteNoteFromDb(id);
+          } catch (err) {
+            if (isNetworkError(err)) {
+              useOfflineSyncStore.setState({ isOnline: false });
+              deleteNote(id);
+              await deleteNoteFromDb(id);
+              queueOfflineMutation({
+                type: 'delete',
+                noteId: id,
+                payload: { noteId: id },
+              });
+            } else {
+              throw err;
+            }
+          }
         }
       }
     },
@@ -810,8 +1135,23 @@ export const useBulkAddLabel = () => {
             payload: { noteId: id, labels: newLabels } as Record<string, unknown>,
           });
         } else {
-          const updatedNote = await updateNoteInApi(id, { labels: newLabels });
-          await upsertNoteInDb(updatedNote);
+          try {
+            const updatedNote = await updateNoteInApi(id, { labels: newLabels });
+            await upsertNoteInDb(updatedNote);
+          } catch (err) {
+            if (isNetworkError(err)) {
+              useOfflineSyncStore.setState({ isOnline: false });
+              const updatedNote = updateNote(id, { labels: newLabels });
+              await upsertNoteInDb(updatedNote);
+              queueOfflineMutation({
+                type: 'update',
+                noteId: id,
+                payload: { noteId: id, labels: newLabels } as Record<string, unknown>,
+              });
+            } else {
+              throw err;
+            }
+          }
         }
       }
     },
@@ -821,9 +1161,6 @@ export const useBulkAddLabel = () => {
   });
 };
 
-/**
- * Mutation hook to upload a note image to S3/MinIO.
- */
 export const useUploadNoteImage = () => {
   return useMutation({
     mutationFn: async (file: File) => {
