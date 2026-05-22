@@ -29,7 +29,7 @@ export class PasswordResetTokenService {
   async createTokenForUser(userId: string): Promise<string> {
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(rawToken);
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 15); // 15 minutes
 
     await this.prisma.passwordResetToken.create({
       data: {

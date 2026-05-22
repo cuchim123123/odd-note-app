@@ -51,7 +51,7 @@ export class MailerService {
         <p>You requested to reset your password.</p>
         <p>Click this link to reset your password:</p>
         <p><a href="${resetUrl}">${resetUrl}</a></p>
-        <p>This link expires in 1 hour.</p>
+        <p>This link expires in 15 minutes.</p>
         <p>If you did not request this, you can ignore this email.</p>
       `,
     });
