@@ -199,21 +199,17 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
             const tx = db.transaction('syncQueue', 'readwrite');
             const store = tx.objectStore('syncQueue');
 
-            // Clear old queue
-            await new Promise<void>((resolve, reject) => {
-              const clearReq = store.clear();
-              clearReq.onsuccess = () => resolve();
-              clearReq.onerror = () => reject(clearReq.error);
-            });
-
-            // Write current queue
+            // Synchronously queue all operations on the transaction
+            store.clear();
             for (const item of get().syncQueue) {
-              await new Promise<void>((resolve, reject) => {
-                const addReq = store.add(item);
-                addReq.onsuccess = () => resolve();
-                addReq.onerror = () => reject(addReq.error);
-              });
+              store.add(item);
             }
+
+            // Await the transaction completion event
+            await new Promise<void>((resolve, reject) => {
+              tx.oncomplete = () => resolve();
+              tx.onerror = () => reject(tx.error);
+            });
 
             db.close();
           } catch (error) {

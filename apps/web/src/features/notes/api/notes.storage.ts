@@ -73,11 +73,11 @@ export const readNoteFromDb = async (id: string): Promise<Note | null> => {
 export const upsertNoteInDb = async (note: Note): Promise<void> => {
   try {
     const db = await openNotesDb();
-    const tx = db.transaction(NOTES_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(NOTES_STORE_NAME);
 
-    // Smart merge: Fetch the existing cached record first
+    // Smart merge: Fetch the existing cached record first using a readonly transaction
     const existing = await new Promise<Note | null>((resolve) => {
+      const tx = db.transaction(NOTES_STORE_NAME, 'readonly');
+      const store = tx.objectStore(NOTES_STORE_NAME);
       const req = store.get(note.id || '');
       req.onsuccess = () => resolve(req.result ? cloneNote(req.result as Note) : null);
       req.onerror = () => resolve(null);
@@ -92,15 +92,18 @@ export const upsertNoteInDb = async (note: Note): Promise<void> => {
         : note.content) ?? '',
     };
 
+    // Write the merged record using a fresh readwrite transaction
     await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(NOTES_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(NOTES_STORE_NAME);
       const request = store.put(mergedNote);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
 
     db.close();
-  } catch {
-    // Ignore offline cache write failures.
+  } catch (err) {
+    console.error('Failed to upsert note in IndexedDB:', err);
   }
 };
 
