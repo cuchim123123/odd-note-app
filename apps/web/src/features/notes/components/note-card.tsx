@@ -186,7 +186,7 @@ const NoteCardComponent = function NoteCard({
           {/* Footer Metadata */}
           <div className="flex items-center justify-between border-t border-border/10 pt-2 text-[10px] font-medium text-muted-foreground/50 shrink-0">
             <div className="flex items-center gap-1.5">
-              <span>18/5/2026</span>
+              <span>{new Date(note.updatedAt || 0).toLocaleDateString(undefined, { day: 'numeric', month: 'numeric', year: 'numeric' })}</span>
               <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
               <span>{new Date(note.updatedAt || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>

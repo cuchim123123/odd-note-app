@@ -181,7 +181,7 @@ export function SharingModal({
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm break-all">{share.recipientEmail}</div>
                         <div className="text-xs text-muted-foreground">
-                          18/5/2026
+                          {new Date(share.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'numeric', year: 'numeric' })}
                         </div>
                       </div>
                       <button
