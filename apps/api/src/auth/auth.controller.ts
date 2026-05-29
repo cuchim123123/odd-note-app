@@ -1,33 +1,49 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards, Inject } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { SessionTokenService } from './session-token.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
 import { USER_REPOSITORY } from './domain/ports/user.repository.port';
 import type { IUserRepository } from './domain/ports/user.repository.port';
 import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto, UpdateProfileDto } from './dto';
 import { EmailVerificationService } from './email-verification.service';
-import { PasswordResetService } from './password-reset.service';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
+// Use cases
+import { RegisterUseCase } from './application/use-cases/register.use-case';
+import { LoginUseCase } from './application/use-cases/login.use-case';
+import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
+import { RefreshUseCase } from './application/use-cases/refresh.use-case';
+import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
+import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
+import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case';
+
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly authService: AuthService,
+    private readonly registerUseCase: RegisterUseCase,
+    private readonly loginUseCase: LoginUseCase,
+    private readonly changePasswordUseCase: ChangePasswordUseCase,
+    private readonly refreshUseCase: RefreshUseCase,
+    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
+    private readonly getCurrentUserUseCase: GetCurrentUserUseCase,
+    private readonly updateProfileUseCase: UpdateProfileUseCase,
+    private readonly sessionTokenService: SessionTokenService,
     private readonly emailVerificationService: EmailVerificationService,
-    private readonly passwordResetService: PasswordResetService,
     private readonly passwordResetTokenService: PasswordResetTokenService,
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
   ) {}
 
   @Post('register')
   async register(@Body() input: RegisterDto) {
-    return await this.authService.register(input);
+    return await this.registerUseCase.execute(input);
   }
 
   @Post('login')
   async login(@Body() input: LoginDto) {
-    return await this.authService.login(input);
+    return await this.loginUseCase.execute(input);
   }
 
   @Get('verify-email/:token')
@@ -44,43 +60,42 @@ export class AuthController {
   @UseGuards(AccessTokenGuard)
   @Get('me')
   async me(@CurrentUser() userId: string) {
-    return await this.authService.getCurrentUser(userId);
+    return await this.getCurrentUserUseCase.execute(userId);
   }
 
   @UseGuards(AccessTokenGuard)
   @Patch('profile')
   async updateProfile(@CurrentUser() userId: string, @Body() input: UpdateProfileDto) {
-    return await this.authService.updateProfile(userId, input);
+    return await this.updateProfileUseCase.execute(userId, input);
   }
 
   @UseGuards(AccessTokenGuard)
   @Patch('change-password')
   async changePassword(@CurrentUser() userId: string, @Body() input: ChangePasswordDto) {
-    await this.authService.changePassword(userId, input);
+    await this.changePasswordUseCase.execute(userId, input);
     return { success: true, message: 'Password changed successfully' };
   }
 
   @Post('refresh')
   async refresh(@Body() input: RefreshTokenDto) {
-    return await this.authService.refresh(input.refreshToken!);
+    return await this.refreshUseCase.execute(input.refreshToken!);
   }
 
   @Post('logout')
   async logout(@Body() input: RefreshTokenDto) {
-    await this.authService.logout(input.refreshToken!);
+    await this.sessionTokenService.revokeRefreshToken(input.refreshToken!);
     return { success: true };
   }
 
   @Post('forgot-password')
   async forgotPassword(@Body() input: ForgotPasswordDto) {
-    await this.passwordResetService.sendResetPasswordEmail(input.email!);
-    // Always return success for security (don't reveal whether email exists)
+    await this.forgotPasswordUseCase.execute(input.email!);
     return { message: 'If the email exists, a reset link has been sent' };
   }
 
   @Post('reset-password')
   async resetPassword(@Body() input: ResetPasswordDto) {
-    await this.passwordResetService.resetPassword(input.token!, input.password!);
+    await this.resetPasswordUseCase.execute(input.token!, input.password!);
     return { message: 'Password reset successfully' };
   }
 
@@ -93,14 +108,11 @@ export class AuthController {
       return { message: 'Not available' };
     }
 
-    // Create token and return raw token for test automation.
     const user = await this.userRepo.findByEmail(body.email);
     if (!user) {
-      // Don't reveal whether the email exists; return same shape as the real endpoint
       return { message: 'If the email exists, a reset link has been sent' };
     }
 
-    // Create a raw token via the token service (returns raw token to send to user)
     const raw = await this.passwordResetTokenService.createTokenForUser(user.id);
     return { token: raw };
   }
@@ -114,6 +126,6 @@ export class AuthController {
       return { message: 'Not available' };
     }
 
-    return await this.authService.login(input);
+    return await this.loginUseCase.execute(input);
   }
 }

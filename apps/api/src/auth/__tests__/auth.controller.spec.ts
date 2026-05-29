@@ -5,10 +5,6 @@ vi.mock('../../config', () => ({
   JwtConfigService: class JwtConfigService {},
 }));
 
-vi.mock('../auth.service', () => ({
-  AuthService: class AuthService {}
-}));
-
 vi.mock('../email-verification.service', () => ({
   EmailVerificationService: class EmailVerificationService {}
 }));
@@ -17,42 +13,70 @@ vi.mock('../password-reset-token.service', () => ({
   PasswordResetTokenService: class PasswordResetTokenService {}
 }));
 
-vi.mock('../../prisma/prisma.service', () => ({
-  PrismaService: class PrismaService {}
-}));
-
 vi.mock('@nestjs/jwt', () => ({
   JwtService: class JwtService {}
 }));
 
 import { AuthController } from '../auth.controller';
-import type { AuthService } from '../auth.service';
+import type { SessionTokenService } from '../session-token.service';
 import type { EmailVerificationService } from '../email-verification.service';
-import type { PasswordResetService } from '../password-reset.service';
 import type { PasswordResetTokenService } from '../password-reset-token.service';
 import type { IUserRepository } from '../domain/ports/user.repository.port';
 
+// Use case types
+import type { RegisterUseCase } from '../application/use-cases/register.use-case';
+import type { LoginUseCase } from '../application/use-cases/login.use-case';
+import type { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
+import type { RefreshUseCase } from '../application/use-cases/refresh.use-case';
+import type { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.use-case';
+import type { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
+import type { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
+import type { UpdateProfileUseCase } from '../application/use-cases/update-profile.use-case';
+
 function createController() {
-  const authService = {
-    register: vi.fn(),
-    login: vi.fn(),
-    logout: vi.fn(),
-    refresh: vi.fn(),
-    getCurrentUser: vi.fn(),
+  const registerUseCase = {
+    execute: vi.fn(),
+  };
+
+  const loginUseCase = {
+    execute: vi.fn(),
+  };
+
+  const changePasswordUseCase = {
+    execute: vi.fn(),
+  };
+
+  const refreshUseCase = {
+    execute: vi.fn(),
+  };
+
+  const forgotPasswordUseCase = {
+    execute: vi.fn(),
+  };
+
+  const resetPasswordUseCase = {
+    execute: vi.fn(),
+  };
+
+  const getCurrentUserUseCase = {
+    execute: vi.fn(),
+  };
+
+  const updateProfileUseCase = {
+    execute: vi.fn(),
+  };
+
+  const sessionTokenService = {
+    revokeRefreshToken: vi.fn(),
   };
 
   const emailVerificationService = {
     verifyEmailToken: vi.fn(),
-  };
-
-  const passwordResetService = {
-    sendResetPasswordEmail: vi.fn(),
-    resetPassword: vi.fn(),
+    resendVerificationEmail: vi.fn(),
   };
 
   const passwordResetTokenService = {
     createTokenForUser: vi.fn(),
-    validateAndMarkAsUsed: vi.fn(),
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,18 +85,32 @@ function createController() {
   };
 
   const controller = new AuthController(
-    authService as unknown as AuthService,
+    registerUseCase as unknown as RegisterUseCase,
+    loginUseCase as unknown as LoginUseCase,
+    changePasswordUseCase as unknown as ChangePasswordUseCase,
+    refreshUseCase as unknown as RefreshUseCase,
+    forgotPasswordUseCase as unknown as ForgotPasswordUseCase,
+    resetPasswordUseCase as unknown as ResetPasswordUseCase,
+    getCurrentUserUseCase as unknown as GetCurrentUserUseCase,
+    updateProfileUseCase as unknown as UpdateProfileUseCase,
+    sessionTokenService as unknown as SessionTokenService,
     emailVerificationService as unknown as EmailVerificationService,
-    passwordResetService as unknown as PasswordResetService,
     passwordResetTokenService as unknown as PasswordResetTokenService,
     userRepo as unknown as IUserRepository,
   );
 
   return {
     controller,
-    authService,
+    registerUseCase,
+    loginUseCase,
+    changePasswordUseCase,
+    refreshUseCase,
+    forgotPasswordUseCase,
+    resetPasswordUseCase,
+    getCurrentUserUseCase,
+    updateProfileUseCase,
+    sessionTokenService,
     emailVerificationService,
-    passwordResetService,
     passwordResetTokenService,
     userRepo,
   };
@@ -83,29 +121,29 @@ describe('AuthController', () => {
     vi.clearAllMocks();
   });
 
-  it('delegates register to AuthService', async () => {
-    const { controller, authService } = createController();
+  it('delegates register to RegisterUseCase', async () => {
+    const { controller, registerUseCase } = createController();
     const input = { email: 'test@test.com', displayName: 'Test', password: 'Password123!' };
     const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: false }, tokens: { accessToken: 'a', refreshToken: 'r' } };
 
-    authService.register.mockResolvedValue(expectedResult);
+    registerUseCase.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.register(input);
 
-    expect(authService.register).toHaveBeenCalledWith(input);
+    expect(registerUseCase.execute).toHaveBeenCalledWith(input);
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates login to AuthService', async () => {
-    const { controller, authService } = createController();
+  it('delegates login to LoginUseCase', async () => {
+    const { controller, loginUseCase } = createController();
     const input = { email: 'test@test.com', password: 'Password123!' };
     const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: true }, tokens: { accessToken: 'a', refreshToken: 'r' } };
 
-    authService.login.mockResolvedValue(expectedResult);
+    loginUseCase.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.login(input);
 
-    expect(authService.login).toHaveBeenCalledWith(input);
+    expect(loginUseCase.execute).toHaveBeenCalledWith(input);
     expect(result).toEqual(expectedResult);
   });
 
@@ -122,40 +160,40 @@ describe('AuthController', () => {
     expect(result).toEqual(expectedResult);
   });
 
-  it('returns the current user profile from the access token', async () => {
-    const { controller, authService } = createController();
+  it('returns the current user profile from GetCurrentUserUseCase', async () => {
+    const { controller, getCurrentUserUseCase } = createController();
     const expectedResult = { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: false };
 
-    authService.getCurrentUser.mockResolvedValue(expectedResult);
+    getCurrentUserUseCase.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.me('user-1');
 
-    expect(authService.getCurrentUser).toHaveBeenCalledWith('user-1');
+    expect(getCurrentUserUseCase.execute).toHaveBeenCalledWith('user-1');
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates refresh to AuthService', async () => {
-    const { controller, authService } = createController();
+  it('delegates refresh to RefreshUseCase', async () => {
+    const { controller, refreshUseCase } = createController();
     const input = { refreshToken: 'r' };
     const expectedResult = { accessToken: 'a2', refreshToken: 'r2' };
 
-    authService.refresh.mockResolvedValue(expectedResult);
+    refreshUseCase.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.refresh(input);
 
-    expect(authService.refresh).toHaveBeenCalledWith(input.refreshToken);
+    expect(refreshUseCase.execute).toHaveBeenCalledWith(input.refreshToken);
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates logout to AuthService', async () => {
-    const { controller, authService } = createController();
+  it('delegates logout to SessionTokenService', async () => {
+    const { controller, sessionTokenService } = createController();
     const input = { refreshToken: 'r' };
 
-    authService.logout.mockResolvedValue(undefined);
+    sessionTokenService.revokeRefreshToken.mockResolvedValue(undefined);
 
     const result = await controller.logout(input);
 
-    expect(authService.logout).toHaveBeenCalledWith(input.refreshToken);
+    expect(sessionTokenService.revokeRefreshToken).toHaveBeenCalledWith(input.refreshToken);
     expect(result).toEqual({ success: true });
   });
 });
