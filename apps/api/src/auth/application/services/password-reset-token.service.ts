@@ -1,15 +1,12 @@
 import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { randomBytes, createHash } from 'crypto';
-import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
-import type { ITokenRepository } from '../../domain/ports/token.repository.port';
-import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
-import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import { UNIT_OF_WORK } from '../../domain/ports/unit-of-work.port';
+import type { IUnitOfWork } from '../../domain/ports/unit-of-work.port';
 
 @Injectable()
 export class PasswordResetTokenService {
   constructor(
-    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: IUnitOfWork,
   ) {}
 
   private hashToken(rawToken: string): string {
@@ -26,7 +23,7 @@ export class PasswordResetTokenService {
     const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 15); // 15 minutes
 
-    await this.tokenRepo.createResetToken({
+    await this.unitOfWork.tokenRepository.createResetToken({
       tokenHash,
       expiresAt,
       userId,
@@ -40,7 +37,7 @@ export class PasswordResetTokenService {
     const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 15); // 15 minutes
 
-    await this.tokenRepo.createResetToken({
+    await this.unitOfWork.tokenRepository.createResetToken({
       tokenHash,
       expiresAt,
       userId,
@@ -60,11 +57,11 @@ export class PasswordResetTokenService {
     const tokenHash = this.hashToken(rawToken);
 
     try {
-      const result = await this.userRepo.runTransaction(async () => {
+      const result = await this.unitOfWork.runTransaction(async () => {
         // Find reset token via db client (or transaction client passed through repo)
         // Since Prisma client is used under the hood in PrismaTokenRepository,
         // we can find the token first
-        const token = await this.tokenRepo.findResetToken(tokenHash);
+        const token = await this.unitOfWork.tokenRepository.findResetToken(tokenHash);
 
         if (!token) {
           throw new BadRequestException('Invalid password reset token');
@@ -79,7 +76,7 @@ export class PasswordResetTokenService {
         }
 
         // Mark as used atomically
-        await this.tokenRepo.markResetTokenUsed(token.id);
+        await this.unitOfWork.tokenRepository.markResetTokenUsed(token.id);
 
         return { userId: token.userId };
       });

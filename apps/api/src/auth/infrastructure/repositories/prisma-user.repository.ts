@@ -41,9 +41,5 @@ export class PrismaUserRepository implements IUserRepository {
     return AuthUserMapper.toDomain(raw);
   }
 
-  async runTransaction<T>(callback: () => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(async (tx) => {
-      return txStorage.run(tx, callback);
-    });
-  }
+
 }

@@ -65,13 +65,18 @@ function createMocks() {
     update: vi.fn(async (id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string; isEmailVerified?: boolean }) => {
       return prisma.user.update({ where: { id }, data });
     }),
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const unitOfWork: any = {
+    userRepository: userRepo,
     runTransaction: vi.fn(async (callback: () => Promise<unknown>) => {
       return prisma.$transaction(callback);
     }),
   };
 
   const registerUseCase = new RegisterUseCase(
-    userRepo as never,
+    unitOfWork as never,
     authConfig as never,
     sessionTokenService as never,
     authUserMapper as never,

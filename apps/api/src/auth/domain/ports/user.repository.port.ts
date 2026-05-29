@@ -13,6 +13,5 @@ export interface IUserRepository {
       isEmailVerified?: boolean;
     },
   ): Promise<User>;
-  runTransaction<T>(callback: () => Promise<T>): Promise<T>;
 }
 export const USER_REPOSITORY = Symbol('IUserRepository');

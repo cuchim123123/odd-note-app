@@ -16,6 +16,8 @@ import { USER_REPOSITORY } from './domain/ports/user.repository.port';
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
 import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
 import { PrismaTokenRepository } from './infrastructure/repositories/prisma-token.repository';
+import { UNIT_OF_WORK } from './domain/ports/unit-of-work.port';
+import { PrismaUnitOfWork } from './infrastructure/repositories/prisma-unit-of-work';
 
 // Use cases
 import { RegisterUseCase } from './application/use-cases/register.use-case';
@@ -50,10 +52,12 @@ import { UpdateProfileUseCase } from './application/use-cases/update-profile.use
     UpdateProfileUseCase,
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },
+    { provide: UNIT_OF_WORK, useClass: PrismaUnitOfWork },
   ],
   exports: [
     USER_REPOSITORY,
     TOKEN_REPOSITORY,
+    UNIT_OF_WORK,
     RegisterUseCase,
     LoginUseCase,
     ChangePasswordUseCase,

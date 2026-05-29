@@ -49,13 +49,14 @@ function createService() {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userRepo: any = {
+  const unitOfWork: any = {
+    tokenRepository: tokenRepo,
     runTransaction: vi.fn(async (callback: () => Promise<unknown>) => {
       return prisma.$transaction(callback);
     }),
   };
 
-  const service = new VerificationTokenService(tokenRepo as never, userRepo as never, authConfig as never);
+  const service = new VerificationTokenService(unitOfWork as never, authConfig as never);
 
   return { service, prisma, authConfig };
 }

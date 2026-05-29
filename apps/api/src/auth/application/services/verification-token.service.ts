@@ -1,16 +1,13 @@
 import { BadRequestException, Injectable, Inject } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import { AuthConfigService } from '../../../config';
-import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
-import type { ITokenRepository } from '../../domain/ports/token.repository.port';
-import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
-import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import { UNIT_OF_WORK } from '../../domain/ports/unit-of-work.port';
+import type { IUnitOfWork } from '../../domain/ports/unit-of-work.port';
 
 @Injectable()
 export class VerificationTokenService {
   constructor(
-    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: IUnitOfWork,
     private readonly authConfig: AuthConfigService,
   ) {}
 
@@ -23,7 +20,7 @@ export class VerificationTokenService {
     const tokenHash = this.hashToken(verificationToken);
     const expiresAt = new Date(Date.now() + this.authConfig.getEmailVerificationTokenExpiryMs());
 
-    await this.tokenRepo.createVerificationToken({
+    await this.unitOfWork.tokenRepository.createVerificationToken({
       tokenHash,
       expiresAt,
       userId,
@@ -34,15 +31,15 @@ export class VerificationTokenService {
 
   async validateAndUseVerificationToken(token: string): Promise<string> {
     const tokenHash = this.hashToken(token);
-    return this.userRepo.runTransaction(async () => {
-      const verificationToken = await this.tokenRepo.findVerificationToken(tokenHash);
+    return this.unitOfWork.runTransaction(async () => {
+      const verificationToken = await this.unitOfWork.tokenRepository.findVerificationToken(tokenHash);
 
       if (!verificationToken || verificationToken.usedAt || verificationToken.expiresAt < new Date()) {
         throw new BadRequestException('Verification token is invalid or expired');
       }
 
       const now = new Date();
-      const consumeResult = await this.tokenRepo.markVerificationTokenUsed(verificationToken.id, now);
+      const consumeResult = await this.unitOfWork.tokenRepository.markVerificationTokenUsed(verificationToken.id, now);
 
       if (consumeResult.count !== 1) {
         throw new BadRequestException('Verification token is invalid or expired');

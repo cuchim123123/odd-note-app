@@ -36,39 +36,40 @@ function createService() {
     getRefreshTokenSecret: vi.fn(() => 'refresh-secret'),
   };
 
+   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userRepo: any = {
-    findById: vi.fn(async (id: string) => {
-      return prisma.user.findUnique({ where: { id } });
-    }),
+  const unitOfWork: any = {
+    userRepository: {
+      findById: vi.fn(async (id: string) => {
+        return prisma.user.findUnique({ where: { id } });
+      }),
+    },
+    tokenRepository: {
+      createRefreshToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }) => {
+        return prisma.refreshToken.create({ data });
+      }),
+      findRefreshToken: vi.fn(async (hash: string) => {
+        return prisma.refreshToken.findUnique({ where: { tokenHash: hash } });
+      }),
+      revokeRefreshToken: vi.fn(async (hash: string, now: Date) => {
+        return prisma.refreshToken.updateMany({
+          where: { tokenHash: hash },
+          data: { revokedAt: now },
+        });
+      }),
+      updateRefreshTokenRevocation: vi.fn(async (id: string, now: Date) => {
+        return prisma.refreshToken.updateMany({
+          where: { id },
+          data: { revokedAt: now },
+        });
+      }),
+    },
     runTransaction: vi.fn(async (callback: () => Promise<unknown>) => {
       return prisma.$transaction(callback);
     }),
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tokenRepo: any = {
-    createRefreshToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }) => {
-      return prisma.refreshToken.create({ data });
-    }),
-    findRefreshToken: vi.fn(async (hash: string) => {
-      return prisma.refreshToken.findUnique({ where: { tokenHash: hash } });
-    }),
-    revokeRefreshToken: vi.fn(async (hash: string, now: Date) => {
-      return prisma.refreshToken.updateMany({
-        where: { tokenHash: hash },
-        data: { revokedAt: now },
-      });
-    }),
-    updateRefreshTokenRevocation: vi.fn(async (id: string, now: Date) => {
-      return prisma.refreshToken.updateMany({
-        where: { id },
-        data: { revokedAt: now },
-      });
-    }),
-  };
-
-  const service = new SessionTokenService(userRepo as never, tokenRepo as never, jwtService as never, jwtConfig as never);
+  const service = new SessionTokenService(unitOfWork as never, jwtService as never, jwtConfig as never);
 
   return { service, prisma, jwtService, jwtConfig };
 }
