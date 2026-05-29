@@ -25,7 +25,7 @@ export class PrismaUserRepository implements IUserRepository {
     return client.user.create({ data: { ...data, email: data.email.toLowerCase() } });
   }
 
-  async update(id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string }, tx?: unknown): Promise<User> {
+  async update(id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string; isEmailVerified?: boolean }, tx?: unknown): Promise<User> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = (tx as any) ?? this.prisma;
     return client.user.update({ where: { id }, data });

@@ -7,9 +7,11 @@ vi.mock('../../config', () => ({
 import { EmailVerificationService } from '../email-verification.service';
 
 function createService() {
-  const prisma = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prisma: any = {
     user: {
       update: vi.fn(),
+      findUnique: vi.fn(),
     },
   };
 
@@ -30,8 +32,18 @@ function createService() {
     toProfile: vi.fn(),
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userRepo: any = {
+    findByEmail: vi.fn(async (email: string) => {
+      return prisma.user.findUnique({ where: { email } });
+    }),
+    update: vi.fn(async (id: string, data: { isEmailVerified?: boolean }) => {
+      return prisma.user.update({ where: { id }, data });
+    }),
+  };
+
   const service = new EmailVerificationService(
-    prisma as never,
+    userRepo as never,
     verificationTokenService as never,
     authUrlService as never,
     mailerService as never,
