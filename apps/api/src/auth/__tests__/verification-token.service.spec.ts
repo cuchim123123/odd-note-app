@@ -6,7 +6,7 @@ vi.mock('../../config', () => ({
   AuthConfigService: class AuthConfigService {},
 }));
 
-import { VerificationTokenService } from '../verification-token.service';
+import { VerificationTokenService } from '../application/services/verification-token.service';
 
 type TransactionClientMock = {
   verificationToken: {

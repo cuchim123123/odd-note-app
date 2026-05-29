@@ -1,12 +1,12 @@
 import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
-import { JwtConfigService } from '../config';
-import type { AuthTokens } from './auth.types';
-import { USER_REPOSITORY } from './domain/ports/user.repository.port';
-import type { IUserRepository } from './domain/ports/user.repository.port';
-import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
-import type { ITokenRepository } from './domain/ports/token.repository.port';
+import { JwtConfigService } from '../../../config';
+import type { AuthTokens } from '../auth.types';
+import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
+import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
+import type { ITokenRepository } from '../../domain/ports/token.repository.port';
 
 type RefreshTokenPayload = {
   sub?: string;
@@ -47,7 +47,6 @@ export class SessionTokenService {
     userId: string,
     tx?: unknown,
   ): Promise<AuthTokens> {
-    // Fetch displayName for JWT payload (used by collaboration gateway)
     const user = await this.userRepo.findById(userId, tx);
 
     const accessToken = this.jwtService.sign(
@@ -78,8 +77,6 @@ export class SessionTokenService {
     const tokenHash = this.hashToken(refreshToken);
     const now = new Date();
 
-    // Note: Since JWT validation guarantees sub matches, revoking by tokenHash is completely secure.
-    // To ensure exact user check, we can safely trust verification token sub.
     await this.tokenRepo.revokeRefreshToken(tokenHash, now);
   }
 

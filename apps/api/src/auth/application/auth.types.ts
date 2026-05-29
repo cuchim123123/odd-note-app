@@ -1,10 +1,8 @@
-import type { UserRole } from '@prisma/client';
-
 export type AuthUserProfile = {
   id: string;
   email: string;
   displayName: string;
-  role: UserRole;
+  role: 'USER' | 'ADMIN';
   isEmailVerified: boolean;
   avatarUrl: string | null;
 };

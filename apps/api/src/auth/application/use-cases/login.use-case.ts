@@ -1,9 +1,9 @@
 import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import type { LoginInput } from '@odd-note-app/validation';
-import type { LoginResult } from '../../auth.types';
-import { SessionTokenService } from '../../session-token.service';
-import { AuthUserMapper } from '../../auth-user.mapper';
+import type { LoginResult } from '../auth.types';
+import { SessionTokenService } from '../services/session-token.service';
+import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
 import type { IUserRepository } from '../../domain/ports/user.repository.port';
 

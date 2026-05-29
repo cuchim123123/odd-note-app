@@ -1,13 +1,14 @@
 import { createZodDto } from 'nestjs-zod';
-import { forgotPasswordSchema, resetPasswordSchema } from '@odd-note-app/validation';
 import { z } from 'zod';
+import { forgotPasswordSchema, resetPasswordSchema } from '@odd-note-app/validation';
 
 export class ForgotPasswordDto extends createZodDto(forgotPasswordSchema) {}
 
-const resetPasswordDtoSchema = resetPasswordSchema.and(
+const resetPasswordDtoSchema = z.intersection(
+  resetPasswordSchema,
   z.object({
-    token: z.string().min(1, 'Token is required'),
-  })
+    token: z.string(),
+  }),
 );
 
 export class ResetPasswordDto extends createZodDto(resetPasswordDtoSchema) {}

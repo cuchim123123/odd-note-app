@@ -2,10 +2,10 @@ import { Injectable, ConflictException, Logger, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { AuthConfigService } from '../../../config';
 import type { RegisterInput } from '@odd-note-app/validation';
-import type { RegisterResult } from '../../auth.types';
-import { SessionTokenService } from '../../session-token.service';
-import { AuthUserMapper } from '../../auth-user.mapper';
-import { EmailVerificationService } from '../../email-verification.service';
+import type { RegisterResult } from '../auth.types';
+import { SessionTokenService } from '../services/session-token.service';
+import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
+import { EmailVerificationService } from '../services/email-verification.service';
 import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
 import type { IUserRepository } from '../../domain/ports/user.repository.port';
 

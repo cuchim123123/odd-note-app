@@ -1,9 +1,9 @@
 import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { randomBytes, createHash } from 'crypto';
-import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
-import type { ITokenRepository } from './domain/ports/token.repository.port';
-import { USER_REPOSITORY } from './domain/ports/user.repository.port';
-import type { IUserRepository } from './domain/ports/user.repository.port';
+import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
+import type { ITokenRepository } from '../../domain/ports/token.repository.port';
+import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
+import type { IUserRepository } from '../../domain/ports/user.repository.port';
 
 @Injectable()
 export class PasswordResetTokenService {

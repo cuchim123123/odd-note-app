@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '../config/config.module';
 import { PrismaModule } from '../prisma/prisma.module';
-import { AuthController } from './auth.controller';
-import { SessionTokenService } from './session-token.service';
+import { AuthController } from './presentation/auth.controller';
+import { SessionTokenService } from './application/services/session-token.service';
 import { AuthConfigModule, JwtConfigModule } from '../config';
 import { MailerService } from '../common/mailer/mailer.service';
 import { AuthUrlService } from '../common/auth-url.service';
-import { AuthUserMapper } from './auth-user.mapper';
-import { EmailVerificationService } from './email-verification.service';
-import { VerificationTokenService } from './verification-token.service';
-import { PasswordResetTokenService } from './password-reset-token.service';
+import { AuthUserMapper } from './infrastructure/mappers/auth-user.mapper';
+import { EmailVerificationService } from './application/services/email-verification.service';
+import { VerificationTokenService } from './application/services/verification-token.service';
+import { PasswordResetTokenService } from './application/services/password-reset-token.service';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
-import { TokenCleanupService } from './token-cleanup.service';
+import { TokenCleanupService } from './application/services/token-cleanup.service';
 import { USER_REPOSITORY } from './domain/ports/user.repository.port';
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
 import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
@@ -51,6 +51,17 @@ import { UpdateProfileUseCase } from './application/use-cases/update-profile.use
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },
   ],
-  exports: [USER_REPOSITORY, TOKEN_REPOSITORY, RegisterUseCase, LoginUseCase, ChangePasswordUseCase, RefreshUseCase, ForgotPasswordUseCase, ResetPasswordUseCase, GetCurrentUserUseCase, UpdateProfileUseCase],
+  exports: [
+    USER_REPOSITORY,
+    TOKEN_REPOSITORY,
+    RegisterUseCase,
+    LoginUseCase,
+    ChangePasswordUseCase,
+    RefreshUseCase,
+    ForgotPasswordUseCase,
+    ResetPasswordUseCase,
+    GetCurrentUserUseCase,
+    UpdateProfileUseCase,
+  ],
 })
 export class AuthModule {}

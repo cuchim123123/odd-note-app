@@ -6,7 +6,7 @@ vi.mock('../../config', () => ({
   JwtConfigService: class JwtConfigService {},
 }));
 
-import { SessionTokenService } from '../session-token.service';
+import { SessionTokenService } from '../application/services/session-token.service';
 
 type TransactionClientMock = {
   refreshToken: {

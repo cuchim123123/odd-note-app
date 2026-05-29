@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { MailerService } from '../../../common/mailer/mailer.service';
 import { AuthUrlService } from '../../../common/auth-url.service';
-import { PasswordResetTokenService } from '../../password-reset-token.service';
+import { PasswordResetTokenService } from '../services/password-reset-token.service';
 import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
 import type { IUserRepository } from '../../domain/ports/user.repository.port';
 

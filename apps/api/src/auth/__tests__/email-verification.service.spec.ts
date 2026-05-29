@@ -4,7 +4,7 @@ vi.mock('../../config', () => ({
   AuthConfigService: class AuthConfigService {},
 }));
 
-import { EmailVerificationService } from '../email-verification.service';
+import { EmailVerificationService } from '../application/services/email-verification.service';
 
 function createService() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

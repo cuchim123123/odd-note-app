@@ -1,23 +1,23 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards, Inject } from '@nestjs/common';
-import { SessionTokenService } from './session-token.service';
-import { PasswordResetTokenService } from './password-reset-token.service';
-import { USER_REPOSITORY } from './domain/ports/user.repository.port';
-import type { IUserRepository } from './domain/ports/user.repository.port';
+import { SessionTokenService } from '../application/services/session-token.service';
+import { PasswordResetTokenService } from '../application/services/password-reset-token.service';
+import { USER_REPOSITORY } from '../domain/ports/user.repository.port';
+import type { IUserRepository } from '../domain/ports/user.repository.port';
 import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto, UpdateProfileDto } from './dto';
-import { EmailVerificationService } from './email-verification.service';
+import { EmailVerificationService } from '../application/services/email-verification.service';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
-import { AccessTokenGuard } from '../common/guards/access-token.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AccessTokenGuard } from '../../common/guards/access-token.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 // Use cases
-import { RegisterUseCase } from './application/use-cases/register.use-case';
-import { LoginUseCase } from './application/use-cases/login.use-case';
-import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
-import { RefreshUseCase } from './application/use-cases/refresh.use-case';
-import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
-import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
-import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
-import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case';
+import { RegisterUseCase } from '../application/use-cases/register.use-case';
+import { LoginUseCase } from '../application/use-cases/login.use-case';
+import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
+import { RefreshUseCase } from '../application/use-cases/refresh.use-case';
+import { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.use-case';
+import { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
+import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
+import { UpdateProfileUseCase } from '../application/use-cases/update-profile.use-case';
 
 @Controller('auth')
 export class AuthController {

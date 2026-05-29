@@ -1,12 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { User } from '@prisma/client';
+import { User } from '../../domain/entities/user.entity';
 import { VerificationTokenService } from './verification-token.service';
-import { MailerService } from '../common/mailer/mailer.service';
-import { AuthUrlService } from '../common/auth-url.service';
-import { AuthUserMapper } from './auth-user.mapper';
-import type { AuthUserProfile } from './auth.types';
-import { USER_REPOSITORY } from './domain/ports/user.repository.port';
-import type { IUserRepository } from './domain/ports/user.repository.port';
+import { MailerService } from '../../../common/mailer/mailer.service';
+import { AuthUrlService } from '../../../common/auth-url.service';
+import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
+import type { AuthUserProfile } from '../auth.types';
+import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
+import type { IUserRepository } from '../../domain/ports/user.repository.port';
 
 @Injectable()
 export class EmailVerificationService {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthTokens } from '../../auth.types';
-import { SessionTokenService } from '../../session-token.service';
+import type { AuthTokens } from '../auth.types';
+import { SessionTokenService } from '../services/session-token.service';
 
 @Injectable()
 export class RefreshUseCase {

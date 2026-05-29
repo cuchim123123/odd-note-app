@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, Inject } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
-import { AuthConfigService } from '../config';
-import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
-import type { ITokenRepository } from './domain/ports/token.repository.port';
-import { USER_REPOSITORY } from './domain/ports/user.repository.port';
-import type { IUserRepository } from './domain/ports/user.repository.port';
+import { AuthConfigService } from '../../../config';
+import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
+import type { ITokenRepository } from '../../domain/ports/token.repository.port';
+import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
+import type { IUserRepository } from '../../domain/ports/user.repository.port';
 
 @Injectable()
 export class VerificationTokenService {
