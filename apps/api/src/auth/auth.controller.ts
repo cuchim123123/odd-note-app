@@ -2,12 +2,12 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/co
 import { AuthService } from './auth.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto } from './dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto, UpdateProfileDto } from './dto';
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
-import type { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
-import { AccessTokenGuard } from './access-token.guard';
-import { CurrentUser } from './current-user.decorator';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
+import { AccessTokenGuard } from '../common/guards/access-token.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -48,7 +48,7 @@ export class AuthController {
 
   @UseGuards(AccessTokenGuard)
   @Patch('profile')
-  async updateProfile(@CurrentUser() userId: string, @Body() input: { displayName?: string; avatarUrl?: string | null }) {
+  async updateProfile(@CurrentUser() userId: string, @Body() input: UpdateProfileDto) {
     return await this.authService.updateProfile(userId, input);
   }
 
@@ -72,14 +72,14 @@ export class AuthController {
 
   @Post('forgot-password')
   async forgotPassword(@Body() input: ForgotPasswordDto) {
-    await this.passwordResetService.sendResetPasswordEmail(input.email);
+    await this.passwordResetService.sendResetPasswordEmail(input.email!);
     // Always return success for security (don't reveal whether email exists)
     return { message: 'If the email exists, a reset link has been sent' };
   }
 
   @Post('reset-password')
   async resetPassword(@Body() input: ResetPasswordDto) {
-    await this.passwordResetService.resetPassword(input.token, input.password);
+    await this.passwordResetService.resetPassword(input.token!, input.password!);
     return { message: 'Password reset successfully' };
   }
 

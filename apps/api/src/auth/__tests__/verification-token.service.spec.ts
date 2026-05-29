@@ -24,7 +24,7 @@ function createService() {
       findUnique: vi.fn(),
       updateMany: vi.fn(),
     },
-    $transaction: vi.fn(),
+    $transaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback(prisma)),
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +32,36 @@ function createService() {
     getEmailVerificationTokenExpiryMs: vi.fn(() => 24 * 60 * 60 * 1000), // 24 hours
   };
 
-  const service = new VerificationTokenService(prisma as never, authConfig as never);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tokenRepo: any = {
+    createVerificationToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }, tx: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (tx as any) ?? prisma;
+      return client.verificationToken.create({ data });
+    }),
+    findVerificationToken: vi.fn(async (hash: string, tx: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (tx as any) ?? prisma;
+      return client.verificationToken.findUnique({ where: { tokenHash: hash } });
+    }),
+    markVerificationTokenUsed: vi.fn(async (id: string, now: Date, tx: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (tx as any) ?? prisma;
+      return client.verificationToken.updateMany({
+        where: { id },
+        data: { usedAt: now },
+      });
+    }),
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userRepo: any = {
+    runTransaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+      return prisma.$transaction(callback);
+    }),
+  };
+
+  const service = new VerificationTokenService(tokenRepo as never, userRepo as never, authConfig as never);
 
   return { service, prisma, authConfig };
 }

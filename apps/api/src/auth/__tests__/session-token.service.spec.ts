@@ -103,50 +103,57 @@ describe('SessionTokenService', () => {
   });
 
   it('allows only one concurrent refresh rotation to succeed', async () => {
-    const { service, prisma, jwtService } = createService();
-    jwtService.verify.mockReturnValue({ sub: 'user-123', type: 'refresh' });
-    jwtService.sign.mockReturnValueOnce('access-1').mockReturnValueOnce('refresh-1').mockReturnValueOnce('access-2').mockReturnValueOnce('refresh-2');
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-12T00:00:00.000Z'));
 
-    const state = {
-      tokenRecord: {
-        id: 'token-1',
-        userId: 'user-123',
-        expiresAt: new Date('2026-05-19T00:00:00.000Z'),
-        revokedAt: null as Date | null,
-      },
-    };
+    try {
+      const { service, prisma, jwtService } = createService();
+      jwtService.verify.mockReturnValue({ sub: 'user-123', type: 'refresh' });
+      jwtService.sign.mockReturnValueOnce('access-1').mockReturnValueOnce('refresh-1').mockReturnValueOnce('access-2').mockReturnValueOnce('refresh-2');
 
-    prisma.$transaction.mockImplementation(async (callback: (tx: TransactionClientMock & { user: { findUnique: ReturnType<typeof vi.fn> } }) => Promise<unknown>) => {
-      const tx: TransactionClientMock & { user: { findUnique: ReturnType<typeof vi.fn> } } = {
-        refreshToken: {
-          findUnique: vi.fn().mockResolvedValue(state.tokenRecord),
-          updateMany: vi.fn(async () => {
-            if (state.tokenRecord.revokedAt || state.tokenRecord.expiresAt < new Date()) {
-              return { count: 0 };
-            }
-
-            state.tokenRecord.revokedAt = new Date('2026-05-12T00:00:00.000Z');
-            return { count: 1 };
-          }),
-          create: vi.fn(async () => undefined),
-        },
-        user: {
-          findUnique: vi.fn().mockResolvedValue({ displayName: 'Mock User' }),
+      const state = {
+        tokenRecord: {
+          id: 'token-1',
+          userId: 'user-123',
+          expiresAt: new Date('2026-05-19T00:00:00.000Z'),
+          revokedAt: null as Date | null,
         },
       };
-      return callback(tx);
-    });
 
-    const results = await Promise.allSettled([
-      service.rotateRefreshToken('refresh.jwt'),
-      service.rotateRefreshToken('refresh.jwt'),
-    ]);
+      prisma.$transaction.mockImplementation(async (callback: (tx: TransactionClientMock & { user: { findUnique: ReturnType<typeof vi.fn> } }) => Promise<unknown>) => {
+        const tx: TransactionClientMock & { user: { findUnique: ReturnType<typeof vi.fn> } } = {
+          refreshToken: {
+            findUnique: vi.fn().mockResolvedValue(state.tokenRecord),
+            updateMany: vi.fn(async () => {
+              if (state.tokenRecord.revokedAt || state.tokenRecord.expiresAt < new Date()) {
+                return { count: 0 };
+              }
 
-    const fulfilled = results.filter((result) => result.status === 'fulfilled');
-    const rejected = results.filter((result) => result.status === 'rejected');
+              state.tokenRecord.revokedAt = new Date('2026-05-12T00:00:00.000Z');
+              return { count: 1 };
+            }),
+            create: vi.fn(async () => undefined),
+          },
+          user: {
+            findUnique: vi.fn().mockResolvedValue({ displayName: 'Mock User' }),
+          },
+        };
+        return callback(tx);
+      });
 
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    expect(state.tokenRecord.revokedAt).not.toBeNull();
+      const results = await Promise.allSettled([
+        service.rotateRefreshToken('refresh.jwt'),
+        service.rotateRefreshToken('refresh.jwt'),
+      ]);
+
+      const fulfilled = results.filter((result) => result.status === 'fulfilled');
+      const rejected = results.filter((result) => result.status === 'rejected');
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(state.tokenRecord.revokedAt).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

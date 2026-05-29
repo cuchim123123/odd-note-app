@@ -12,9 +12,13 @@ import { EmailVerificationService } from './email-verification.service';
 import { VerificationTokenService } from './verification-token.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
 import { PasswordResetService } from './password-reset.service';
-import { AccessTokenGuard } from './access-token.guard';
+import { AccessTokenGuard } from '../common/guards/access-token.guard';
 
 import { TokenCleanupService } from './token-cleanup.service';
+import { USER_REPOSITORY } from './domain/ports/user.repository.port';
+import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
+import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
+import { PrismaTokenRepository } from './infrastructure/repositories/prisma-token.repository';
 
 @Module({
   imports: [ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
@@ -31,6 +35,9 @@ import { TokenCleanupService } from './token-cleanup.service';
     PasswordResetService,
     TokenCleanupService,
     AccessTokenGuard,
+    { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
+    { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },
   ],
+  exports: [USER_REPOSITORY, TOKEN_REPOSITORY],
 })
 export class AuthModule {}

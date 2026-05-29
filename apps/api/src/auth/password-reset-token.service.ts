@@ -1,20 +1,15 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { randomBytes } from 'crypto';
-import { createHash } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
-import { AuthConfigService } from '../config';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { randomBytes, createHash } from 'crypto';
+import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
+import type { ITokenRepository } from './domain/ports/token.repository.port';
+import { USER_REPOSITORY } from './domain/ports/user.repository.port';
+import type { IUserRepository } from './domain/ports/user.repository.port';
 
-/**
- * Manages password reset token lifecycle.
- * - Creates hashed reset tokens with expiry
- * - Validates and marks tokens as used (atomic transaction for safety)
- * - Prevents token reuse
- */
 @Injectable()
 export class PasswordResetTokenService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly authConfig: AuthConfigService,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
   ) {}
 
   private hashToken(rawToken: string): string {
@@ -31,12 +26,10 @@ export class PasswordResetTokenService {
     const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 15); // 15 minutes
 
-    await this.prisma.passwordResetToken.create({
-      data: {
-        tokenHash,
-        expiresAt,
-        userId,
-      },
+    await this.tokenRepo.createResetToken({
+      tokenHash,
+      expiresAt,
+      userId,
     });
 
     return rawToken;
@@ -53,10 +46,11 @@ export class PasswordResetTokenService {
     const tokenHash = this.hashToken(rawToken);
 
     try {
-      const result = await this.prisma.$transaction(async (tx) => {
-        const token = await tx.passwordResetToken.findUnique({
-          where: { tokenHash },
-        });
+      const result = await this.userRepo.runTransaction(async () => {
+        // Find reset token via db client (or transaction client passed through repo)
+        // Since Prisma client is used under the hood in PrismaTokenRepository,
+        // we can find the token first
+        const token = await this.tokenRepo.findResetToken(tokenHash);
 
         if (!token) {
           throw new BadRequestException('Invalid password reset token');
@@ -71,10 +65,7 @@ export class PasswordResetTokenService {
         }
 
         // Mark as used atomically
-        await tx.passwordResetToken.update({
-          where: { tokenHash },
-          data: { usedAt: new Date() },
-        });
+        await this.tokenRepo.markResetTokenUsed(token.id);
 
         return { userId: token.userId };
       });
@@ -86,20 +77,5 @@ export class PasswordResetTokenService {
       }
       throw new BadRequestException('Invalid password reset token');
     }
-  }
-
-  /**
-   * Cleanup expired password reset tokens (for background job/cron).
-   */
-  async cleanupExpiredTokens(): Promise<{ deletedCount: number }> {
-    const result = await this.prisma.passwordResetToken.deleteMany({
-      where: {
-        expiresAt: {
-          lt: new Date(),
-        },
-      },
-    });
-
-    return { deletedCount: result.count };
   }
 }

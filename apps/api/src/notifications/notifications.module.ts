@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtConfigModule } from '../config';
-import { AccessTokenGuard } from '../auth/access-token.guard';
+import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
 

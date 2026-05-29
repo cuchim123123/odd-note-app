@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import type { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
+import type { ITokenRepository } from './domain/ports/token.repository.port';
 
 @Injectable()
 export class TokenCleanupService implements OnModuleInit, OnModuleDestroy {
@@ -9,7 +10,9 @@ export class TokenCleanupService implements OnModuleInit, OnModuleDestroy {
   // Run cleanup every hour
   private readonly CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
+  ) {}
 
   onModuleInit() {
     this.cleanupInterval = setInterval(() => {
@@ -31,37 +34,11 @@ export class TokenCleanupService implements OnModuleInit, OnModuleDestroy {
     const now = new Date();
 
     try {
-      const [refreshRes, verificationRes, resetRes] = await Promise.all([
-        this.prisma.refreshToken.deleteMany({
-          where: {
-            OR: [
-              { expiresAt: { lt: now } },
-              { revokedAt: { lt: now } },
-            ],
-          },
-        }),
-        this.prisma.verificationToken.deleteMany({
-          where: {
-            OR: [
-              { expiresAt: { lt: now } },
-              { usedAt: { lt: now } },
-            ],
-          },
-        }),
-        this.prisma.passwordResetToken.deleteMany({
-          where: {
-            OR: [
-              { expiresAt: { lt: now } },
-              { usedAt: { lt: now } },
-            ],
-          },
-        }),
-      ]);
-
-      const totalDeleted = refreshRes.count + verificationRes.count + resetRes.count;
+      const res = await this.tokenRepo.deleteExpiredOrUsedTokens(now);
+      const totalDeleted = res.refreshCount + res.verificationCount + res.resetCount;
       if (totalDeleted > 0) {
         this.logger.log(
-          `Cleaned up ${totalDeleted} expired/revoked tokens (Refresh: ${refreshRes.count}, Verification: ${verificationRes.count}, Reset: ${resetRes.count})`,
+          `Cleaned up ${totalDeleted} expired/revoked tokens (Refresh: ${res.refreshCount}, Verification: ${res.verificationCount}, Reset: ${res.resetCount})`,
         );
       }
     } catch (error) {
