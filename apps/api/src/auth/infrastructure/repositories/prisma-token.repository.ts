@@ -7,23 +7,22 @@ import type { VerificationToken, PasswordResetToken, RefreshToken } from '@prism
 export class PrismaTokenRepository implements ITokenRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private getClient(tx?: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (tx as any) ?? this.prisma;
+  }
+
   // Verification tokens
   async createVerificationToken(data: { userId: string; tokenHash: string; expiresAt: Date }, tx?: unknown): Promise<VerificationToken> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = (tx as any) ?? this.prisma;
-    return client.verificationToken.create({ data });
+    return this.getClient(tx).verificationToken.create({ data });
   }
 
   async findVerificationToken(tokenHash: string, tx?: unknown): Promise<VerificationToken | null> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = (tx as any) ?? this.prisma;
-    return client.verificationToken.findUnique({ where: { tokenHash } });
+    return this.getClient(tx).verificationToken.findUnique({ where: { tokenHash } });
   }
 
   async markVerificationTokenUsed(id: string, now: Date, tx?: unknown): Promise<{ count: number }> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = (tx as any) ?? this.prisma;
-    return client.verificationToken.updateMany({
+    return this.getClient(tx).verificationToken.updateMany({
       where: {
         id,
         usedAt: null,
@@ -48,15 +47,11 @@ export class PrismaTokenRepository implements ITokenRepository {
 
   // Refresh tokens
   async createRefreshToken(data: { userId: string; tokenHash: string; expiresAt: Date }, tx?: unknown): Promise<RefreshToken> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = (tx as any) ?? this.prisma;
-    return client.refreshToken.create({ data });
+    return this.getClient(tx).refreshToken.create({ data });
   }
 
   async findRefreshToken(tokenHash: string, tx?: unknown): Promise<RefreshToken | null> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = (tx as any) ?? this.prisma;
-    return client.refreshToken.findUnique({ where: { tokenHash } });
+    return this.getClient(tx).refreshToken.findUnique({ where: { tokenHash } });
   }
 
   async revokeRefreshToken(tokenHash: string, revokedAt: Date): Promise<void> {
@@ -67,9 +62,7 @@ export class PrismaTokenRepository implements ITokenRepository {
   }
 
   async updateRefreshTokenRevocation(id: string, revokedAt: Date, tx?: unknown): Promise<{ count: number }> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const client = (tx as any) ?? this.prisma;
-    return client.refreshToken.updateMany({
+    return this.getClient(tx).refreshToken.updateMany({
       where: { id, revokedAt: null, expiresAt: { gt: revokedAt } },
       data: { revokedAt },
     });
