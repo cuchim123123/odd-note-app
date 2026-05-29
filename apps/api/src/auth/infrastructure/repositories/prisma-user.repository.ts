@@ -1,30 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type { IUserRepository } from '../../domain/ports/user.repository.port';
-import { User } from '../../domain/entities/user.entity';
+import type { User } from '../../domain/entities/user.entity';
 import { AuthUserMapper } from '../mappers/auth-user.mapper';
-import { txStorage } from './tx-storage';
 
 @Injectable()
 export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private getClient() {
-    return txStorage.getStore() ?? this.prisma;
-  }
-
   async findById(id: string): Promise<User | null> {
-    const raw = await this.getClient().user.findUnique({ where: { id } });
+    const raw = await this.prisma.user.findUnique({ where: { id } });
     return raw ? AuthUserMapper.toDomain(raw) : null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const raw = await this.getClient().user.findUnique({ where: { email: email.toLowerCase() } });
+    const raw = await this.prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     return raw ? AuthUserMapper.toDomain(raw) : null;
   }
 
   async create(data: { email: string; displayName: string; passwordHash: string }): Promise<User> {
-    const raw = await this.getClient().user.create({ data: { ...data, email: data.email.toLowerCase() } });
+    const raw = await this.prisma.user.create({ data: { ...data, email: data.email.toLowerCase() } });
     return AuthUserMapper.toDomain(raw);
   }
 
@@ -37,9 +32,7 @@ export class PrismaUserRepository implements IUserRepository {
       isEmailVerified?: boolean;
     },
   ): Promise<User> {
-    const raw = await this.getClient().user.update({ where: { id }, data });
+    const raw = await this.prisma.user.update({ where: { id }, data });
     return AuthUserMapper.toDomain(raw);
   }
-
-
 }

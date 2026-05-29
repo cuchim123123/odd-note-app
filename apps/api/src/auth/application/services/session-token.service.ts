@@ -3,8 +3,12 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
 import { JwtConfigService } from '../../../config';
 import type { AuthTokens } from '../auth.types';
+import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
+import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
+import type { ITokenRepository } from '../../domain/ports/token.repository.port';
 import { UNIT_OF_WORK } from '../../domain/ports/unit-of-work.port';
-import type { IUnitOfWork } from '../../domain/ports/unit-of-work.port';
+import type { IUnitOfWork, ITransactionContext } from '../../domain/ports/unit-of-work.port';
 
 type RefreshTokenPayload = {
   sub?: string;
@@ -14,6 +18,8 @@ type RefreshTokenPayload = {
 @Injectable()
 export class SessionTokenService {
   constructor(
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: IUnitOfWork,
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
@@ -40,8 +46,11 @@ export class SessionTokenService {
     return { userId: payload.sub };
   }
 
-  async generateAndStoreTokens(userId: string): Promise<AuthTokens> {
-    const user = await this.unitOfWork.userRepository.findById(userId);
+  async generateAndStoreTokens(userId: string, ctx?: ITransactionContext): Promise<AuthTokens> {
+    const userRepo = ctx?.userRepository ?? this.userRepo;
+    const tokenRepo = ctx?.tokenRepository ?? this.tokenRepo;
+
+    const user = await userRepo.findById(userId);
 
     const accessToken = this.jwtService.sign(
       { sub: userId, displayName: user?.displayName ?? 'User' },
@@ -57,7 +66,7 @@ export class SessionTokenService {
     const expiryMs = this.jwtConfig.getRefreshTokenExpiryMs();
     const expiresAt = new Date(Date.now() + expiryMs);
 
-    await this.unitOfWork.tokenRepository.createRefreshToken({
+    await tokenRepo.createRefreshToken({
       tokenHash,
       expiresAt,
       userId,
@@ -71,15 +80,15 @@ export class SessionTokenService {
     const tokenHash = this.hashToken(refreshToken);
     const now = new Date();
 
-    await this.unitOfWork.tokenRepository.revokeRefreshToken(tokenHash, now);
+    await this.tokenRepo.revokeRefreshToken(tokenHash, now);
   }
 
   async rotateRefreshToken(refreshToken: string): Promise<AuthTokens> {
     const { userId } = this.verifyRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);
 
-    return this.unitOfWork.runTransaction(async () => {
-      const tokenRecord = await this.unitOfWork.tokenRepository.findRefreshToken(tokenHash);
+    return this.unitOfWork.runTransaction(async (ctx) => {
+      const tokenRecord = await ctx.tokenRepository.findRefreshToken(tokenHash);
 
       if (
         !tokenRecord ||
@@ -91,13 +100,13 @@ export class SessionTokenService {
       }
 
       const now = new Date();
-      const revokeResult = await this.unitOfWork.tokenRepository.updateRefreshTokenRevocation(tokenRecord.id, now);
+      const revokeResult = await ctx.tokenRepository.updateRefreshTokenRevocation(tokenRecord.id, now);
 
       if (revokeResult.count !== 1) {
         throw new UnauthorizedException('Refresh token is invalid or expired');
       }
 
-      return this.generateAndStoreTokens(tokenRecord.userId);
+      return this.generateAndStoreTokens(tokenRecord.userId, ctx);
     });
   }
 }

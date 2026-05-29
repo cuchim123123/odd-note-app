@@ -6,6 +6,8 @@ import type { RegisterResult } from '../auth.types';
 import { SessionTokenService } from '../services/session-token.service';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import { EmailVerificationService } from '../services/email-verification.service';
+import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
+import type { IUserRepository } from '../../domain/ports/user.repository.port';
 import { UNIT_OF_WORK } from '../../domain/ports/unit-of-work.port';
 import type { IUnitOfWork } from '../../domain/ports/unit-of-work.port';
 
@@ -15,6 +17,7 @@ export class RegisterUseCase {
   private readonly passwordSaltRounds: number;
 
   constructor(
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: IUnitOfWork,
     private readonly authConfig: AuthConfigService,
     private readonly sessionTokenService: SessionTokenService,
@@ -25,7 +28,7 @@ export class RegisterUseCase {
   }
 
   async execute(input: RegisterInput): Promise<RegisterResult> {
-    const existingUser = await this.unitOfWork.userRepository.findByEmail(input.email);
+    const existingUser = await this.userRepo.findByEmail(input.email);
 
     if (existingUser) {
       throw new ConflictException('Email is already registered');
@@ -33,10 +36,10 @@ export class RegisterUseCase {
 
     const passwordHash = await bcrypt.hash(input.password, this.passwordSaltRounds);
 
-    const { user, verificationToken } = await this.unitOfWork.runTransaction(async () => {
+    const { user, verificationToken } = await this.unitOfWork.runTransaction(async (ctx) => {
       let newUser;
       try {
-        newUser = await this.unitOfWork.userRepository.create({
+        newUser = await ctx.userRepository.create({
           email: input.email,
           displayName: input.displayName,
           passwordHash,
@@ -49,7 +52,7 @@ export class RegisterUseCase {
         throw err;
       }
 
-      const token = await this.emailVerificationService.createTokenForUser(newUser.id);
+      const token = await this.emailVerificationService.createTokenForUser(newUser.id, ctx.tokenRepository);
 
       return { user: newUser, verificationToken: token };
     });

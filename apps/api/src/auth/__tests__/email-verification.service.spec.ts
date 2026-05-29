@@ -67,7 +67,7 @@ describe('EmailVerificationService', () => {
 
     const result = await service.createTokenForUser('user-123');
 
-    expect(verificationTokenService.createAndStoreVerificationToken).toHaveBeenCalledWith('user-123');
+    expect(verificationTokenService.createAndStoreVerificationToken).toHaveBeenCalledWith('user-123', undefined);
     expect(result).toBe('verification-token');
   });
 

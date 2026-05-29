@@ -7,6 +7,7 @@ import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import type { AuthUserProfile } from '../auth.types';
 import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
 import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import type { ITokenRepository } from '../../domain/ports/token.repository.port';
 
 @Injectable()
 export class EmailVerificationService {
@@ -18,8 +19,8 @@ export class EmailVerificationService {
     private readonly authUserMapper: AuthUserMapper,
   ) {}
 
-  async createTokenForUser(userId: string): Promise<string> {
-    return this.verificationTokenService.createAndStoreVerificationToken(userId);
+  async createTokenForUser(userId: string, tokenRepo?: ITokenRepository): Promise<string> {
+    return this.verificationTokenService.createAndStoreVerificationToken(userId, tokenRepo);
   }
 
   async sendVerificationForUser(user: User, token: string): Promise<void> {

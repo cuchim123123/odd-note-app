@@ -8,8 +8,6 @@ vi.mock('../../config', () => ({
 
 import { SessionTokenService } from '../application/services/session-token.service';
 
-
-
 function createService() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prisma: any = {
@@ -21,7 +19,6 @@ function createService() {
     user: {
       findUnique: vi.fn().mockResolvedValue({ displayName: 'Mock User' }),
     },
-    $transaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback(prisma)),
   };
 
   const jwtService = {
@@ -36,42 +33,52 @@ function createService() {
     getRefreshTokenSecret: vi.fn(() => 'refresh-secret'),
   };
 
-   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const unitOfWork: any = {
-    userRepository: {
-      findById: vi.fn(async (id: string) => {
-        return prisma.user.findUnique({ where: { id } });
-      }),
-    },
-    tokenRepository: {
-      createRefreshToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }) => {
-        return prisma.refreshToken.create({ data });
-      }),
-      findRefreshToken: vi.fn(async (hash: string) => {
-        return prisma.refreshToken.findUnique({ where: { tokenHash: hash } });
-      }),
-      revokeRefreshToken: vi.fn(async (hash: string, now: Date) => {
-        return prisma.refreshToken.updateMany({
-          where: { tokenHash: hash },
-          data: { revokedAt: now },
-        });
-      }),
-      updateRefreshTokenRevocation: vi.fn(async (id: string, now: Date) => {
-        return prisma.refreshToken.updateMany({
-          where: { id },
-          data: { revokedAt: now },
-        });
-      }),
-    },
-    runTransaction: vi.fn(async (callback: () => Promise<unknown>) => {
-      return prisma.$transaction(callback);
+  const userRepo: any = {
+    findById: vi.fn(async (id: string) => {
+      return prisma.user.findUnique({ where: { id } });
     }),
   };
 
-  const service = new SessionTokenService(unitOfWork as never, jwtService as never, jwtConfig as never);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tokenRepo: any = {
+    createRefreshToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }) => {
+      return prisma.refreshToken.create({ data });
+    }),
+    findRefreshToken: vi.fn(async (hash: string) => {
+      return prisma.refreshToken.findUnique({ where: { tokenHash: hash } });
+    }),
+    revokeRefreshToken: vi.fn(async (hash: string, now: Date) => {
+      return prisma.refreshToken.updateMany({
+        where: { tokenHash: hash },
+        data: { revokedAt: now },
+      });
+    }),
+    updateRefreshTokenRevocation: vi.fn(async (id: string, now: Date) => {
+      return prisma.refreshToken.updateMany({
+        where: { id },
+        data: { revokedAt: now },
+      });
+    }),
+  };
 
-  return { service, prisma, jwtService, jwtConfig };
+  // Explicit UoW: runTransaction passes ctx with scoped repos to the callback
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const unitOfWork: any = {
+    runTransaction: vi.fn(async (callback: (ctx: { userRepository: typeof userRepo; tokenRepository: typeof tokenRepo }) => Promise<unknown>) => {
+      return callback({ userRepository: userRepo, tokenRepository: tokenRepo });
+    }),
+  };
+
+  const service = new SessionTokenService(
+    userRepo as never,
+    tokenRepo as never,
+    unitOfWork as never,
+    jwtService as never,
+    jwtConfig as never,
+  );
+
+  return { service, prisma, jwtService, jwtConfig, userRepo, tokenRepo, unitOfWork };
 }
 
 describe('SessionTokenService', () => {
@@ -109,16 +116,13 @@ describe('SessionTokenService', () => {
   });
 
   it('rejects already revoked refresh tokens', async () => {
-    const { service, prisma, jwtService } = createService();
+    const { service, jwtService, tokenRepo } = createService();
     jwtService.verify.mockReturnValue({ sub: 'user-123', type: 'refresh' });
-    prisma.refreshToken.findUnique.mockResolvedValue({
+    tokenRepo.findRefreshToken.mockResolvedValue({
       id: 'token-1',
       userId: 'user-123',
       expiresAt: new Date('2026-05-19T00:00:00.000Z'),
       revokedAt: new Date('2026-05-12T00:00:00.000Z'),
-    });
-    prisma.$transaction.mockImplementation(async (callback: () => Promise<unknown>) => {
-      return callback();
     });
 
     await expect(service.rotateRefreshToken('refresh.jwt')).rejects.toBeInstanceOf(UnauthorizedException);
@@ -129,7 +133,7 @@ describe('SessionTokenService', () => {
     vi.setSystemTime(new Date('2026-05-12T00:00:00.000Z'));
 
     try {
-      const { service, prisma, jwtService } = createService();
+      const { service, jwtService, tokenRepo, userRepo } = createService();
       jwtService.verify.mockReturnValue({ sub: 'user-123', type: 'refresh' });
       jwtService.sign.mockReturnValueOnce('access-1').mockReturnValueOnce('refresh-1').mockReturnValueOnce('access-2').mockReturnValueOnce('refresh-2');
 
@@ -142,20 +146,15 @@ describe('SessionTokenService', () => {
         },
       };
 
-      prisma.refreshToken.findUnique.mockResolvedValue(state.tokenRecord);
-      prisma.refreshToken.updateMany.mockImplementation(async () => {
+      tokenRepo.findRefreshToken.mockResolvedValue(state.tokenRecord);
+      tokenRepo.updateRefreshTokenRevocation.mockImplementation(async () => {
         if (state.tokenRecord.revokedAt || state.tokenRecord.expiresAt < new Date()) {
           return { count: 0 };
         }
-
         state.tokenRecord.revokedAt = new Date('2026-05-12T00:00:00.000Z');
         return { count: 1 };
       });
-      prisma.user.findUnique.mockResolvedValue({ displayName: 'Mock User' });
-
-      prisma.$transaction.mockImplementation(async (callback: () => Promise<unknown>) => {
-        return callback();
-      });
+      userRepo.findById.mockResolvedValue({ displayName: 'Mock User' });
 
       const results = await Promise.allSettled([
         service.rotateRefreshToken('refresh.jwt'),

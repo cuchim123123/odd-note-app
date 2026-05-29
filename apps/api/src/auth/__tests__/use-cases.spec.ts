@@ -69,13 +69,13 @@ function createMocks() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const unitOfWork: any = {
-    userRepository: userRepo,
-    runTransaction: vi.fn(async (callback: () => Promise<unknown>) => {
-      return prisma.$transaction(callback);
+    runTransaction: vi.fn(async (callback: (ctx: { userRepository: typeof userRepo; tokenRepository: unknown }) => Promise<unknown>) => {
+      return callback({ userRepository: userRepo, tokenRepository: {} });
     }),
   };
 
   const registerUseCase = new RegisterUseCase(
+    userRepo as never,
     unitOfWork as never,
     authConfig as never,
     sessionTokenService as never,
@@ -104,6 +104,7 @@ function createMocks() {
     changePasswordUseCase,
     refreshUseCase,
     prisma,
+    unitOfWork,
     authConfig,
     sessionTokenService,
     authUserMapper,
@@ -120,7 +121,7 @@ describe('Auth Use Cases', () => {
     it('registers a user, sends verification, and returns profile & tokens', async () => {
       vi.mocked(bcrypt.hash).mockImplementation(async () => 'hashed-password');
 
-      const { registerUseCase, prisma, sessionTokenService, authUserMapper, emailVerificationService } = createMocks();
+      const { registerUseCase, prisma, unitOfWork, sessionTokenService, authUserMapper, emailVerificationService } = createMocks();
 
       const createdUser = {
         id: 'user-123',
@@ -135,10 +136,7 @@ describe('Auth Use Cases', () => {
 
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue(createdUser);
-      prisma.$transaction.mockImplementation(async (callback: () => Promise<unknown>) => {
-        emailVerificationService.createTokenForUser.mockResolvedValue('verification-token');
-        return callback();
-      });
+      emailVerificationService.createTokenForUser.mockResolvedValue('verification-token');
       emailVerificationService.sendVerificationForUser.mockResolvedValue(undefined);
       sessionTokenService.generateAndStoreTokens.mockResolvedValue({
         accessToken: 'access-token',
@@ -162,8 +160,8 @@ describe('Auth Use Cases', () => {
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'user@example.com' },
       });
-      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-      expect(emailVerificationService.createTokenForUser).toHaveBeenCalledWith('user-123');
+      expect(unitOfWork.runTransaction).toHaveBeenCalledTimes(1);
+      expect(emailVerificationService.createTokenForUser).toHaveBeenCalledWith('user-123', expect.anything());
       expect(emailVerificationService.sendVerificationForUser).toHaveBeenCalledWith(createdUser, 'verification-token');
       expect(sessionTokenService.generateAndStoreTokens).toHaveBeenCalledWith('user-123');
       expect(authUserMapper.toProfile).toHaveBeenCalledWith(createdUser);
@@ -183,7 +181,7 @@ describe('Auth Use Cases', () => {
     });
 
     it('rejects registration when email already exists', async () => {
-      const { registerUseCase, prisma, sessionTokenService, emailVerificationService } = createMocks();
+      const { registerUseCase, prisma, unitOfWork, sessionTokenService, emailVerificationService } = createMocks();
 
       prisma.user.findUnique.mockResolvedValue({ id: 'existing-user' });
 
@@ -195,7 +193,7 @@ describe('Auth Use Cases', () => {
         }),
       ).rejects.toBeInstanceOf(ConflictException);
 
-      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(unitOfWork.runTransaction).not.toHaveBeenCalled();
       expect(sessionTokenService.generateAndStoreTokens).not.toHaveBeenCalled();
       expect(emailVerificationService.createTokenForUser).not.toHaveBeenCalled();
     });
