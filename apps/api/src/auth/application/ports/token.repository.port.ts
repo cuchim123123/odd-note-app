@@ -1,4 +1,4 @@
-import type { VerificationToken, PasswordResetToken, RefreshToken } from '../entities/token.entity';
+import type { VerificationToken, PasswordResetToken, RefreshToken } from '../../domain/entities/token.entity';
 
 export interface ITokenRepository {
   // Verification tokens

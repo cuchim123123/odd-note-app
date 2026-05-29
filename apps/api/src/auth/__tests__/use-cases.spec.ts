@@ -69,7 +69,7 @@ function createMocks() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const unitOfWork: any = {
-    runTransaction: vi.fn(async (callback: (ctx: { userRepository: typeof userRepo; tokenRepository: unknown }) => Promise<unknown>) => {
+    execute: vi.fn(async (callback: (ctx: { userRepository: typeof userRepo; tokenRepository: unknown }) => Promise<unknown>) => {
       return callback({ userRepository: userRepo, tokenRepository: {} });
     }),
   };
@@ -160,7 +160,7 @@ describe('Auth Use Cases', () => {
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'user@example.com' },
       });
-      expect(unitOfWork.runTransaction).toHaveBeenCalledTimes(1);
+      expect(unitOfWork.execute).toHaveBeenCalledTimes(1);
       expect(emailVerificationService.createTokenForUser).toHaveBeenCalledWith('user-123', expect.anything());
       expect(emailVerificationService.sendVerificationForUser).toHaveBeenCalledWith(createdUser, 'verification-token');
       expect(sessionTokenService.generateAndStoreTokens).toHaveBeenCalledWith('user-123');
@@ -193,7 +193,7 @@ describe('Auth Use Cases', () => {
         }),
       ).rejects.toBeInstanceOf(ConflictException);
 
-      expect(unitOfWork.runTransaction).not.toHaveBeenCalled();
+      expect(unitOfWork.execute).not.toHaveBeenCalled();
       expect(sessionTokenService.generateAndStoreTokens).not.toHaveBeenCalled();
       expect(emailVerificationService.createTokenForUser).not.toHaveBeenCalled();
     });

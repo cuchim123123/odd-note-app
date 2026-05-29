@@ -12,11 +12,11 @@ import { VerificationTokenService } from './application/services/verification-to
 import { PasswordResetTokenService } from './application/services/password-reset-token.service';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { TokenCleanupService } from './application/services/token-cleanup.service';
-import { USER_REPOSITORY } from './domain/ports/user.repository.port';
+import { USER_REPOSITORY } from './application/ports/user.repository.port';
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
-import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
+import { TOKEN_REPOSITORY } from './application/ports/token.repository.port';
 import { PrismaTokenRepository } from './infrastructure/repositories/prisma-token.repository';
-import { UNIT_OF_WORK } from './domain/ports/unit-of-work.port';
+import { UNIT_OF_WORK } from './application/ports/unit-of-work.port';
 import { PrismaUnitOfWork } from './infrastructure/repositories/prisma-unit-of-work';
 
 // Use cases

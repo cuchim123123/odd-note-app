@@ -62,10 +62,10 @@ function createService() {
     }),
   };
 
-  // Explicit UoW: runTransaction passes ctx with scoped repos to the callback
+  // Explicit UoW: execute passes ctx with scoped repos to the callback
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const unitOfWork: any = {
-    runTransaction: vi.fn(async (callback: (ctx: { userRepository: typeof userRepo; tokenRepository: typeof tokenRepo }) => Promise<unknown>) => {
+    execute: vi.fn(async (callback: (ctx: { userRepository: typeof userRepo; tokenRepository: typeof tokenRepo }) => Promise<unknown>) => {
       return callback({ userRepository: userRepo, tokenRepository: tokenRepo });
     }),
   };

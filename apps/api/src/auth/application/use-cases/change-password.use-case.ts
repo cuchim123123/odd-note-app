@@ -2,8 +2,8 @@ import { Injectable, UnauthorizedException, BadRequestException, Inject } from '
 import * as bcrypt from 'bcryptjs';
 import { AuthConfigService } from '../../../config';
 import type { ChangePasswordOutput } from '@odd-note-app/validation';
-import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
-import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import { USER_REPOSITORY } from '../ports/user.repository.port';
+import type { IUserRepository } from '../ports/user.repository.port';
 
 @Injectable()
 export class ChangePasswordUseCase {

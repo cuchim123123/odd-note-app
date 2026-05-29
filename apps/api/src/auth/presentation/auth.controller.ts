@@ -1,8 +1,8 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards, Inject } from '@nestjs/common';
 import { SessionTokenService } from '../application/services/session-token.service';
 import { PasswordResetTokenService } from '../application/services/password-reset-token.service';
-import { USER_REPOSITORY } from '../domain/ports/user.repository.port';
-import type { IUserRepository } from '../domain/ports/user.repository.port';
+import { USER_REPOSITORY } from '../application/ports/user.repository.port';
+import type { IUserRepository } from '../application/ports/user.repository.port';
 import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto, UpdateProfileDto } from './dto';
 import { EmailVerificationService } from '../application/services/email-verification.service';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';

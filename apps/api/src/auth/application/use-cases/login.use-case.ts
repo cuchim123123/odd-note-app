@@ -4,8 +4,8 @@ import type { LoginInput } from '@odd-note-app/validation';
 import type { LoginResult } from '../auth.types';
 import { SessionTokenService } from '../services/session-token.service';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
-import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
-import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import { USER_REPOSITORY } from '../ports/user.repository.port';
+import type { IUserRepository } from '../ports/user.repository.port';
 
 @Injectable()
 export class LoginUseCase {

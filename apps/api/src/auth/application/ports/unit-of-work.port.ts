@@ -7,6 +7,6 @@ export interface ITransactionContext {
 }
 
 export interface IUnitOfWork {
-  runTransaction<T>(work: (ctx: ITransactionContext) => Promise<T>): Promise<T>;
+  execute<T>(work: (ctx: ITransactionContext) => Promise<T>): Promise<T>;
 }
 export const UNIT_OF_WORK = Symbol('IUnitOfWork');

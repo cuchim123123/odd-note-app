@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, Inject } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import { AuthConfigService } from '../../../config';
-import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
-import type { ITokenRepository } from '../../domain/ports/token.repository.port';
-import { UNIT_OF_WORK } from '../../domain/ports/unit-of-work.port';
-import type { IUnitOfWork } from '../../domain/ports/unit-of-work.port';
+import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
+import type { ITokenRepository } from '../ports/token.repository.port';
+import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
+import type { IUnitOfWork } from '../ports/unit-of-work.port';
 
 @Injectable()
 export class VerificationTokenService {
@@ -35,7 +35,7 @@ export class VerificationTokenService {
 
   async validateAndUseVerificationToken(token: string): Promise<string> {
     const tokenHash = this.hashToken(token);
-    return this.unitOfWork.runTransaction(async (ctx) => {
+    return this.unitOfWork.execute(async (ctx) => {
       const verificationToken = await ctx.tokenRepository.findVerificationToken(tokenHash);
 
       if (!verificationToken || verificationToken.usedAt || verificationToken.expiresAt < new Date()) {

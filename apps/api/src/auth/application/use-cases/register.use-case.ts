@@ -6,10 +6,10 @@ import type { RegisterResult } from '../auth.types';
 import { SessionTokenService } from '../services/session-token.service';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import { EmailVerificationService } from '../services/email-verification.service';
-import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
-import type { IUserRepository } from '../../domain/ports/user.repository.port';
-import { UNIT_OF_WORK } from '../../domain/ports/unit-of-work.port';
-import type { IUnitOfWork } from '../../domain/ports/unit-of-work.port';
+import { USER_REPOSITORY } from '../ports/user.repository.port';
+import type { IUserRepository } from '../ports/user.repository.port';
+import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
+import type { IUnitOfWork } from '../ports/unit-of-work.port';
 
 @Injectable()
 export class RegisterUseCase {
@@ -36,7 +36,7 @@ export class RegisterUseCase {
 
     const passwordHash = await bcrypt.hash(input.password, this.passwordSaltRounds);
 
-    const { user, verificationToken } = await this.unitOfWork.runTransaction(async (ctx) => {
+    const { user, verificationToken } = await this.unitOfWork.execute(async (ctx) => {
       let newUser;
       try {
         newUser = await ctx.userRepository.create({

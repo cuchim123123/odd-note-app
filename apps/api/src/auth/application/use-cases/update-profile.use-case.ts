@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import type { AuthUserProfile } from '../auth.types';
-import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
-import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import { USER_REPOSITORY } from '../ports/user.repository.port';
+import type { IUserRepository } from '../ports/user.repository.port';
 
 @Injectable()
 export class UpdateProfileUseCase {

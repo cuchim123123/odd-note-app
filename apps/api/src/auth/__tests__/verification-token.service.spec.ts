@@ -21,10 +21,10 @@ function createService() {
     getEmailVerificationTokenExpiryMs: vi.fn(() => 24 * 60 * 60 * 1000), // 24 hours
   };
 
-  // Explicit UoW: runTransaction passes ctx with scoped repos to the callback
+  // Explicit UoW: execute passes ctx with scoped repos to the callback
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const unitOfWork: any = {
-    runTransaction: vi.fn(async (callback: (ctx: { tokenRepository: typeof tokenRepo }) => Promise<unknown>) => {
+    execute: vi.fn(async (callback: (ctx: { tokenRepository: typeof tokenRepo }) => Promise<unknown>) => {
       return callback({ tokenRepository: tokenRepo });
     }),
   };

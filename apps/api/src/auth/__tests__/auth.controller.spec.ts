@@ -21,7 +21,7 @@ import { AuthController } from '../presentation/auth.controller';
 import type { SessionTokenService } from '../application/services/session-token.service';
 import type { EmailVerificationService } from '../application/services/email-verification.service';
 import type { PasswordResetTokenService } from '../application/services/password-reset-token.service';
-import type { IUserRepository } from '../domain/ports/user.repository.port';
+import type { IUserRepository } from '../application/ports/user.repository.port';
 
 // Use case types
 import type { RegisterUseCase } from '../application/use-cases/register.use-case';

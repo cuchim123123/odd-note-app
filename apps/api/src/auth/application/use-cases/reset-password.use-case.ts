@@ -2,8 +2,8 @@ import { Injectable, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { AuthConfigService } from '../../../config';
 import { PasswordResetTokenService } from '../services/password-reset-token.service';
-import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
-import type { IUserRepository } from '../../domain/ports/user.repository.port';
+import { USER_REPOSITORY } from '../ports/user.repository.port';
+import type { IUserRepository } from '../ports/user.repository.port';
 
 @Injectable()
 export class ResetPasswordUseCase {

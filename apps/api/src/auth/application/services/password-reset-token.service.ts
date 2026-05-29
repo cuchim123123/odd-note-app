@@ -1,9 +1,9 @@
 import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { randomBytes, createHash } from 'crypto';
-import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
-import type { ITokenRepository } from '../../domain/ports/token.repository.port';
-import { UNIT_OF_WORK } from '../../domain/ports/unit-of-work.port';
-import type { IUnitOfWork } from '../../domain/ports/unit-of-work.port';
+import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
+import type { ITokenRepository } from '../ports/token.repository.port';
+import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
+import type { IUnitOfWork } from '../ports/unit-of-work.port';
 
 @Injectable()
 export class PasswordResetTokenService {
@@ -34,7 +34,7 @@ export class PasswordResetTokenService {
     const tokenHash = this.hashToken(rawToken);
 
     try {
-      const result = await this.unitOfWork.runTransaction(async (ctx) => {
+      const result = await this.unitOfWork.execute(async (ctx) => {
         const token = await ctx.tokenRepository.findResetToken(tokenHash);
 
         if (!token) {

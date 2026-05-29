@@ -3,12 +3,12 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
 import { JwtConfigService } from '../../../config';
 import type { AuthTokens } from '../auth.types';
-import { USER_REPOSITORY } from '../../domain/ports/user.repository.port';
-import type { IUserRepository } from '../../domain/ports/user.repository.port';
-import { TOKEN_REPOSITORY } from '../../domain/ports/token.repository.port';
-import type { ITokenRepository } from '../../domain/ports/token.repository.port';
-import { UNIT_OF_WORK } from '../../domain/ports/unit-of-work.port';
-import type { IUnitOfWork, ITransactionContext } from '../../domain/ports/unit-of-work.port';
+import { USER_REPOSITORY } from '../ports/user.repository.port';
+import type { IUserRepository } from '../ports/user.repository.port';
+import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
+import type { ITokenRepository } from '../ports/token.repository.port';
+import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
+import type { IUnitOfWork, ITransactionContext } from '../ports/unit-of-work.port';
 
 type RefreshTokenPayload = {
   sub?: string;
@@ -87,7 +87,7 @@ export class SessionTokenService {
     const { userId } = this.verifyRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);
 
-    return this.unitOfWork.runTransaction(async (ctx) => {
+    return this.unitOfWork.execute(async (ctx) => {
       const tokenRecord = await ctx.tokenRepository.findRefreshToken(tokenHash);
 
       if (

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import type { ITokenRepository } from '../../domain/ports/token.repository.port';
+import type { PrismaTransactionClient } from './prisma-client.type';
+import type { ITokenRepository } from '../../application/ports/token.repository.port';
 import type { VerificationToken, PasswordResetToken, RefreshToken } from '../../domain/entities/token.entity';
 
 @Injectable()
 export class PrismaTokenRepository implements ITokenRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaTransactionClient) {}
 
   // Verification tokens
   async createVerificationToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<VerificationToken> {
