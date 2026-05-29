@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type { IUserRepository } from '../../domain/ports/user.repository.port';
-import type { User } from '@prisma/client';
+import { User } from '../../domain/entities/user.entity';
+import { AuthUserMapper } from '../../auth-user.mapper';
 
 @Injectable()
 export class PrismaUserRepository implements IUserRepository {
@@ -13,19 +14,32 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async findById(id: string, tx?: unknown): Promise<User | null> {
-    return this.getClient(tx).user.findUnique({ where: { id } });
+    const raw = await this.getClient(tx).user.findUnique({ where: { id } });
+    return raw ? AuthUserMapper.toDomain(raw) : null;
   }
 
   async findByEmail(email: string, tx?: unknown): Promise<User | null> {
-    return this.getClient(tx).user.findUnique({ where: { email: email.toLowerCase() } });
+    const raw = await this.getClient(tx).user.findUnique({ where: { email: email.toLowerCase() } });
+    return raw ? AuthUserMapper.toDomain(raw) : null;
   }
 
   async create(data: { email: string; displayName: string; passwordHash: string }, tx?: unknown): Promise<User> {
-    return this.getClient(tx).user.create({ data: { ...data, email: data.email.toLowerCase() } });
+    const raw = await this.getClient(tx).user.create({ data: { ...data, email: data.email.toLowerCase() } });
+    return AuthUserMapper.toDomain(raw);
   }
 
-  async update(id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string; isEmailVerified?: boolean }, tx?: unknown): Promise<User> {
-    return this.getClient(tx).user.update({ where: { id }, data });
+  async update(
+    id: string,
+    data: {
+      displayName?: string;
+      avatarUrl?: string | null;
+      passwordHash?: string;
+      isEmailVerified?: boolean;
+    },
+    tx?: unknown,
+  ): Promise<User> {
+    const raw = await this.getClient(tx).user.update({ where: { id }, data });
+    return AuthUserMapper.toDomain(raw);
   }
 
   async runTransaction<T>(callback: (tx: unknown) => Promise<T>): Promise<T> {

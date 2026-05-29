@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { User } from '@prisma/client';
+import type { User as PrismaUser } from '@prisma/client';
+import { User as DomainUser } from './domain/entities/user.entity';
 import type { AuthUserProfile } from './auth.types';
 import type { EnvConfig } from '../config/config.module';
 
@@ -7,7 +8,7 @@ import type { EnvConfig } from '../config/config.module';
 export class AuthUserMapper {
   constructor(@Inject('ENV_CONFIG') private readonly env: EnvConfig) {}
 
-  toProfile(user: User): AuthUserProfile {
+  toProfile(user: DomainUser): AuthUserProfile {
     let avatarUrl = user.avatarUrl;
 
     if (avatarUrl) {
@@ -34,6 +35,34 @@ export class AuthUserMapper {
       role: user.role,
       isEmailVerified: user.isEmailVerified,
       avatarUrl,
+    };
+  }
+
+  static toDomain(prismaUser: PrismaUser): DomainUser {
+    return new DomainUser(
+      prismaUser.id,
+      prismaUser.email,
+      prismaUser.displayName,
+      prismaUser.passwordHash,
+      prismaUser.role,
+      prismaUser.isEmailVerified,
+      prismaUser.avatarUrl,
+      prismaUser.createdAt,
+      prismaUser.updatedAt,
+    );
+  }
+
+  static toPersistence(domainUser: DomainUser): PrismaUser {
+    return {
+      id: domainUser.id,
+      email: domainUser.email,
+      displayName: domainUser.displayName,
+      passwordHash: domainUser.passwordHash,
+      role: domainUser.role,
+      isEmailVerified: domainUser.isEmailVerified,
+      avatarUrl: domainUser.avatarUrl,
+      createdAt: domainUser.createdAt,
+      updatedAt: domainUser.updatedAt,
     };
   }
 }
