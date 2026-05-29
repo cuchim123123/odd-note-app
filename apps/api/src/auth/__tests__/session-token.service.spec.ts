@@ -17,7 +17,8 @@ type TransactionClientMock = {
 };
 
 function createService() {
-  const prisma = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prisma: any = {
     refreshToken: {
       create: vi.fn(),
       findUnique: vi.fn(),
@@ -26,7 +27,7 @@ function createService() {
     user: {
       findUnique: vi.fn().mockResolvedValue({ displayName: 'Mock User' }),
     },
-    $transaction: vi.fn(),
+    $transaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback(prisma)),
   };
 
   const jwtService = {
@@ -41,7 +42,47 @@ function createService() {
     getRefreshTokenSecret: vi.fn(() => 'refresh-secret'),
   };
 
-  const service = new SessionTokenService(prisma as never, jwtService as never, jwtConfig as never);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userRepo: any = {
+    findById: vi.fn(async (id: string, tx: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (tx as any) ?? prisma;
+      return client.user.findUnique({ where: { id } });
+    }),
+    runTransaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+      return prisma.$transaction(callback);
+    }),
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tokenRepo: any = {
+    createRefreshToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }, tx: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (tx as any) ?? prisma;
+      return client.refreshToken.create({ data });
+    }),
+    findRefreshToken: vi.fn(async (hash: string, tx: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (tx as any) ?? prisma;
+      return client.refreshToken.findUnique({ where: { tokenHash: hash } });
+    }),
+    revokeRefreshToken: vi.fn(async (hash: string, now: Date) => {
+      return prisma.refreshToken.updateMany({
+        where: { tokenHash: hash },
+        data: { revokedAt: now },
+      });
+    }),
+    updateRefreshTokenRevocation: vi.fn(async (id: string, now: Date, tx: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (tx as any) ?? prisma;
+      return client.refreshToken.updateMany({
+        where: { id },
+        data: { revokedAt: now },
+      });
+    }),
+  };
+
+  const service = new SessionTokenService(userRepo as never, tokenRepo as never, jwtService as never, jwtConfig as never);
 
   return { service, prisma, jwtService, jwtConfig };
 }

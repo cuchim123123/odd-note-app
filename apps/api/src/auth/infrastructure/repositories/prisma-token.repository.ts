@@ -53,8 +53,10 @@ export class PrismaTokenRepository implements ITokenRepository {
     return client.refreshToken.create({ data });
   }
 
-  async findRefreshToken(tokenHash: string): Promise<RefreshToken | null> {
-    return this.prisma.refreshToken.findUnique({ where: { tokenHash } });
+  async findRefreshToken(tokenHash: string, tx?: unknown): Promise<RefreshToken | null> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = (tx as any) ?? this.prisma;
+    return client.refreshToken.findUnique({ where: { tokenHash } });
   }
 
   async revokeRefreshToken(tokenHash: string, revokedAt: Date): Promise<void> {

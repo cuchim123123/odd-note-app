@@ -13,7 +13,7 @@ export interface ITokenRepository {
 
   // Refresh tokens
   createRefreshToken(data: { userId: string; tokenHash: string; expiresAt: Date }, tx?: unknown): Promise<RefreshToken>;
-  findRefreshToken(tokenHash: string): Promise<RefreshToken | null>;
+  findRefreshToken(tokenHash: string, tx?: unknown): Promise<RefreshToken | null>;
   revokeRefreshToken(tokenHash: string, revokedAt: Date): Promise<void>;
   updateRefreshTokenRevocation(id: string, revokedAt: Date, tx?: unknown): Promise<{ count: number }>;
 

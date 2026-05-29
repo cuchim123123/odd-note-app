@@ -7,20 +7,28 @@ import type { User } from '@prisma/client';
 export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findById(id: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { id } });
+  async findById(id: string, tx?: unknown): Promise<User | null> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = (tx as any) ?? this.prisma;
+    return client.user.findUnique({ where: { id } });
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  async findByEmail(email: string, tx?: unknown): Promise<User | null> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = (tx as any) ?? this.prisma;
+    return client.user.findUnique({ where: { email: email.toLowerCase() } });
   }
 
-  async create(data: { email: string; displayName: string; passwordHash: string }): Promise<User> {
-    return this.prisma.user.create({ data: { ...data, email: data.email.toLowerCase() } });
+  async create(data: { email: string; displayName: string; passwordHash: string }, tx?: unknown): Promise<User> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = (tx as any) ?? this.prisma;
+    return client.user.create({ data: { ...data, email: data.email.toLowerCase() } });
   }
 
-  async update(id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string }): Promise<User> {
-    return this.prisma.user.update({ where: { id }, data });
+  async update(id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string }, tx?: unknown): Promise<User> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = (tx as any) ?? this.prisma;
+    return client.user.update({ where: { id }, data });
   }
 
   async runTransaction<T>(callback: (tx: unknown) => Promise<T>): Promise<T> {

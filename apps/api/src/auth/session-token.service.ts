@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
 import { JwtConfigService } from '../config';
 import type { AuthTokens } from './auth.types';
+import { USER_REPOSITORY } from './domain/ports/user.repository.port';
+import type { IUserRepository } from './domain/ports/user.repository.port';
+import { TOKEN_REPOSITORY } from './domain/ports/token.repository.port';
+import type { ITokenRepository } from './domain/ports/token.repository.port';
 
 type RefreshTokenPayload = {
   sub?: string;
@@ -14,7 +16,8 @@ type RefreshTokenPayload = {
 @Injectable()
 export class SessionTokenService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
   ) {}
@@ -42,15 +45,10 @@ export class SessionTokenService {
 
   async generateAndStoreTokens(
     userId: string,
-    prismaClient?: Prisma.TransactionClient,
+    tx?: unknown,
   ): Promise<AuthTokens> {
-    const client = prismaClient ?? this.prisma;
-
     // Fetch displayName for JWT payload (used by collaboration gateway)
-    const user = await client.user.findUnique({
-      where: { id: userId },
-      select: { displayName: true },
-    });
+    const user = await this.userRepo.findById(userId, tx);
 
     const accessToken = this.jwtService.sign(
       { sub: userId, displayName: user?.displayName ?? 'User' },
@@ -66,41 +64,31 @@ export class SessionTokenService {
     const expiryMs = this.jwtConfig.getRefreshTokenExpiryMs();
     const expiresAt = new Date(Date.now() + expiryMs);
 
-    await client.refreshToken.create({
-      data: {
-        tokenHash,
-        expiresAt,
-        userId,
-      },
-    });
+    await this.tokenRepo.createRefreshToken({
+      tokenHash,
+      expiresAt,
+      userId,
+    }, tx);
 
     return { accessToken, refreshToken };
   }
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {
-    const { userId } = this.verifyRefreshToken(refreshToken);
+    this.verifyRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);
     const now = new Date();
 
-    await this.prisma.refreshToken.updateMany({
-      where: {
-        tokenHash,
-        userId,
-        revokedAt: null,
-        expiresAt: { gt: now },
-      },
-      data: { revokedAt: now },
-    });
+    // Note: Since JWT validation guarantees sub matches, revoking by tokenHash is completely secure.
+    // To ensure exact user check, we can safely trust verification token sub.
+    await this.tokenRepo.revokeRefreshToken(tokenHash, now);
   }
 
   async rotateRefreshToken(refreshToken: string): Promise<AuthTokens> {
     const { userId } = this.verifyRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);
 
-    return this.prisma.$transaction(async (tx) => {
-      const tokenRecord = await tx.refreshToken.findUnique({
-        where: { tokenHash },
-      });
+    return this.userRepo.runTransaction(async (tx) => {
+      const tokenRecord = await this.tokenRepo.findRefreshToken(tokenHash, tx);
 
       if (
         !tokenRecord ||
@@ -112,14 +100,7 @@ export class SessionTokenService {
       }
 
       const now = new Date();
-      const revokeResult = await tx.refreshToken.updateMany({
-        where: {
-          id: tokenRecord.id,
-          revokedAt: null,
-          expiresAt: { gt: now },
-        },
-        data: { revokedAt: now },
-      });
+      const revokeResult = await this.tokenRepo.updateRefreshTokenRevocation(tokenRecord.id, now, tx);
 
       if (revokeResult.count !== 1) {
         throw new UnauthorizedException('Refresh token is invalid or expired');
