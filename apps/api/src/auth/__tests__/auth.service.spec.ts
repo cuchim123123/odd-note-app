@@ -21,11 +21,14 @@ type TransactionClientMock = {
 };
 
 function createService() {
-  const prisma = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prisma: any = {
     user: {
       findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
     },
-    $transaction: vi.fn(),
+    $transaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback(prisma)),
   };
 
   const authConfig = {
@@ -47,8 +50,29 @@ function createService() {
     sendVerificationForUser: vi.fn(),
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userRepo: any = {
+    findById: vi.fn(async (id: string) => {
+      return prisma.user.findUnique({ where: { id } });
+    }),
+    findByEmail: vi.fn(async (email: string) => {
+      return prisma.user.findUnique({ where: { email } });
+    }),
+    create: vi.fn(async (data: { email: string; displayName: string; passwordHash: string }, tx?: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (tx as any) ?? prisma;
+      return client.user.create({ data });
+    }),
+    update: vi.fn(async (id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string; isEmailVerified?: boolean }) => {
+      return prisma.user.update({ where: { id }, data });
+    }),
+    runTransaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+      return prisma.$transaction(callback);
+    }),
+  };
+
   const service = new AuthService(
-    prisma as never,
+    userRepo as never,
     authConfig as never,
     sessionTokenService as never,
     authUserMapper as never,

@@ -30,7 +30,7 @@ import type { AuthService } from '../auth.service';
 import type { EmailVerificationService } from '../email-verification.service';
 import type { PasswordResetService } from '../password-reset.service';
 import type { PasswordResetTokenService } from '../password-reset-token.service';
-import type { PrismaService } from '../../prisma/prisma.service';
+import type { IUserRepository } from '../domain/ports/user.repository.port';
 
 function createController() {
   const authService = {
@@ -55,10 +55,9 @@ function createController() {
     validateAndMarkAsUsed: vi.fn(),
   };
 
-  const prismaService = {
-    user: {
-      findUnique: vi.fn(),
-    },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userRepo: any = {
+    findByEmail: vi.fn(),
   };
 
   const controller = new AuthController(
@@ -66,7 +65,7 @@ function createController() {
     emailVerificationService as unknown as EmailVerificationService,
     passwordResetService as unknown as PasswordResetService,
     passwordResetTokenService as unknown as PasswordResetTokenService,
-    prismaService as unknown as PrismaService,
+    userRepo as unknown as IUserRepository,
   );
 
   return {
@@ -75,7 +74,7 @@ function createController() {
     emailVerificationService,
     passwordResetService,
     passwordResetTokenService,
-    prismaService,
+    userRepo,
   };
 }
 

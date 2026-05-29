@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards, Inject } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { USER_REPOSITORY } from './domain/ports/user.repository.port';
+import type { IUserRepository } from './domain/ports/user.repository.port';
 import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto, UpdateProfileDto } from './dto';
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
@@ -16,7 +17,7 @@ export class AuthController {
     private readonly emailVerificationService: EmailVerificationService,
     private readonly passwordResetService: PasswordResetService,
     private readonly passwordResetTokenService: PasswordResetTokenService,
-    private readonly prisma: PrismaService,
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
   ) {}
 
   @Post('register')
@@ -93,7 +94,7 @@ export class AuthController {
     }
 
     // Create token and return raw token for test automation.
-    const user = await this.prisma.user.findUnique({ where: { email: body.email.toLowerCase() } });
+    const user = await this.userRepo.findByEmail(body.email);
     if (!user) {
       // Don't reveal whether the email exists; return same shape as the real endpoint
       return { message: 'If the email exists, a reset link has been sent' };
