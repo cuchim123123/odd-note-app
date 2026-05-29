@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../prisma/prisma.service';
 import { AuthConfigService } from '../config';
 import { MailerService } from '../common/mailer/mailer.service';
 import { AuthUrlService } from '../common/auth-url.service';
 import { PasswordResetTokenService } from './password-reset-token.service';
+import { USER_REPOSITORY } from './domain/ports/user.repository.port';
+import type { IUserRepository } from './domain/ports/user.repository.port';
 
 /**
  * Orchestrates password reset use-cases.
@@ -17,7 +18,7 @@ export class PasswordResetService {
   private readonly passwordSaltRounds: number;
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     private readonly authConfig: AuthConfigService,
     private readonly passwordResetTokenService: PasswordResetTokenService,
     private readonly mailerService: MailerService,
@@ -32,9 +33,7 @@ export class PasswordResetService {
    * Non-critical operation: if email send fails, we still report success (security UX).
    */
   async sendResetPasswordEmail(email: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+    const user = await this.userRepo.findByEmail(email);
 
     if (!user) {
       // Don't reveal whether email exists (security)
@@ -61,9 +60,6 @@ export class PasswordResetService {
 
     const hashedPassword = await bcrypt.hash(newPassword, this.passwordSaltRounds);
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash: hashedPassword },
-    });
+    await this.userRepo.update(userId, { passwordHash: hashedPassword });
   }
 }
