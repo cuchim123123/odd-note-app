@@ -33,14 +33,14 @@ export class RegisterUseCase {
 
     const passwordHash = await bcrypt.hash(input.password, this.passwordSaltRounds);
 
-    const { user, verificationToken } = await this.userRepo.runTransaction(async (tx) => {
+    const { user, verificationToken } = await this.userRepo.runTransaction(async () => {
       let newUser;
       try {
         newUser = await this.userRepo.create({
           email: input.email,
           displayName: input.displayName,
           passwordHash,
-        }, tx);
+        });
       } catch (err: unknown) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((err as any)?.code === 'P2002') {
@@ -49,7 +49,7 @@ export class RegisterUseCase {
         throw err;
       }
 
-      const token = await this.emailVerificationService.createTokenForUser(newUser.id, tx);
+      const token = await this.emailVerificationService.createTokenForUser(newUser.id);
 
       return { user: newUser, verificationToken: token };
     });

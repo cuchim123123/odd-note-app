@@ -43,11 +43,8 @@ export class SessionTokenService {
     return { userId: payload.sub };
   }
 
-  async generateAndStoreTokens(
-    userId: string,
-    tx?: unknown,
-  ): Promise<AuthTokens> {
-    const user = await this.userRepo.findById(userId, tx);
+  async generateAndStoreTokens(userId: string): Promise<AuthTokens> {
+    const user = await this.userRepo.findById(userId);
 
     const accessToken = this.jwtService.sign(
       { sub: userId, displayName: user?.displayName ?? 'User' },
@@ -67,7 +64,7 @@ export class SessionTokenService {
       tokenHash,
       expiresAt,
       userId,
-    }, tx);
+    });
 
     return { accessToken, refreshToken };
   }
@@ -84,8 +81,8 @@ export class SessionTokenService {
     const { userId } = this.verifyRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);
 
-    return this.userRepo.runTransaction(async (tx) => {
-      const tokenRecord = await this.tokenRepo.findRefreshToken(tokenHash, tx);
+    return this.userRepo.runTransaction(async () => {
+      const tokenRecord = await this.tokenRepo.findRefreshToken(tokenHash);
 
       if (
         !tokenRecord ||
@@ -97,13 +94,13 @@ export class SessionTokenService {
       }
 
       const now = new Date();
-      const revokeResult = await this.tokenRepo.updateRefreshTokenRevocation(tokenRecord.id, now, tx);
+      const revokeResult = await this.tokenRepo.updateRefreshTokenRevocation(tokenRecord.id, now);
 
       if (revokeResult.count !== 1) {
         throw new UnauthorizedException('Refresh token is invalid or expired');
       }
 
-      return this.generateAndStoreTokens(tokenRecord.userId, tx);
+      return this.generateAndStoreTokens(tokenRecord.userId);
     });
   }
 }

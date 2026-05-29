@@ -21,12 +21,6 @@ import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
 import { RefreshUseCase } from '../application/use-cases/refresh.use-case';
 
-type TransactionClientMock = {
-  user: {
-    create: ReturnType<typeof vi.fn>;
-  };
-};
-
 function createMocks() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prisma: any = {
@@ -35,7 +29,7 @@ function createMocks() {
       create: vi.fn(),
       update: vi.fn(),
     },
-    $transaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback(prisma)),
+    $transaction: vi.fn(async (callback: () => Promise<unknown>) => callback()),
   };
 
   const authConfig = {
@@ -65,15 +59,13 @@ function createMocks() {
     findByEmail: vi.fn(async (email: string) => {
       return prisma.user.findUnique({ where: { email } });
     }),
-    create: vi.fn(async (data: { email: string; displayName: string; passwordHash: string }, tx?: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = (tx as any) ?? prisma;
-      return client.user.create({ data });
+    create: vi.fn(async (data: { email: string; displayName: string; passwordHash: string }) => {
+      return prisma.user.create({ data });
     }),
     update: vi.fn(async (id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string; isEmailVerified?: boolean }) => {
       return prisma.user.update({ where: { id }, data });
     }),
-    runTransaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+    runTransaction: vi.fn(async (callback: () => Promise<unknown>) => {
       return prisma.$transaction(callback);
     }),
   };
@@ -137,15 +129,10 @@ describe('Auth Use Cases', () => {
       };
 
       prisma.user.findUnique.mockResolvedValue(null);
-      prisma.$transaction.mockImplementation(async (callback: (tx: TransactionClientMock) => Promise<unknown>) => {
-        const tx: TransactionClientMock = {
-          user: {
-            create: vi.fn().mockResolvedValue(createdUser),
-          },
-        };
-
+      prisma.user.create.mockResolvedValue(createdUser);
+      prisma.$transaction.mockImplementation(async (callback: () => Promise<unknown>) => {
         emailVerificationService.createTokenForUser.mockResolvedValue('verification-token');
-        return callback(tx);
+        return callback();
       });
       emailVerificationService.sendVerificationForUser.mockResolvedValue(undefined);
       sessionTokenService.generateAndStoreTokens.mockResolvedValue({
@@ -171,7 +158,7 @@ describe('Auth Use Cases', () => {
         where: { email: 'user@example.com' },
       });
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-      expect(emailVerificationService.createTokenForUser).toHaveBeenCalledWith('user-123', expect.any(Object));
+      expect(emailVerificationService.createTokenForUser).toHaveBeenCalledWith('user-123');
       expect(emailVerificationService.sendVerificationForUser).toHaveBeenCalledWith(createdUser, 'verification-token');
       expect(sessionTokenService.generateAndStoreTokens).toHaveBeenCalledWith('user-123');
       expect(authUserMapper.toProfile).toHaveBeenCalledWith(createdUser);

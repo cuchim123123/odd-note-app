@@ -65,9 +65,9 @@ describe('EmailVerificationService', () => {
     const { service, verificationTokenService } = createService();
     verificationTokenService.createAndStoreVerificationToken.mockResolvedValue('verification-token');
 
-    const result = await service.createTokenForUser('user-123', { tx: true } as never);
+    const result = await service.createTokenForUser('user-123');
 
-    expect(verificationTokenService.createAndStoreVerificationToken).toHaveBeenCalledWith('user-123', { tx: true });
+    expect(verificationTokenService.createAndStoreVerificationToken).toHaveBeenCalledWith('user-123');
     expect(result).toBe('verification-token');
   });
 

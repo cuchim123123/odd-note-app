@@ -8,13 +8,7 @@ vi.mock('../../config', () => ({
 
 import { SessionTokenService } from '../application/services/session-token.service';
 
-type TransactionClientMock = {
-  refreshToken: {
-    create: ReturnType<typeof vi.fn>;
-    findUnique: ReturnType<typeof vi.fn>;
-    updateMany: ReturnType<typeof vi.fn>;
-  };
-};
+
 
 function createService() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,27 +38,21 @@ function createService() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRepo: any = {
-    findById: vi.fn(async (id: string, tx: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = (tx as any) ?? prisma;
-      return client.user.findUnique({ where: { id } });
+    findById: vi.fn(async (id: string) => {
+      return prisma.user.findUnique({ where: { id } });
     }),
-    runTransaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+    runTransaction: vi.fn(async (callback: () => Promise<unknown>) => {
       return prisma.$transaction(callback);
     }),
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tokenRepo: any = {
-    createRefreshToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }, tx: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = (tx as any) ?? prisma;
-      return client.refreshToken.create({ data });
+    createRefreshToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }) => {
+      return prisma.refreshToken.create({ data });
     }),
-    findRefreshToken: vi.fn(async (hash: string, tx: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = (tx as any) ?? prisma;
-      return client.refreshToken.findUnique({ where: { tokenHash: hash } });
+    findRefreshToken: vi.fn(async (hash: string) => {
+      return prisma.refreshToken.findUnique({ where: { tokenHash: hash } });
     }),
     revokeRefreshToken: vi.fn(async (hash: string, now: Date) => {
       return prisma.refreshToken.updateMany({
@@ -72,10 +60,8 @@ function createService() {
         data: { revokedAt: now },
       });
     }),
-    updateRefreshTokenRevocation: vi.fn(async (id: string, now: Date, tx: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = (tx as any) ?? prisma;
-      return client.refreshToken.updateMany({
+    updateRefreshTokenRevocation: vi.fn(async (id: string, now: Date) => {
+      return prisma.refreshToken.updateMany({
         where: { id },
         data: { revokedAt: now },
       });
@@ -124,20 +110,14 @@ describe('SessionTokenService', () => {
   it('rejects already revoked refresh tokens', async () => {
     const { service, prisma, jwtService } = createService();
     jwtService.verify.mockReturnValue({ sub: 'user-123', type: 'refresh' });
-    prisma.$transaction.mockImplementation(async (callback: (tx: TransactionClientMock) => Promise<unknown>) => {
-      const tx: TransactionClientMock = {
-        refreshToken: {
-          findUnique: vi.fn().mockResolvedValue({
-            id: 'token-1',
-            userId: 'user-123',
-            expiresAt: new Date('2026-05-19T00:00:00.000Z'),
-            revokedAt: new Date('2026-05-12T00:00:00.000Z'),
-          }),
-          updateMany: vi.fn(),
-          create: vi.fn(),
-        },
-      };
-      return callback(tx);
+    prisma.refreshToken.findUnique.mockResolvedValue({
+      id: 'token-1',
+      userId: 'user-123',
+      expiresAt: new Date('2026-05-19T00:00:00.000Z'),
+      revokedAt: new Date('2026-05-12T00:00:00.000Z'),
+    });
+    prisma.$transaction.mockImplementation(async (callback: () => Promise<unknown>) => {
+      return callback();
     });
 
     await expect(service.rotateRefreshToken('refresh.jwt')).rejects.toBeInstanceOf(UnauthorizedException);
@@ -161,25 +141,19 @@ describe('SessionTokenService', () => {
         },
       };
 
-      prisma.$transaction.mockImplementation(async (callback: (tx: TransactionClientMock & { user: { findUnique: ReturnType<typeof vi.fn> } }) => Promise<unknown>) => {
-        const tx: TransactionClientMock & { user: { findUnique: ReturnType<typeof vi.fn> } } = {
-          refreshToken: {
-            findUnique: vi.fn().mockResolvedValue(state.tokenRecord),
-            updateMany: vi.fn(async () => {
-              if (state.tokenRecord.revokedAt || state.tokenRecord.expiresAt < new Date()) {
-                return { count: 0 };
-              }
+      prisma.refreshToken.findUnique.mockResolvedValue(state.tokenRecord);
+      prisma.refreshToken.updateMany.mockImplementation(async () => {
+        if (state.tokenRecord.revokedAt || state.tokenRecord.expiresAt < new Date()) {
+          return { count: 0 };
+        }
 
-              state.tokenRecord.revokedAt = new Date('2026-05-12T00:00:00.000Z');
-              return { count: 1 };
-            }),
-            create: vi.fn(async () => undefined),
-          },
-          user: {
-            findUnique: vi.fn().mockResolvedValue({ displayName: 'Mock User' }),
-          },
-        };
-        return callback(tx);
+        state.tokenRecord.revokedAt = new Date('2026-05-12T00:00:00.000Z');
+        return { count: 1 };
+      });
+      prisma.user.findUnique.mockResolvedValue({ displayName: 'Mock User' });
+
+      prisma.$transaction.mockImplementation(async (callback: () => Promise<unknown>) => {
+        return callback();
       });
 
       const results = await Promise.allSettled([

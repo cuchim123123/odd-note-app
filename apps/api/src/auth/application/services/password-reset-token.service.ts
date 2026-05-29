@@ -21,6 +21,20 @@ export class PasswordResetTokenService {
    * Token is hashed before storage and has an expiry.
    * Returns raw token (not hashed) to send to user.
    */
+  async createTokenForTest(userId: string): Promise<string> {
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 15); // 15 minutes
+
+    await this.tokenRepo.createResetToken({
+      tokenHash,
+      expiresAt,
+      userId,
+    });
+
+    return rawToken;
+  }
+
   async createTokenForUser(userId: string): Promise<string> {
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(rawToken);

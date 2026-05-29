@@ -34,20 +34,14 @@ function createService() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tokenRepo: any = {
-    createVerificationToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }, tx: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = (tx as any) ?? prisma;
-      return client.verificationToken.create({ data });
+    createVerificationToken: vi.fn(async (data: { userId: string; tokenHash: string; expiresAt: Date }) => {
+      return prisma.verificationToken.create({ data });
     }),
-    findVerificationToken: vi.fn(async (hash: string, tx: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = (tx as any) ?? prisma;
-      return client.verificationToken.findUnique({ where: { tokenHash: hash } });
+    findVerificationToken: vi.fn(async (hash: string) => {
+      return prisma.verificationToken.findUnique({ where: { tokenHash: hash } });
     }),
-    markVerificationTokenUsed: vi.fn(async (id: string, now: Date, tx: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = (tx as any) ?? prisma;
-      return client.verificationToken.updateMany({
+    markVerificationTokenUsed: vi.fn(async (id: string, now: Date) => {
+      return prisma.verificationToken.updateMany({
         where: { id },
         data: { usedAt: now },
       });
@@ -56,7 +50,7 @@ function createService() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRepo: any = {
-    runTransaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+    runTransaction: vi.fn(async (callback: () => Promise<unknown>) => {
       return prisma.$transaction(callback);
     }),
   };
@@ -72,19 +66,11 @@ describe('VerificationTokenService', () => {
     vi.setSystemTime(new Date('2026-05-12T00:00:00.000Z'));
 
     try {
-      const { service } = createService();
+      const { service, prisma } = createService();
 
-      const txClient = {
-        verificationToken: {
-          create: vi.fn(),
-          findUnique: vi.fn(),
-          updateMany: vi.fn(),
-        },
-      };
+      await service.createAndStoreVerificationToken('user-123');
 
-      await service.createAndStoreVerificationToken('user-123', txClient as never);
-
-      expect(txClient.verificationToken.create).toHaveBeenCalledWith({
+      expect(prisma.verificationToken.create).toHaveBeenCalledWith({
         data: {
           tokenHash: expect.any(String), // SHA256 hash
           expiresAt: new Date('2026-05-13T00:00:00.000Z'), // Now + 24h
@@ -92,7 +78,7 @@ describe('VerificationTokenService', () => {
         },
       });
 
-      const callArgs = txClient.verificationToken.create.mock.calls[0]![0];
+      const callArgs = prisma.verificationToken.create.mock.calls[0]![0];
       expect(callArgs.data.tokenHash).toHaveLength(64); // SHA256 hex is 64 chars
     } finally {
       vi.useRealTimers();
@@ -188,29 +174,23 @@ describe('VerificationTokenService', () => {
         consumeCount: 0,
       };
 
-      prismaService.$transaction.mockImplementation(async (callback: (tx: TransactionClientMock) => Promise<unknown>) => {
-        const tx: TransactionClientMock = {
-          verificationToken: {
-            create: vi.fn(),
-            findUnique: vi.fn().mockResolvedValue({ ...tokenState }),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            updateMany: vi.fn(async (args: any) => {
-              // Simulate atomic update: only succeed if conditions match
-              const now = new Date();
-              if (
-                tokenState.id === args.where.id &&
-                tokenState.usedAt === null &&
-                tokenState.expiresAt > now
-              ) {
-                tokenState.usedAt = now;
-                tokenState.consumeCount++;
-                return { count: 1 };
-              }
-              return { count: 0 };
-            }),
-          },
-        };
-        return callback(tx);
+      prismaService.verificationToken.findUnique.mockResolvedValue({ ...tokenState });
+      prismaService.verificationToken.updateMany.mockImplementation(async (args: { where: { id: string } }) => {
+        const now = new Date();
+        if (
+          tokenState.id === args.where.id &&
+          tokenState.usedAt === null &&
+          tokenState.expiresAt > now
+        ) {
+          tokenState.usedAt = now;
+          tokenState.consumeCount++;
+          return { count: 1 };
+        }
+        return { count: 0 };
+      });
+
+      prismaService.$transaction.mockImplementation(async (callback: () => Promise<unknown>) => {
+        return callback();
       });
 
       const results = await Promise.allSettled([

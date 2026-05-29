@@ -1,9 +1,9 @@
 import type { User } from '../entities/user.entity';
 
 export interface IUserRepository {
-  findById(id: string, tx?: unknown): Promise<User | null>;
-  findByEmail(email: string, tx?: unknown): Promise<User | null>;
-  create(data: { email: string; displayName: string; passwordHash: string }, tx?: unknown): Promise<User>;
+  findById(id: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
+  create(data: { email: string; displayName: string; passwordHash: string }): Promise<User>;
   update(
     id: string,
     data: {
@@ -12,8 +12,7 @@ export interface IUserRepository {
       passwordHash?: string;
       isEmailVerified?: boolean;
     },
-    tx?: unknown,
   ): Promise<User>;
-  runTransaction<T>(callback: (transactionClient: unknown) => Promise<T>): Promise<T>;
+  runTransaction<T>(callback: () => Promise<T>): Promise<T>;
 }
 export const USER_REPOSITORY = Symbol('IUserRepository');

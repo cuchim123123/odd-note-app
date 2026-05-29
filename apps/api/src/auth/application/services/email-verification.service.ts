@@ -18,8 +18,8 @@ export class EmailVerificationService {
     private readonly authUserMapper: AuthUserMapper,
   ) {}
 
-  async createTokenForUser(userId: string, tx?: unknown): Promise<string> {
-    return this.verificationTokenService.createAndStoreVerificationToken(userId, tx);
+  async createTokenForUser(userId: string): Promise<string> {
+    return this.verificationTokenService.createAndStoreVerificationToken(userId);
   }
 
   async sendVerificationForUser(user: User, token: string): Promise<void> {

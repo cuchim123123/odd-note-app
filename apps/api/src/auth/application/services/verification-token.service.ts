@@ -18,10 +18,7 @@ export class VerificationTokenService {
     return createHash('sha256').update(rawToken).digest('hex');
   }
 
-  async createAndStoreVerificationToken(
-    userId: string,
-    tx?: unknown,
-  ): Promise<string> {
+  async createAndStoreVerificationToken(userId: string): Promise<string> {
     const verificationToken = randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(verificationToken);
     const expiresAt = new Date(Date.now() + this.authConfig.getEmailVerificationTokenExpiryMs());
@@ -30,22 +27,22 @@ export class VerificationTokenService {
       tokenHash,
       expiresAt,
       userId,
-    }, tx);
+    });
 
     return verificationToken;
   }
 
   async validateAndUseVerificationToken(token: string): Promise<string> {
     const tokenHash = this.hashToken(token);
-    return this.userRepo.runTransaction(async (tx) => {
-      const verificationToken = await this.tokenRepo.findVerificationToken(tokenHash, tx);
+    return this.userRepo.runTransaction(async () => {
+      const verificationToken = await this.tokenRepo.findVerificationToken(tokenHash);
 
       if (!verificationToken || verificationToken.usedAt || verificationToken.expiresAt < new Date()) {
         throw new BadRequestException('Verification token is invalid or expired');
       }
 
       const now = new Date();
-      const consumeResult = await this.tokenRepo.markVerificationTokenUsed(verificationToken.id, now, tx);
+      const consumeResult = await this.tokenRepo.markVerificationTokenUsed(verificationToken.id, now);
 
       if (consumeResult.count !== 1) {
         throw new BadRequestException('Verification token is invalid or expired');

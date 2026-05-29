@@ -1,10 +1,10 @@
-import type { VerificationToken, PasswordResetToken, RefreshToken } from '@prisma/client';
+import type { VerificationToken, PasswordResetToken, RefreshToken } from '../entities/token.entity';
 
 export interface ITokenRepository {
   // Verification tokens
-  createVerificationToken(data: { userId: string; tokenHash: string; expiresAt: Date }, tx?: unknown): Promise<VerificationToken>;
-  findVerificationToken(tokenHash: string, tx?: unknown): Promise<VerificationToken | null>;
-  markVerificationTokenUsed(id: string, now: Date, tx?: unknown): Promise<{ count: number }>;
+  createVerificationToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<VerificationToken>;
+  findVerificationToken(tokenHash: string): Promise<VerificationToken | null>;
+  markVerificationTokenUsed(id: string, now: Date): Promise<{ count: number }>;
 
   // Password reset tokens
   createResetToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<PasswordResetToken>;
@@ -12,10 +12,10 @@ export interface ITokenRepository {
   markResetTokenUsed(id: string): Promise<void>;
 
   // Refresh tokens
-  createRefreshToken(data: { userId: string; tokenHash: string; expiresAt: Date }, tx?: unknown): Promise<RefreshToken>;
-  findRefreshToken(tokenHash: string, tx?: unknown): Promise<RefreshToken | null>;
+  createRefreshToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<RefreshToken>;
+  findRefreshToken(tokenHash: string): Promise<RefreshToken | null>;
   revokeRefreshToken(tokenHash: string, revokedAt: Date): Promise<void>;
-  updateRefreshTokenRevocation(id: string, revokedAt: Date, tx?: unknown): Promise<{ count: number }>;
+  updateRefreshTokenRevocation(id: string, revokedAt: Date): Promise<{ count: number }>;
 
   // Cleanup
   deleteExpiredOrUsedTokens(now: Date): Promise<{ refreshCount: number; verificationCount: number; resetCount: number }>;
