@@ -37,7 +37,7 @@ export class AccessTokenGuard implements CanActivate {
       throw new UnauthorizedException('Access token is invalid or expired');
     }
 
-    if (!payload.sub || payload.type !== 'access') {
+    if (!payload.sub || payload.type === 'refresh') {
       throw new UnauthorizedException('Access token is invalid or expired');
     }
 
