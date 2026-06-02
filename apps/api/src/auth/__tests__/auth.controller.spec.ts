@@ -5,23 +5,9 @@ vi.mock('../../config', () => ({
   JwtConfigService: class JwtConfigService {},
 }));
 
-vi.mock('../email-verification.service', () => ({
-  EmailVerificationService: class EmailVerificationService {}
-}));
-
-vi.mock('../password-reset-token.service', () => ({
-  PasswordResetTokenService: class PasswordResetTokenService {}
-}));
-
-vi.mock('@nestjs/jwt', () => ({
-  JwtService: class JwtService {}
-}));
-
-import { AuthController } from '../presentation/auth.controller';
-import type { SessionTokenService } from '../application/services/session-token.service';
-import type { EmailVerificationService } from '../application/services/email-verification.service';
-import type { PasswordResetTokenService } from '../application/services/password-reset-token.service';
+import type { TokenProvider } from '../application/ports/token-provider.port';
 import type { UserRepository } from '../application/ports/user.repository.port';
+import { AuthController } from '../presentation/auth.controller';
 
 // Use case types
 import type { RegisterUseCase } from '../application/use-cases/register.use-case';
@@ -32,6 +18,9 @@ import type { ForgotPasswordUseCase } from '../application/use-cases/forgot-pass
 import type { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
 import type { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
 import type { UpdateProfileUseCase } from '../application/use-cases/update-profile.use-case';
+import type { VerifyEmailUseCase } from '../application/use-cases/verify-email.use-case';
+import type { ResendVerificationUseCase } from '../application/use-cases/resend-verification.use-case';
+import type { LogoutUseCase } from '../application/use-cases/logout.use-case';
 
 function createController() {
   const registerUseCase = {
@@ -66,17 +55,25 @@ function createController() {
     execute: vi.fn(),
   };
 
-  const sessionTokenService = {
-    revokeRefreshToken: vi.fn(),
+  const verifyEmailUseCase = {
+    execute: vi.fn(),
   };
 
-  const emailVerificationService = {
-    verifyEmailToken: vi.fn(),
-    resendVerificationEmail: vi.fn(),
+  const resendVerificationUseCase = {
+    execute: vi.fn(),
   };
 
-  const passwordResetTokenService = {
-    createTokenForUser: vi.fn(),
+  const logoutUseCase = {
+    execute: vi.fn(),
+  };
+
+  const tokenProvider = {
+    generatePasswordResetToken: vi.fn(),
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tokenRepo: any = {
+    createResetToken: vi.fn(),
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,9 +90,11 @@ function createController() {
     resetPasswordUseCase as unknown as ResetPasswordUseCase,
     getCurrentUserUseCase as unknown as GetCurrentUserUseCase,
     updateProfileUseCase as unknown as UpdateProfileUseCase,
-    sessionTokenService as unknown as SessionTokenService,
-    emailVerificationService as unknown as EmailVerificationService,
-    passwordResetTokenService as unknown as PasswordResetTokenService,
+    logoutUseCase as unknown as LogoutUseCase,
+    verifyEmailUseCase as unknown as VerifyEmailUseCase,
+    resendVerificationUseCase as unknown as ResendVerificationUseCase,
+    tokenProvider as unknown as TokenProvider,
+    tokenRepo,
     userRepo as unknown as UserRepository,
   );
 
@@ -109,9 +108,11 @@ function createController() {
     resetPasswordUseCase,
     getCurrentUserUseCase,
     updateProfileUseCase,
-    sessionTokenService,
-    emailVerificationService,
-    passwordResetTokenService,
+    logoutUseCase,
+    verifyEmailUseCase,
+    resendVerificationUseCase,
+    tokenProvider,
+    tokenRepo,
     userRepo,
   };
 }
@@ -147,16 +148,16 @@ describe('AuthController', () => {
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates verifyEmail to EmailVerificationService', async () => {
-    const { controller, emailVerificationService } = createController();
+  it('delegates verifyEmail to VerifyEmailUseCase', async () => {
+    const { controller, verifyEmailUseCase } = createController();
     const token = 'some-valid-token';
-    const expectedResult = { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: true };
+    const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: true } };
 
-    emailVerificationService.verifyEmailToken.mockResolvedValue(expectedResult);
+    verifyEmailUseCase.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.verifyEmail(token);
 
-    expect(emailVerificationService.verifyEmailToken).toHaveBeenCalledWith(token);
+    expect(verifyEmailUseCase.execute).toHaveBeenCalledWith(token);
     expect(result).toEqual(expectedResult);
   });
 
@@ -185,15 +186,15 @@ describe('AuthController', () => {
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates logout to SessionTokenService', async () => {
-    const { controller, sessionTokenService } = createController();
+  it('delegates logout to LogoutUseCase', async () => {
+    const { controller, logoutUseCase } = createController();
     const input = { refreshToken: 'r' };
 
-    sessionTokenService.revokeRefreshToken.mockResolvedValue(undefined);
+    logoutUseCase.execute.mockResolvedValue(undefined);
 
     const result = await controller.logout(input);
 
-    expect(sessionTokenService.revokeRefreshToken).toHaveBeenCalledWith(input.refreshToken);
+    expect(logoutUseCase.execute).toHaveBeenCalledWith(input.refreshToken);
     expect(result).toEqual({ success: true });
   });
 });

@@ -2,14 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '../config/config.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthController } from './presentation/auth.controller';
-import { SessionTokenService } from './application/services/session-token.service';
+import { TOKEN_PROVIDER } from './application/ports/token-provider.port';
+import { JwtTokenProvider } from './infrastructure/adapters/jwt-token-provider.adapter';
 import { AuthConfigModule, JwtConfigModule } from '../config';
 import { MailerService } from '../common/mailer/mailer.service';
 import { AuthUrlService } from '../common/auth-url.service';
 import { AuthUserMapper } from './infrastructure/mappers/auth-user.mapper';
-import { EmailVerificationService } from './application/services/email-verification.service';
-import { VerificationTokenService } from './application/services/verification-token.service';
-import { PasswordResetTokenService } from './application/services/password-reset-token.service';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { TokenCleanupService } from './application/services/token-cleanup.service';
 import { USER_REPOSITORY } from './application/ports/user.repository.port';
@@ -30,18 +28,17 @@ import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.u
 import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
 import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case';
+import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
+import { ResendVerificationUseCase } from './application/use-cases/resend-verification.use-case';
 
 @Module({
   imports: [ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [AuthController],
   providers: [
-    SessionTokenService,
-    VerificationTokenService,
-    PasswordResetTokenService,
     MailerService,
     AuthUrlService,
     AuthUserMapper,
-    EmailVerificationService,
     TokenCleanupService,
     AccessTokenGuard,
     RegisterUseCase,
@@ -52,10 +49,14 @@ import { UpdateProfileUseCase } from './application/use-cases/update-profile.use
     ResetPasswordUseCase,
     GetCurrentUserUseCase,
     UpdateProfileUseCase,
+    LogoutUseCase,
+    VerifyEmailUseCase,
+    ResendVerificationUseCase,
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },
     { provide: UNIT_OF_WORK, useClass: PrismaUnitOfWork },
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasher },
+    { provide: TOKEN_PROVIDER, useClass: JwtTokenProvider },
   ],
   exports: [
     USER_REPOSITORY,
@@ -70,6 +71,9 @@ import { UpdateProfileUseCase } from './application/use-cases/update-profile.use
     ResetPasswordUseCase,
     GetCurrentUserUseCase,
     UpdateProfileUseCase,
+    LogoutUseCase,
+    VerifyEmailUseCase,
+    ResendVerificationUseCase,
   ],
 })
 export class AuthModule {}

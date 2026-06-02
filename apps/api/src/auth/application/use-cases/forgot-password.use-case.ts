@@ -1,7 +1,10 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { MailerService } from '../../../common/mailer/mailer.service';
 import { AuthUrlService } from '../../../common/auth-url.service';
-import { PasswordResetTokenService } from '../services/password-reset-token.service';
+import { TOKEN_PROVIDER } from '../ports/token-provider.port';
+import type { TokenProvider } from '../ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
+import type { TokenRepository } from '../ports/token.repository.port';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
 import type { UserRepository } from '../ports/user.repository.port';
 
@@ -11,7 +14,8 @@ export class ForgotPasswordUseCase {
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
-    private readonly passwordResetTokenService: PasswordResetTokenService,
+    @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
     private readonly mailerService: MailerService,
     private readonly authUrlService: AuthUrlService,
   ) {}
@@ -25,7 +29,13 @@ export class ForgotPasswordUseCase {
     }
 
     try {
-      const rawToken = await this.passwordResetTokenService.createTokenForUser(user.id);
+      const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generatePasswordResetToken();
+
+      await this.tokenRepo.createResetToken({
+        tokenHash,
+        expiresAt,
+        userId: user.id,
+      });
       const resetUrl = this.authUrlService.buildResetPasswordUrl(rawToken);
       await this.mailerService.sendPasswordResetEmail(user.email, resetUrl);
     } catch (error) {

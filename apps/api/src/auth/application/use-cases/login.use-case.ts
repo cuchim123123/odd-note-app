@@ -4,7 +4,10 @@ import { PASSWORD_HASHER } from '../ports/password-hasher.port';
 import type { PasswordHasher } from '../ports/password-hasher.port';
 import type { LoginInput } from '@odd-note-app/validation';
 import type { LoginResult } from '../auth.types';
-import { SessionTokenService } from '../services/session-token.service';
+import { TOKEN_PROVIDER } from '../ports/token-provider.port';
+import type { TokenProvider } from '../ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
+import type { TokenRepository } from '../ports/token.repository.port';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
 import type { UserRepository } from '../ports/user.repository.port';
@@ -14,7 +17,8 @@ export class LoginUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
-    private readonly sessionTokenService: SessionTokenService,
+    @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
     private readonly authUserMapper: AuthUserMapper,
   ) {}
 
@@ -31,11 +35,18 @@ export class LoginUseCase {
       throw new InvalidCredentialsError();
     }
 
-    const tokens = await this.sessionTokenService.generateAndStoreTokens(user.id);
+    const accessToken = this.tokenProvider.signAccessToken({ sub: user.id, displayName: user.displayName });
+    const refresh = this.tokenProvider.generateRefreshToken(user.id);
+
+    await this.tokenRepo.createRefreshToken({
+      tokenHash: refresh.tokenHash,
+      expiresAt: refresh.expiresAt,
+      userId: user.id,
+    });
 
     return {
       user: this.authUserMapper.toProfile(user),
-      tokens,
+      tokens: { accessToken, refreshToken: refresh.rawToken },
     };
   }
 }

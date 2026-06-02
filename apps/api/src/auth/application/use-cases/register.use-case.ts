@@ -4,13 +4,17 @@ import { PASSWORD_HASHER } from '../ports/password-hasher.port';
 import type { PasswordHasher } from '../ports/password-hasher.port';
 import type { RegisterInput } from '@odd-note-app/validation';
 import type { RegisterResult } from '../auth.types';
-import { SessionTokenService } from '../services/session-token.service';
-import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
-import { EmailVerificationService } from '../services/email-verification.service';
+import { TOKEN_PROVIDER } from '../ports/token-provider.port';
+import type { TokenProvider } from '../ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
+import type { TokenRepository } from '../ports/token.repository.port';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
 import type { UserRepository } from '../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
 import type { UnitOfWork } from '../ports/unit-of-work.port';
+import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
+import { MailerService } from '../../../common/mailer/mailer.service';
+import { AuthUrlService } from '../../../common/auth-url.service';
 
 @Injectable()
 export class RegisterUseCase {
@@ -19,9 +23,11 @@ export class RegisterUseCase {
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
-    private readonly sessionTokenService: SessionTokenService,
+    @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
     private readonly authUserMapper: AuthUserMapper,
-    private readonly emailVerificationService: EmailVerificationService,
+    private readonly mailerService: MailerService,
+    private readonly authUrlService: AuthUrlService,
   ) {}
 
   async execute(input: RegisterInput): Promise<RegisterResult> {
@@ -49,13 +55,24 @@ export class RegisterUseCase {
         throw err;
       }
 
-      const token = await this.emailVerificationService.createTokenForUser(newUser.id, ctx.tokenRepository);
+      const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generateVerificationToken();
 
-      return { user: newUser, verificationToken: token };
+      await ctx.tokenRepository.createVerificationToken({
+        tokenHash,
+        expiresAt,
+        userId: newUser.id,
+      });
+
+      return { user: newUser, verificationToken: rawToken };
     });
 
     try {
-      await this.emailVerificationService.sendVerificationForUser(user, verificationToken);
+      const verificationUrl = this.authUrlService.buildVerificationEmailUrl(verificationToken);
+      await this.mailerService.sendVerificationEmail({
+        to: user.email,
+        displayName: user.displayName,
+        verificationUrl,
+      });
     } catch (error) {
       this.logger.error(
         `Failed to send verification email for ${user.email}`,
@@ -63,11 +80,18 @@ export class RegisterUseCase {
       );
     }
 
-    const tokens = await this.sessionTokenService.generateAndStoreTokens(user.id);
+    const accessToken = this.tokenProvider.signAccessToken({ sub: user.id, displayName: user.displayName });
+    const refresh = this.tokenProvider.generateRefreshToken(user.id);
+    
+    await this.tokenRepo.createRefreshToken({
+      tokenHash: refresh.tokenHash,
+      expiresAt: refresh.expiresAt,
+      userId: user.id,
+    });
 
     return {
       user: this.authUserMapper.toProfile(user),
-      tokens,
+      tokens: { accessToken, refreshToken: refresh.rawToken },
     };
   }
 }
