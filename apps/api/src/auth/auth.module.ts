@@ -9,7 +9,7 @@ import { MAIL_SENDER } from './application/ports/mail-sender.port';
 import { NodemailerMailSender } from './infrastructure/adapters/nodemailer-mail-sender.adapter';
 import { AuthUserMapper } from './infrastructure/mappers/auth-user.mapper';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
-import { TokenCleanupService } from './application/services/token-cleanup.service';
+import { TokenCleanupCron } from './infrastructure/cron/token-cleanup.cron';
 import { USER_REPOSITORY } from './application/ports/user.repository.port';
 import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
 import { TOKEN_REPOSITORY } from './application/ports/token.repository.port';
@@ -38,7 +38,7 @@ import { ResendVerificationUseCase } from './application/use-cases/resend-verifi
   providers: [
 
     AuthUserMapper,
-    TokenCleanupService,
+    TokenCleanupCron,
     AccessTokenGuard,
     RegisterUseCase,
     LoginUseCase,

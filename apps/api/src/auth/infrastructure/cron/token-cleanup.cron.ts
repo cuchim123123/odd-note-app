@@ -1,11 +1,11 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import type { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { TokenRepository } from '../ports/token.repository.port';
+import { TOKEN_REPOSITORY } from '../../application/ports/token.repository.port';
+import type { TokenRepository } from '../../application/ports/token.repository.port';
 
 @Injectable()
-export class TokenCleanupService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(TokenCleanupService.name);
+export class TokenCleanupCron implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(TokenCleanupCron.name);
   private cleanupInterval: NodeJS.Timeout | null = null;
   // Run cleanup every hour
   private readonly CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
