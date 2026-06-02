@@ -40,14 +40,9 @@ function createMocks() {
     hashToken: vi.fn((token: string) => `hashed-${token}`),
   };
 
-  const mailerService = {
+  const mailSender = {
     sendVerificationEmail: vi.fn(),
     sendPasswordResetEmail: vi.fn(),
-  };
-
-  const authUrlService = {
-    buildVerificationEmailUrl: vi.fn((token) => `http://localhost/verify/${token}`),
-    buildResetPasswordUrl: vi.fn((token) => `http://localhost/reset/${token}`),
   };
 
   const passwordHasher = {
@@ -98,8 +93,7 @@ function createMocks() {
     tokenProvider as never,
     tokenRepo as never,
     authUserMapper as never,
-    mailerService as never,
-    authUrlService as never,
+    mailSender as never,
   );
 
   const loginUseCase = new LoginUseCase(
@@ -133,8 +127,7 @@ function createMocks() {
     tokenProvider,
     tokenRepo,
     authUserMapper,
-    mailerService,
-    authUrlService,
+    mailSender,
     passwordHasher,
   };
 }
@@ -146,7 +139,7 @@ describe('Auth Use Cases', () => {
 
   describe('RegisterUseCase', () => {
     it('registers a user, sends verification, and returns profile & tokens', async () => {
-      const { registerUseCase, prisma, unitOfWork, tokenProvider, tokenRepo, authUserMapper, mailerService, passwordHasher } = createMocks();
+      const { registerUseCase, prisma, unitOfWork, tokenProvider, tokenRepo, authUserMapper, mailSender, passwordHasher } = createMocks();
       passwordHasher.hash.mockResolvedValue('hashed-password');
 
       const createdUser = {
@@ -185,7 +178,7 @@ describe('Auth Use Cases', () => {
       });
       expect(unitOfWork.execute).toHaveBeenCalledTimes(1);
       expect(tokenRepo.createVerificationToken).toHaveBeenCalled();
-      expect(mailerService.sendVerificationEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'user@example.com' }));
+      expect(mailSender.sendVerificationEmail).toHaveBeenCalledWith('user@example.com', 'User Example', 'verification-token');
       expect(tokenProvider.signAccessToken).toHaveBeenCalled();
       expect(tokenProvider.generateRefreshToken).toHaveBeenCalled();
       expect(tokenRepo.createRefreshToken).toHaveBeenCalled();

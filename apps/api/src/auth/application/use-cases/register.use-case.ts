@@ -13,8 +13,8 @@ import type { UserRepository } from '../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
 import type { UnitOfWork } from '../ports/unit-of-work.port';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
-import { MailerService } from '../../../common/mailer/mailer.service';
-import { AuthUrlService } from '../../../common/auth-url.service';
+import { MAIL_SENDER } from '../ports/mail-sender.port';
+import type { MailSender } from '../ports/mail-sender.port';
 
 @Injectable()
 export class RegisterUseCase {
@@ -26,8 +26,7 @@ export class RegisterUseCase {
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
     private readonly authUserMapper: AuthUserMapper,
-    private readonly mailerService: MailerService,
-    private readonly authUrlService: AuthUrlService,
+    @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
   ) {}
 
   async execute(input: RegisterInput): Promise<RegisterResult> {
@@ -67,12 +66,7 @@ export class RegisterUseCase {
     });
 
     try {
-      const verificationUrl = this.authUrlService.buildVerificationEmailUrl(verificationToken);
-      await this.mailerService.sendVerificationEmail({
-        to: user.email,
-        displayName: user.displayName,
-        verificationUrl,
-      });
+      await this.mailSender.sendVerificationEmail(user.email, user.displayName, verificationToken);
     } catch (error) {
       this.logger.error(
         `Failed to send verification email for ${user.email}`,

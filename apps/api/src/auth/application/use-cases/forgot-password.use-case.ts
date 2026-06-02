@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { MailerService } from '../../../common/mailer/mailer.service';
-import { AuthUrlService } from '../../../common/auth-url.service';
+import { MAIL_SENDER } from '../ports/mail-sender.port';
+import type { MailSender } from '../ports/mail-sender.port';
 import { TOKEN_PROVIDER } from '../ports/token-provider.port';
 import type { TokenProvider } from '../ports/token-provider.port';
 import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
@@ -16,8 +16,7 @@ export class ForgotPasswordUseCase {
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
-    private readonly mailerService: MailerService,
-    private readonly authUrlService: AuthUrlService,
+    @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
   ) {}
 
   async execute(email: string): Promise<void> {
@@ -36,8 +35,7 @@ export class ForgotPasswordUseCase {
         expiresAt,
         userId: user.id,
       });
-      const resetUrl = this.authUrlService.buildResetPasswordUrl(rawToken);
-      await this.mailerService.sendPasswordResetEmail(user.email, resetUrl);
+      await this.mailSender.sendPasswordResetEmail(user.email, rawToken);
     } catch (error) {
       // Log but don't throw - non-critical
       this.logger.error('Failed to send password reset email:', error);

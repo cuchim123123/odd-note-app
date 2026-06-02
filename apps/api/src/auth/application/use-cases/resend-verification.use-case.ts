@@ -5,8 +5,8 @@ import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
 import type { TokenRepository } from '../ports/token.repository.port';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
 import type { UserRepository } from '../ports/user.repository.port';
-import { MailerService } from '../../../common/mailer/mailer.service';
-import { AuthUrlService } from '../../../common/auth-url.service';
+import { MAIL_SENDER } from '../ports/mail-sender.port';
+import type { MailSender } from '../ports/mail-sender.port';
 
 @Injectable()
 export class ResendVerificationUseCase {
@@ -16,8 +16,7 @@ export class ResendVerificationUseCase {
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
-    private readonly mailerService: MailerService,
-    private readonly authUrlService: AuthUrlService,
+    @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
   ) {}
 
   async execute(email: string): Promise<void> {
@@ -36,12 +35,7 @@ export class ResendVerificationUseCase {
     });
 
     try {
-      const verificationUrl = this.authUrlService.buildVerificationEmailUrl(rawToken);
-      await this.mailerService.sendVerificationEmail({
-        to: user.email,
-        displayName: user.displayName,
-        verificationUrl,
-      });
+      await this.mailSender.sendVerificationEmail(user.email, user.displayName, rawToken);
     } catch (error) {
       this.logger.error(
         `Failed to resend verification email for ${user.email}`,

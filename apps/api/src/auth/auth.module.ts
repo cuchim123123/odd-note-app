@@ -5,8 +5,8 @@ import { AuthController } from './presentation/auth.controller';
 import { TOKEN_PROVIDER } from './application/ports/token-provider.port';
 import { JwtTokenProvider } from './infrastructure/adapters/jwt-token-provider.adapter';
 import { AuthConfigModule, JwtConfigModule } from '../config';
-import { MailerService } from '../common/mailer/mailer.service';
-import { AuthUrlService } from '../common/auth-url.service';
+import { MAIL_SENDER } from './application/ports/mail-sender.port';
+import { NodemailerMailSender } from './infrastructure/adapters/nodemailer-mail-sender.adapter';
 import { AuthUserMapper } from './infrastructure/mappers/auth-user.mapper';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { TokenCleanupService } from './application/services/token-cleanup.service';
@@ -36,8 +36,7 @@ import { ResendVerificationUseCase } from './application/use-cases/resend-verifi
   imports: [ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [AuthController],
   providers: [
-    MailerService,
-    AuthUrlService,
+
     AuthUserMapper,
     TokenCleanupService,
     AccessTokenGuard,
@@ -57,6 +56,7 @@ import { ResendVerificationUseCase } from './application/use-cases/resend-verifi
     { provide: UNIT_OF_WORK, useClass: PrismaUnitOfWork },
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasher },
     { provide: TOKEN_PROVIDER, useClass: JwtTokenProvider },
+    { provide: MAIL_SENDER, useClass: NodemailerMailSender },
   ],
   exports: [
     USER_REPOSITORY,
