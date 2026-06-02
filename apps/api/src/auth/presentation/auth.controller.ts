@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards, Inject } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards, Inject, UseFilters } from '@nestjs/common';
 import { SessionTokenService } from '../application/services/session-token.service';
 import { PasswordResetTokenService } from '../application/services/password-reset-token.service';
 import { USER_REPOSITORY } from '../application/ports/user.repository.port';
@@ -19,6 +19,9 @@ import { ResetPasswordUseCase } from '../application/use-cases/reset-password.us
 import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
 import { UpdateProfileUseCase } from '../application/use-cases/update-profile.use-case';
 
+import { AuthErrorFilter } from './filters/auth-error.filter';
+
+@UseFilters(AuthErrorFilter)
 @Controller('auth')
 export class AuthController {
   constructor(

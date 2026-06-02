@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { InvalidTokenError } from '../domain/errors/auth-error';
 import { createHash } from 'crypto';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -110,7 +110,7 @@ describe('SessionTokenService', () => {
       throw new Error('bad token');
     });
 
-    await expect(service.rotateRefreshToken('broken-token')).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.rotateRefreshToken('broken-token')).rejects.toBeInstanceOf(InvalidTokenError);
     expect(prisma.refreshToken.findUnique).not.toHaveBeenCalled();
     expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
   });
@@ -125,7 +125,7 @@ describe('SessionTokenService', () => {
       revokedAt: new Date('2026-05-12T00:00:00.000Z'),
     });
 
-    await expect(service.rotateRefreshToken('refresh.jwt')).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.rotateRefreshToken('refresh.jwt')).rejects.toBeInstanceOf(InvalidTokenError);
   });
 
   it('allows only one concurrent refresh rotation to succeed', async () => {

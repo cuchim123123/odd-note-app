@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { InvalidTokenError } from '../../domain/errors/auth-error';
 import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
 import { JwtConfigService } from '../../../config';
@@ -36,11 +37,11 @@ export class SessionTokenService {
         secret: this.jwtConfig.getRefreshTokenSecret(),
       });
     } catch {
-      throw new UnauthorizedException('Refresh token is invalid or expired');
+      throw new InvalidTokenError();
     }
 
     if (!payload.sub || payload.type !== 'refresh') {
-      throw new UnauthorizedException('Refresh token is invalid or expired');
+      throw new InvalidTokenError();
     }
 
     return { userId: payload.sub };
@@ -96,14 +97,14 @@ export class SessionTokenService {
         tokenRecord.revokedAt ||
         tokenRecord.expiresAt < new Date()
       ) {
-        throw new UnauthorizedException('Refresh token is invalid or expired');
+        throw new InvalidTokenError();
       }
 
       const now = new Date();
       const revokeResult = await ctx.tokenRepository.updateRefreshTokenRevocation(tokenRecord.id, now);
 
       if (revokeResult.count !== 1) {
-        throw new UnauthorizedException('Refresh token is invalid or expired');
+        throw new InvalidTokenError();
       }
 
       return this.generateAndStoreTokens(tokenRecord.userId, ctx);

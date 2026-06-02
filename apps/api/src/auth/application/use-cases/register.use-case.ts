@@ -1,4 +1,5 @@
-import { Injectable, ConflictException, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { UserAlreadyExistsError } from '../../domain/errors/auth-error';
 import * as bcrypt from 'bcryptjs';
 import { AuthConfigService } from '../../../config';
 import type { RegisterInput } from '@odd-note-app/validation';
@@ -31,7 +32,7 @@ export class RegisterUseCase {
     const existingUser = await this.userRepo.findByEmail(input.email);
 
     if (existingUser) {
-      throw new ConflictException('Email is already registered');
+      throw new UserAlreadyExistsError();
     }
 
     const passwordHash = await bcrypt.hash(input.password, this.passwordSaltRounds);
@@ -47,7 +48,7 @@ export class RegisterUseCase {
       } catch (err: unknown) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((err as any)?.code === 'P2002') {
-          throw new ConflictException('Email is already registered');
+          throw new UserAlreadyExistsError();
         }
         throw err;
       }

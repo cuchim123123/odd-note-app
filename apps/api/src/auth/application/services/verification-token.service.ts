@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { InvalidTokenError } from '../../domain/errors/auth-error';
 import { createHash, randomBytes } from 'crypto';
 import { AuthConfigService } from '../../../config';
 import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
@@ -39,14 +40,14 @@ export class VerificationTokenService {
       const verificationToken = await ctx.tokenRepository.findVerificationToken(tokenHash);
 
       if (!verificationToken || verificationToken.usedAt || verificationToken.expiresAt < new Date()) {
-        throw new BadRequestException('Verification token is invalid or expired');
+        throw new InvalidTokenError();
       }
 
       const now = new Date();
       const consumeResult = await ctx.tokenRepository.markVerificationTokenUsed(verificationToken.id, now);
 
       if (consumeResult.count !== 1) {
-        throw new BadRequestException('Verification token is invalid or expired');
+        throw new InvalidTokenError();
       }
 
       return verificationToken.userId;

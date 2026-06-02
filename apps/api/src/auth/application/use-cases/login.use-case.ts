@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { InvalidCredentialsError } from '../../domain/errors/auth-error';
 import * as bcrypt from 'bcryptjs';
 import type { LoginInput } from '@odd-note-app/validation';
 import type { LoginResult } from '../auth.types';
@@ -19,13 +20,13 @@ export class LoginUseCase {
     const user = await this.userRepo.findByEmail(input.email!);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new InvalidCredentialsError();
     }
 
     const isPasswordValid = await bcrypt.compare(input.password!, user.passwordHash);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new InvalidCredentialsError();
     }
 
     const tokens = await this.sessionTokenService.generateAndStoreTokens(user.id);

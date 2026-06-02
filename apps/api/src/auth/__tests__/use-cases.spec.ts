@@ -1,5 +1,5 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { UserAlreadyExistsError, InvalidCredentialsError } from '../domain/errors/auth-error';
 
 vi.mock('../../config', () => ({
   AuthConfigService: class AuthConfigService {
@@ -191,7 +191,7 @@ describe('Auth Use Cases', () => {
           displayName: 'User Example',
           password: 'Password123!',
         }),
-      ).rejects.toBeInstanceOf(ConflictException);
+      ).rejects.toBeInstanceOf(UserAlreadyExistsError);
 
       expect(unitOfWork.execute).not.toHaveBeenCalled();
       expect(sessionTokenService.generateAndStoreTokens).not.toHaveBeenCalled();
@@ -268,7 +268,7 @@ describe('Auth Use Cases', () => {
           email: 'user@example.com',
           password: 'wrong-password',
         }),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
+      ).rejects.toBeInstanceOf(InvalidCredentialsError);
 
       expect(sessionTokenService.generateAndStoreTokens).not.toHaveBeenCalled();
     });

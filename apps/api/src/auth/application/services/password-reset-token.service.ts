@@ -1,9 +1,11 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { InvalidTokenError, TokenAlreadyUsedError, TokenExpiredError } from '../../domain/errors/auth-error';
 import { randomBytes, createHash } from 'crypto';
 import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
 import type { TokenRepository } from '../ports/token.repository.port';
 import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
 import type { UnitOfWork } from '../ports/unit-of-work.port';
+import { AuthError } from '../../domain/errors/auth-error';
 
 @Injectable()
 export class PasswordResetTokenService {
@@ -38,15 +40,15 @@ export class PasswordResetTokenService {
         const token = await ctx.tokenRepository.findResetToken(tokenHash);
 
         if (!token) {
-          throw new BadRequestException('Invalid password reset token');
+          throw new InvalidTokenError('Invalid password reset token');
         }
 
         if (token.usedAt) {
-          throw new BadRequestException('This password reset link has already been used');
+          throw new TokenAlreadyUsedError('This password reset link has already been used');
         }
 
         if (new Date() > token.expiresAt) {
-          throw new BadRequestException('This password reset link has expired');
+          throw new TokenExpiredError('This password reset link has expired');
         }
 
         await ctx.tokenRepository.markResetTokenUsed(token.id);
@@ -56,10 +58,10 @@ export class PasswordResetTokenService {
 
       return result;
     } catch (error) {
-      if (error instanceof BadRequestException) {
+      if (error instanceof AuthError) {
         throw error;
       }
-      throw new BadRequestException('Invalid password reset token');
+      throw new InvalidTokenError('Invalid password reset token');
     }
   }
 }

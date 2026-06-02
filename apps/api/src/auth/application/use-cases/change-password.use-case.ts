@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { UserNotFoundError, IncorrectPasswordError } from '../../domain/errors/auth-error';
 import * as bcrypt from 'bcryptjs';
 import { AuthConfigService } from '../../../config';
 import type { ChangePasswordOutput } from '@odd-note-app/validation';
@@ -20,12 +21,12 @@ export class ChangePasswordUseCase {
     const user = await this.userRepo.findById(userId);
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UserNotFoundError();
     }
 
     const isPasswordValid = await bcrypt.compare(input.currentPassword!, user.passwordHash);
     if (!isPasswordValid) {
-      throw new BadRequestException('Incorrect current password');
+      throw new IncorrectPasswordError();
     }
 
     const passwordHash = await bcrypt.hash(input.newPassword!, this.passwordSaltRounds);

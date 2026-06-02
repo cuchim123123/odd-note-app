@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { InvalidTokenError } from '../domain/errors/auth-error';
 import { createHash } from 'crypto';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -61,8 +61,8 @@ describe('VerificationTokenService', () => {
     const { service, tokenRepo } = createService();
     tokenRepo.findVerificationToken.mockResolvedValue(null);
 
-    await expect(service.validateAndUseVerificationToken('invalid-token')).rejects.toBeInstanceOf(BadRequestException);
-    await expect(service.validateAndUseVerificationToken('invalid-token')).rejects.toThrow('Verification token is invalid or expired');
+    await expect(service.validateAndUseVerificationToken('invalid-token')).rejects.toBeInstanceOf(InvalidTokenError);
+    await expect(service.validateAndUseVerificationToken('invalid-token')).rejects.toThrow('Token is invalid or expired');
   });
 
   it('rejects already-used verification tokens', async () => {
@@ -75,8 +75,8 @@ describe('VerificationTokenService', () => {
       usedAt: new Date('2026-05-12T12:00:00.000Z'), // Already used
     });
 
-    await expect(service.validateAndUseVerificationToken('valid-token')).rejects.toBeInstanceOf(BadRequestException);
-    await expect(service.validateAndUseVerificationToken('valid-token')).rejects.toThrow('Verification token is invalid or expired');
+    await expect(service.validateAndUseVerificationToken('valid-token')).rejects.toBeInstanceOf(InvalidTokenError);
+    await expect(service.validateAndUseVerificationToken('valid-token')).rejects.toThrow('Token is invalid or expired');
   });
 
   it('rejects expired verification tokens', async () => {
@@ -94,8 +94,8 @@ describe('VerificationTokenService', () => {
         usedAt: null,
       });
 
-      await expect(service.validateAndUseVerificationToken('expired-token')).rejects.toBeInstanceOf(BadRequestException);
-      await expect(service.validateAndUseVerificationToken('expired-token')).rejects.toThrow('Verification token is invalid or expired');
+      await expect(service.validateAndUseVerificationToken('expired-token')).rejects.toBeInstanceOf(InvalidTokenError);
+      await expect(service.validateAndUseVerificationToken('expired-token')).rejects.toThrow('Token is invalid or expired');
     } finally {
       vi.useRealTimers();
     }
