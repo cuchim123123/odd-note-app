@@ -18,6 +18,8 @@ import { TOKEN_REPOSITORY } from './application/ports/token.repository.port';
 import { PrismaTokenRepository } from './infrastructure/repositories/prisma-token.repository';
 import { UNIT_OF_WORK } from './application/ports/unit-of-work.port';
 import { PrismaUnitOfWork } from './infrastructure/repositories/prisma-unit-of-work';
+import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
+import { BcryptPasswordHasher } from './infrastructure/adapters/bcrypt-password-hasher.adapter';
 
 // Use cases
 import { RegisterUseCase } from './application/use-cases/register.use-case';
@@ -53,11 +55,13 @@ import { UpdateProfileUseCase } from './application/use-cases/update-profile.use
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },
     { provide: UNIT_OF_WORK, useClass: PrismaUnitOfWork },
+    { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasher },
   ],
   exports: [
     USER_REPOSITORY,
     TOKEN_REPOSITORY,
     UNIT_OF_WORK,
+    PASSWORD_HASHER,
     RegisterUseCase,
     LoginUseCase,
     ChangePasswordUseCase,

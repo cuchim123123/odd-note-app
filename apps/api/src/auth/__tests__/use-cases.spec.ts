@@ -10,12 +10,7 @@ vi.mock('../../config', () => ({
   JwtConfigService: class JwtConfigService {},
 }));
 
-vi.mock('bcryptjs', () => ({
-  hash: vi.fn(),
-  compare: vi.fn(),
-}));
 
-import * as bcrypt from 'bcryptjs';
 import { RegisterUseCase } from '../application/use-cases/register.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
@@ -40,6 +35,11 @@ function createMocks() {
     generateAndStoreTokens: vi.fn(),
     revokeRefreshToken: vi.fn(),
     rotateRefreshToken: vi.fn(),
+  };
+
+  const passwordHasher = {
+    hash: vi.fn(),
+    compare: vi.fn(),
   };
 
   const authUserMapper = {
@@ -77,7 +77,7 @@ function createMocks() {
   const registerUseCase = new RegisterUseCase(
     userRepo as never,
     unitOfWork as never,
-    authConfig as never,
+    passwordHasher as never,
     sessionTokenService as never,
     authUserMapper as never,
     emailVerificationService as never,
@@ -85,13 +85,14 @@ function createMocks() {
 
   const loginUseCase = new LoginUseCase(
     userRepo as never,
+    passwordHasher as never,
     sessionTokenService as never,
     authUserMapper as never,
   );
 
   const changePasswordUseCase = new ChangePasswordUseCase(
     userRepo as never,
-    authConfig as never,
+    passwordHasher as never,
   );
 
   const refreshUseCase = new RefreshUseCase(
@@ -109,6 +110,7 @@ function createMocks() {
     sessionTokenService,
     authUserMapper,
     emailVerificationService,
+    passwordHasher,
   };
 }
 
@@ -119,9 +121,8 @@ describe('Auth Use Cases', () => {
 
   describe('RegisterUseCase', () => {
     it('registers a user, sends verification, and returns profile & tokens', async () => {
-      vi.mocked(bcrypt.hash).mockImplementation(async () => 'hashed-password');
-
-      const { registerUseCase, prisma, unitOfWork, sessionTokenService, authUserMapper, emailVerificationService } = createMocks();
+      const { registerUseCase, prisma, unitOfWork, sessionTokenService, authUserMapper, emailVerificationService, passwordHasher } = createMocks();
+      passwordHasher.hash.mockResolvedValue('hashed-password');
 
       const createdUser = {
         id: 'user-123',
@@ -156,7 +157,7 @@ describe('Auth Use Cases', () => {
         password: 'Password123!',
       });
 
-      expect(bcrypt.hash).toHaveBeenCalledWith('Password123!', 12);
+      expect(passwordHasher.hash).toHaveBeenCalledWith('Password123!');
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'user@example.com' },
       });
@@ -201,7 +202,7 @@ describe('Auth Use Cases', () => {
 
   describe('LoginUseCase', () => {
     it('authenticates with valid credentials and returns auth data', async () => {
-      const { loginUseCase, prisma, sessionTokenService, authUserMapper } = createMocks();
+      const { loginUseCase, prisma, sessionTokenService, authUserMapper, passwordHasher } = createMocks();
 
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
@@ -211,7 +212,7 @@ describe('Auth Use Cases', () => {
         role: 'USER',
         isEmailVerified: true,
       });
-      vi.mocked(bcrypt.compare).mockImplementation(async () => true);
+      passwordHasher.compare.mockResolvedValue(true);
       sessionTokenService.generateAndStoreTokens.mockResolvedValue({
         accessToken: 'access-token',
         refreshToken: 'refresh-token',
@@ -232,7 +233,7 @@ describe('Auth Use Cases', () => {
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'user@example.com' },
       });
-      expect(bcrypt.compare).toHaveBeenCalledWith('Password123!', 'hashed-password');
+      expect(passwordHasher.compare).toHaveBeenCalledWith('Password123!', 'hashed-password');
       expect(sessionTokenService.generateAndStoreTokens).toHaveBeenCalledWith('user-123');
       expect(authUserMapper.toProfile).toHaveBeenCalledWith(expect.objectContaining({ id: 'user-123' }));
       expect(result).toEqual({
@@ -251,7 +252,7 @@ describe('Auth Use Cases', () => {
     });
 
     it('rejects invalid credentials', async () => {
-      const { loginUseCase, prisma, sessionTokenService } = createMocks();
+      const { loginUseCase, prisma, sessionTokenService, passwordHasher } = createMocks();
 
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
@@ -261,7 +262,7 @@ describe('Auth Use Cases', () => {
         role: 'USER',
         isEmailVerified: true,
       });
-      vi.mocked(bcrypt.compare).mockImplementation(async () => false);
+      passwordHasher.compare.mockResolvedValue(false);
 
       await expect(
         loginUseCase.execute({

@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { UserAlreadyExistsError } from '../../domain/errors/auth-error';
-import * as bcrypt from 'bcryptjs';
-import { AuthConfigService } from '../../../config';
+import { PASSWORD_HASHER } from '../ports/password-hasher.port';
+import type { PasswordHasher } from '../ports/password-hasher.port';
 import type { RegisterInput } from '@odd-note-app/validation';
 import type { RegisterResult } from '../auth.types';
 import { SessionTokenService } from '../services/session-token.service';
@@ -15,18 +15,14 @@ import type { UnitOfWork } from '../ports/unit-of-work.port';
 @Injectable()
 export class RegisterUseCase {
   private readonly logger = new Logger(RegisterUseCase.name);
-  private readonly passwordSaltRounds: number;
-
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
-    private readonly authConfig: AuthConfigService,
+    @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
     private readonly sessionTokenService: SessionTokenService,
     private readonly authUserMapper: AuthUserMapper,
     private readonly emailVerificationService: EmailVerificationService,
-  ) {
-    this.passwordSaltRounds = this.authConfig.getPasswordSaltRounds();
-  }
+  ) {}
 
   async execute(input: RegisterInput): Promise<RegisterResult> {
     const existingUser = await this.userRepo.findByEmail(input.email);
@@ -35,7 +31,7 @@ export class RegisterUseCase {
       throw new UserAlreadyExistsError();
     }
 
-    const passwordHash = await bcrypt.hash(input.password, this.passwordSaltRounds);
+    const passwordHash = await this.passwordHasher.hash(input.password);
 
     const { user, verificationToken } = await this.unitOfWork.execute(async (ctx) => {
       let newUser;

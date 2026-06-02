@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { InvalidCredentialsError } from '../../domain/errors/auth-error';
-import * as bcrypt from 'bcryptjs';
+import { PASSWORD_HASHER } from '../ports/password-hasher.port';
+import type { PasswordHasher } from '../ports/password-hasher.port';
 import type { LoginInput } from '@odd-note-app/validation';
 import type { LoginResult } from '../auth.types';
 import { SessionTokenService } from '../services/session-token.service';
@@ -12,6 +13,7 @@ import type { UserRepository } from '../ports/user.repository.port';
 export class LoginUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
+    @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
     private readonly sessionTokenService: SessionTokenService,
     private readonly authUserMapper: AuthUserMapper,
   ) {}
@@ -23,7 +25,7 @@ export class LoginUseCase {
       throw new InvalidCredentialsError();
     }
 
-    const isPasswordValid = await bcrypt.compare(input.password!, user.passwordHash);
+    const isPasswordValid = await this.passwordHasher.compare(input.password!, user.passwordHash);
 
     if (!isPasswordValid) {
       throw new InvalidCredentialsError();
