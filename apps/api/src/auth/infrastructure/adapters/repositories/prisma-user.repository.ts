@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { PrismaTransactionClient } from './prisma-client.type';
-import type { UserRepository } from '../../application/ports/user.repository.port';
-import type { User } from '../../domain/entities/user.entity';
-import { AuthUserMapper } from '../mappers/auth-user.mapper';
+import type { UserRepository } from '../../../application/ports/user.repository.port';
+import type { User } from '../../../domain/entities/user.entity';
+import { AuthUserMapper } from '../../mappers/auth-user.mapper';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepository {

@@ -11,11 +11,11 @@ import { AuthUserMapper } from './infrastructure/mappers/auth-user.mapper';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { TokenCleanupCron } from './infrastructure/cron/token-cleanup.cron';
 import { USER_REPOSITORY } from './application/ports/user.repository.port';
-import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.repository';
+import { PrismaUserRepository } from './infrastructure/adapters/repositories/prisma-user.repository';
 import { TOKEN_REPOSITORY } from './application/ports/token.repository.port';
-import { PrismaTokenRepository } from './infrastructure/repositories/prisma-token.repository';
+import { PrismaTokenRepository } from './infrastructure/adapters/repositories/prisma-token.repository';
 import { UNIT_OF_WORK } from './application/ports/unit-of-work.port';
-import { PrismaUnitOfWork } from './infrastructure/repositories/prisma-unit-of-work';
+import { PrismaUnitOfWork } from './infrastructure/adapters/repositories/prisma-unit-of-work';
 import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { BcryptPasswordHasher } from './infrastructure/adapters/bcrypt-password-hasher.adapter';
 

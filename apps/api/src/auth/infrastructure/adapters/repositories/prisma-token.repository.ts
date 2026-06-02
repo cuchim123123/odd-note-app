@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { PrismaTransactionClient } from './prisma-client.type';
-import type { TokenRepository } from '../../application/ports/token.repository.port';
-import type { VerificationToken, PasswordResetToken, RefreshToken } from '../../domain/entities/token.entity';
+import type { TokenRepository } from '../../../application/ports/token.repository.port';
+import type { VerificationToken, PasswordResetToken, RefreshToken } from '../../../domain/entities/token.entity';
 
 @Injectable()
 export class PrismaTokenRepository implements TokenRepository {
