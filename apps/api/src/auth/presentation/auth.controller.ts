@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards, Inject } from '@n
 import { SessionTokenService } from '../application/services/session-token.service';
 import { PasswordResetTokenService } from '../application/services/password-reset-token.service';
 import { USER_REPOSITORY } from '../application/ports/user.repository.port';
-import type { IUserRepository } from '../application/ports/user.repository.port';
+import type { UserRepository } from '../application/ports/user.repository.port';
 import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto, UpdateProfileDto } from './dto';
 import { EmailVerificationService } from '../application/services/email-verification.service';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
@@ -33,7 +33,7 @@ export class AuthController {
     private readonly sessionTokenService: SessionTokenService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly passwordResetTokenService: PasswordResetTokenService,
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
   ) {}
 
   @Post('register')

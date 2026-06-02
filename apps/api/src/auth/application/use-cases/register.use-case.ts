@@ -7,9 +7,9 @@ import { SessionTokenService } from '../services/session-token.service';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import { EmailVerificationService } from '../services/email-verification.service';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { IUserRepository } from '../ports/user.repository.port';
+import type { UserRepository } from '../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
-import type { IUnitOfWork } from '../ports/unit-of-work.port';
+import type { UnitOfWork } from '../ports/unit-of-work.port';
 
 @Injectable()
 export class RegisterUseCase {
@@ -17,8 +17,8 @@ export class RegisterUseCase {
   private readonly passwordSaltRounds: number;
 
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(UNIT_OF_WORK) private readonly unitOfWork: IUnitOfWork,
+    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     private readonly authConfig: AuthConfigService,
     private readonly sessionTokenService: SessionTokenService,
     private readonly authUserMapper: AuthUserMapper,

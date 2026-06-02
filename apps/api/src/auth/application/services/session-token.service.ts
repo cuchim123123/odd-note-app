@@ -4,11 +4,11 @@ import { createHash } from 'crypto';
 import { JwtConfigService } from '../../../config';
 import type { AuthTokens } from '../auth.types';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { IUserRepository } from '../ports/user.repository.port';
+import type { UserRepository } from '../ports/user.repository.port';
 import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { ITokenRepository } from '../ports/token.repository.port';
+import type { TokenRepository } from '../ports/token.repository.port';
 import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
-import type { IUnitOfWork, ITransactionContext } from '../ports/unit-of-work.port';
+import type { UnitOfWork, TransactionContext } from '../ports/unit-of-work.port';
 
 type RefreshTokenPayload = {
   sub?: string;
@@ -18,9 +18,9 @@ type RefreshTokenPayload = {
 @Injectable()
 export class SessionTokenService {
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
-    @Inject(UNIT_OF_WORK) private readonly unitOfWork: IUnitOfWork,
+    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
   ) {}
@@ -46,7 +46,7 @@ export class SessionTokenService {
     return { userId: payload.sub };
   }
 
-  async generateAndStoreTokens(userId: string, ctx?: ITransactionContext): Promise<AuthTokens> {
+  async generateAndStoreTokens(userId: string, ctx?: TransactionContext): Promise<AuthTokens> {
     const userRepo = ctx?.userRepository ?? this.userRepo;
     const tokenRepo = ctx?.tokenRepository ?? this.tokenRepo;
 

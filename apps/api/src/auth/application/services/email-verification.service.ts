@@ -6,20 +6,20 @@ import { AuthUrlService } from '../../../common/auth-url.service';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import type { AuthUserProfile } from '../auth.types';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { IUserRepository } from '../ports/user.repository.port';
-import type { ITokenRepository } from '../ports/token.repository.port';
+import type { UserRepository } from '../ports/user.repository.port';
+import type { TokenRepository } from '../ports/token.repository.port';
 
 @Injectable()
 export class EmailVerificationService {
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     private readonly verificationTokenService: VerificationTokenService,
     private readonly authUrlService: AuthUrlService,
     private readonly mailerService: MailerService,
     private readonly authUserMapper: AuthUserMapper,
   ) {}
 
-  async createTokenForUser(userId: string, tokenRepo?: ITokenRepository): Promise<string> {
+  async createTokenForUser(userId: string, tokenRepo?: TokenRepository): Promise<string> {
     return this.verificationTokenService.createAndStoreVerificationToken(userId, tokenRepo);
   }
 

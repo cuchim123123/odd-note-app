@@ -1,6 +1,6 @@
 import type { User } from '../../domain/entities/user.entity';
 
-export interface IUserRepository {
+export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
   create(data: { email: string; displayName: string; passwordHash: string }): Promise<User>;
@@ -14,4 +14,4 @@ export interface IUserRepository {
     },
   ): Promise<User>;
 }
-export const USER_REPOSITORY = Symbol('IUserRepository');
+export const USER_REPOSITORY = Symbol('UserRepository');

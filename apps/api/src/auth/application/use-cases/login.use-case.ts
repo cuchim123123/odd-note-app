@@ -5,12 +5,12 @@ import type { LoginResult } from '../auth.types';
 import { SessionTokenService } from '../services/session-token.service';
 import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { IUserRepository } from '../ports/user.repository.port';
+import type { UserRepository } from '../ports/user.repository.port';
 
 @Injectable()
 export class LoginUseCase {
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     private readonly sessionTokenService: SessionTokenService,
     private readonly authUserMapper: AuthUserMapper,
   ) {}

@@ -2,15 +2,15 @@ import { BadRequestException, Injectable, Inject } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import { AuthConfigService } from '../../../config';
 import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { ITokenRepository } from '../ports/token.repository.port';
+import type { TokenRepository } from '../ports/token.repository.port';
 import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
-import type { IUnitOfWork } from '../ports/unit-of-work.port';
+import type { UnitOfWork } from '../ports/unit-of-work.port';
 
 @Injectable()
 export class VerificationTokenService {
   constructor(
-    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
-    @Inject(UNIT_OF_WORK) private readonly unitOfWork: IUnitOfWork,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     private readonly authConfig: AuthConfigService,
   ) {}
 
@@ -18,7 +18,7 @@ export class VerificationTokenService {
     return createHash('sha256').update(rawToken).digest('hex');
   }
 
-  async createAndStoreVerificationToken(userId: string, tokenRepo?: ITokenRepository): Promise<string> {
+  async createAndStoreVerificationToken(userId: string, tokenRepo?: TokenRepository): Promise<string> {
     const repo = tokenRepo ?? this.tokenRepo;
     const verificationToken = randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(verificationToken);

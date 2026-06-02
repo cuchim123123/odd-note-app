@@ -3,14 +3,14 @@ import * as bcrypt from 'bcryptjs';
 import { AuthConfigService } from '../../../config';
 import { PasswordResetTokenService } from '../services/password-reset-token.service';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { IUserRepository } from '../ports/user.repository.port';
+import type { UserRepository } from '../ports/user.repository.port';
 
 @Injectable()
 export class ResetPasswordUseCase {
   private readonly passwordSaltRounds: number;
 
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     private readonly authConfig: AuthConfigService,
     private readonly passwordResetTokenService: PasswordResetTokenService,
   ) {

@@ -1,12 +1,12 @@
-import type { IUserRepository } from './user.repository.port';
-import type { ITokenRepository } from './token.repository.port';
+import type { UserRepository } from './user.repository.port';
+import type { TokenRepository } from './token.repository.port';
 
-export interface ITransactionContext {
-  userRepository: IUserRepository;
-  tokenRepository: ITokenRepository;
+export interface TransactionContext {
+  userRepository: UserRepository;
+  tokenRepository: TokenRepository;
 }
 
-export interface IUnitOfWork {
-  execute<T>(work: (ctx: ITransactionContext) => Promise<T>): Promise<T>;
+export interface UnitOfWork {
+  execute<T>(work: (ctx: TransactionContext) => Promise<T>): Promise<T>;
 }
-export const UNIT_OF_WORK = Symbol('IUnitOfWork');
+export const UNIT_OF_WORK = Symbol('UnitOfWork');

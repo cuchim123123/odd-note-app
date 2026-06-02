@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import type { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { ITokenRepository } from '../ports/token.repository.port';
+import type { TokenRepository } from '../ports/token.repository.port';
 
 @Injectable()
 export class TokenCleanupService implements OnModuleInit, OnModuleDestroy {
@@ -11,7 +11,7 @@ export class TokenCleanupService implements OnModuleInit, OnModuleDestroy {
   private readonly CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
   constructor(
-    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: ITokenRepository,
+    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
   ) {}
 
   onModuleInit() {

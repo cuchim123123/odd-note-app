@@ -3,14 +3,14 @@ import * as bcrypt from 'bcryptjs';
 import { AuthConfigService } from '../../../config';
 import type { ChangePasswordOutput } from '@odd-note-app/validation';
 import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { IUserRepository } from '../ports/user.repository.port';
+import type { UserRepository } from '../ports/user.repository.port';
 
 @Injectable()
 export class ChangePasswordUseCase {
   private readonly passwordSaltRounds: number;
 
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     private readonly authConfig: AuthConfigService,
   ) {
     this.passwordSaltRounds = this.authConfig.getPasswordSaltRounds();

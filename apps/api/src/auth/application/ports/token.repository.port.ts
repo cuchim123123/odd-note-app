@@ -1,6 +1,6 @@
 import type { VerificationToken, PasswordResetToken, RefreshToken } from '../../domain/entities/token.entity';
 
-export interface ITokenRepository {
+export interface TokenRepository {
   // Verification tokens
   createVerificationToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<VerificationToken>;
   findVerificationToken(tokenHash: string): Promise<VerificationToken | null>;
@@ -20,4 +20,4 @@ export interface ITokenRepository {
   // Cleanup
   deleteExpiredOrUsedTokens(now: Date): Promise<{ refreshCount: number; verificationCount: number; resetCount: number }>;
 }
-export const TOKEN_REPOSITORY = Symbol('ITokenRepository');
+export const TOKEN_REPOSITORY = Symbol('TokenRepository');
