@@ -19,38 +19,42 @@ import { PrismaUnitOfWork } from './infrastructure/adapters/repositories/prisma-
 import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { BcryptPasswordHasher } from './infrastructure/adapters/bcrypt-password-hasher.adapter';
 
-// Use cases
-import { RegisterUseCase } from './application/use-cases/register.use-case';
-import { LoginUseCase } from './application/use-cases/login.use-case';
-import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case';
-import { RefreshUseCase } from './application/use-cases/refresh.use-case';
-import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
-import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
-import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
-import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case';
-import { LogoutUseCase } from './application/use-cases/logout.use-case';
-import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
-import { ResendVerificationUseCase } from './application/use-cases/resend-verification.use-case';
+// Commands
+import { RegisterHandler } from './application/commands/register/register.handler';
+import { LoginHandler } from './application/commands/login/login.handler';
+import { ChangePasswordHandler } from './application/commands/change-password/change-password.handler';
+import { RefreshTokensHandler } from './application/commands/refresh-tokens/refresh-tokens.handler';
+import { ForgotPasswordHandler } from './application/commands/forgot-password/forgot-password.handler';
+import { ResetPasswordHandler } from './application/commands/reset-password/reset-password.handler';
+import { UpdateProfileHandler } from './application/commands/update-profile/update-profile.handler';
+import { LogoutHandler } from './application/commands/logout/logout.handler';
+import { VerifyEmailHandler } from './application/commands/verify-email/verify-email.handler';
+import { ResendVerificationHandler } from './application/commands/resend-verification/resend-verification.handler';
+
+// Queries
+import { GetCurrentUserHandler } from './application/queries/get-current-user/get-current-user.handler';
 
 @Module({
   imports: [ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [AuthController],
   providers: [
-
     AuthUserMapper,
     TokenCleanupCron,
     AccessTokenGuard,
-    RegisterUseCase,
-    LoginUseCase,
-    ChangePasswordUseCase,
-    RefreshUseCase,
-    ForgotPasswordUseCase,
-    ResetPasswordUseCase,
-    GetCurrentUserUseCase,
-    UpdateProfileUseCase,
-    LogoutUseCase,
-    VerifyEmailUseCase,
-    ResendVerificationUseCase,
+    // Commands
+    RegisterHandler,
+    LoginHandler,
+    ChangePasswordHandler,
+    RefreshTokensHandler,
+    ForgotPasswordHandler,
+    ResetPasswordHandler,
+    UpdateProfileHandler,
+    LogoutHandler,
+    VerifyEmailHandler,
+    ResendVerificationHandler,
+    // Queries
+    GetCurrentUserHandler,
+    // Port bindings
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },
     { provide: UNIT_OF_WORK, useClass: PrismaUnitOfWork },
@@ -63,17 +67,20 @@ import { ResendVerificationUseCase } from './application/use-cases/resend-verifi
     TOKEN_REPOSITORY,
     UNIT_OF_WORK,
     PASSWORD_HASHER,
-    RegisterUseCase,
-    LoginUseCase,
-    ChangePasswordUseCase,
-    RefreshUseCase,
-    ForgotPasswordUseCase,
-    ResetPasswordUseCase,
-    GetCurrentUserUseCase,
-    UpdateProfileUseCase,
-    LogoutUseCase,
-    VerifyEmailUseCase,
-    ResendVerificationUseCase,
+    // Commands
+    RegisterHandler,
+    LoginHandler,
+    ChangePasswordHandler,
+    RefreshTokensHandler,
+    ForgotPasswordHandler,
+    ResetPasswordHandler,
+    UpdateProfileHandler,
+    LogoutHandler,
+    VerifyEmailHandler,
+    ResendVerificationHandler,
+    // Queries
+    GetCurrentUserHandler,
   ],
 })
 export class AuthModule {}
+

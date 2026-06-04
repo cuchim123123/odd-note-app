@@ -1,17 +1,17 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { AuthTokens } from '../auth.types';
-import { TOKEN_PROVIDER } from '../ports/token-provider.port';
-import type { TokenProvider } from '../ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { TokenRepository } from '../ports/token.repository.port';
-import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { UserRepository } from '../ports/user.repository.port';
-import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
-import type { UnitOfWork } from '../ports/unit-of-work.port';
-import { InvalidTokenError } from '../../domain/errors/auth-error';
+import type { AuthTokens } from '../../shared/auth.types';
+import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
+import type { TokenProvider } from '../../ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
+import type { TokenRepository } from '../../ports/token.repository.port';
+import { USER_REPOSITORY } from '../../ports/user.repository.port';
+import type { UserRepository } from '../../ports/user.repository.port';
+import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
+import type { UnitOfWork } from '../../ports/unit-of-work.port';
+import { InvalidTokenError } from '../../../domain/errors/auth-error';
 
 @Injectable()
-export class RefreshUseCase {
+export class RefreshTokensHandler {
   constructor(
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,

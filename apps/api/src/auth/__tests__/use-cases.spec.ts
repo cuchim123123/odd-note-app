@@ -11,10 +11,10 @@ vi.mock('../../config', () => ({
 }));
 
 
-import { RegisterUseCase } from '../application/use-cases/register.use-case';
-import { LoginUseCase } from '../application/use-cases/login.use-case';
-import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
-import { RefreshUseCase } from '../application/use-cases/refresh.use-case';
+import { RegisterHandler } from '../application/commands/register/register.handler';
+import { LoginHandler } from '../application/commands/login/login.handler';
+import { ChangePasswordHandler } from '../application/commands/change-password/change-password.handler';
+import { RefreshTokensHandler } from '../application/commands/refresh-tokens/refresh-tokens.handler';
 
 function createMocks() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,7 +86,7 @@ function createMocks() {
     }),
   };
 
-  const registerUseCase = new RegisterUseCase(
+  const registerHandler = new RegisterHandler(
     userRepo as never,
     unitOfWork as never,
     passwordHasher as never,
@@ -96,7 +96,7 @@ function createMocks() {
     mailSender as never,
   );
 
-  const loginUseCase = new LoginUseCase(
+  const loginHandler = new LoginHandler(
     userRepo as never,
     passwordHasher as never,
     tokenProvider as never,
@@ -104,12 +104,12 @@ function createMocks() {
     authUserMapper as never,
   );
 
-  const changePasswordUseCase = new ChangePasswordUseCase(
+  const changePasswordHandler = new ChangePasswordHandler(
     userRepo as never,
     passwordHasher as never,
   );
 
-  const refreshUseCase = new RefreshUseCase(
+  const refreshTokensHandler = new RefreshTokensHandler(
     tokenProvider as never,
     tokenRepo as never,
     userRepo as never,
@@ -117,10 +117,10 @@ function createMocks() {
   );
 
   return {
-    registerUseCase,
-    loginUseCase,
-    changePasswordUseCase,
-    refreshUseCase,
+    registerHandler,
+    loginHandler,
+    changePasswordHandler,
+    refreshTokensHandler,
     prisma,
     unitOfWork,
     authConfig,
@@ -137,9 +137,9 @@ describe('Auth Use Cases', () => {
     vi.clearAllMocks();
   });
 
-  describe('RegisterUseCase', () => {
+  describe('RegisterHandler', () => {
     it('registers a user, sends verification, and returns profile & tokens', async () => {
-      const { registerUseCase, prisma, unitOfWork, tokenProvider, tokenRepo, authUserMapper, mailSender, passwordHasher } = createMocks();
+      const { registerHandler, prisma, unitOfWork, tokenProvider, tokenRepo, authUserMapper, mailSender, passwordHasher } = createMocks();
       passwordHasher.hash.mockResolvedValue('hashed-password');
 
       const createdUser = {
@@ -166,7 +166,7 @@ describe('Auth Use Cases', () => {
         isEmailVerified: false,
       });
 
-      const result = await registerUseCase.execute({
+      const result = await registerHandler.execute({
         email: 'user@example.com',
         displayName: 'User Example',
         password: 'Password123!',
@@ -199,12 +199,12 @@ describe('Auth Use Cases', () => {
     });
 
     it('rejects registration when email already exists', async () => {
-      const { registerUseCase, prisma, unitOfWork, tokenProvider } = createMocks();
+      const { registerHandler, prisma, unitOfWork, tokenProvider } = createMocks();
 
       prisma.user.findUnique.mockResolvedValue({ id: 'existing-user' });
 
       await expect(
-        registerUseCase.execute({
+        registerHandler.execute({
           email: 'user@example.com',
           displayName: 'User Example',
           password: 'Password123!',
@@ -216,9 +216,9 @@ describe('Auth Use Cases', () => {
     });
   });
 
-  describe('LoginUseCase', () => {
+  describe('LoginHandler', () => {
     it('authenticates with valid credentials and returns auth data', async () => {
-      const { loginUseCase, prisma, tokenProvider, tokenRepo, authUserMapper, passwordHasher } = createMocks();
+      const { loginHandler, prisma, tokenProvider, tokenRepo, authUserMapper, passwordHasher } = createMocks();
 
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
@@ -239,7 +239,7 @@ describe('Auth Use Cases', () => {
         isEmailVerified: true,
       });
 
-      const result = await loginUseCase.execute({
+      const result = await loginHandler.execute({
         email: 'user@example.com',
         password: 'Password123!',
       });
@@ -268,7 +268,7 @@ describe('Auth Use Cases', () => {
     });
 
     it('rejects invalid credentials', async () => {
-      const { loginUseCase, prisma, tokenProvider, passwordHasher } = createMocks();
+      const { loginHandler, prisma, tokenProvider, passwordHasher } = createMocks();
 
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
@@ -281,7 +281,7 @@ describe('Auth Use Cases', () => {
       passwordHasher.compare.mockResolvedValue(false);
 
       await expect(
-        loginUseCase.execute({
+        loginHandler.execute({
           email: 'user@example.com',
           password: 'wrong-password',
         }),
@@ -291,7 +291,7 @@ describe('Auth Use Cases', () => {
     });
   });
 
-  describe('RefreshUseCase', () => {
+  describe('RefreshTokensHandler', () => {
     it('verifies token and generates new ones', async () => {
       const { tokenProvider } = createMocks();
       // Just a stub test since the implementation handles a lot via unitOfWork now

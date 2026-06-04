@@ -1,24 +1,24 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { UserAlreadyExistsError } from '../../domain/errors/auth-error';
-import { PASSWORD_HASHER } from '../ports/password-hasher.port';
-import type { PasswordHasher } from '../ports/password-hasher.port';
+import { UserAlreadyExistsError } from '../../../domain/errors/auth-error';
+import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
+import type { PasswordHasher } from '../../ports/password-hasher.port';
 import type { RegisterInput } from '@odd-note-app/validation';
-import type { RegisterResult } from '../auth.types';
-import { TOKEN_PROVIDER } from '../ports/token-provider.port';
-import type { TokenProvider } from '../ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { TokenRepository } from '../ports/token.repository.port';
-import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { UserRepository } from '../ports/user.repository.port';
-import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
-import type { UnitOfWork } from '../ports/unit-of-work.port';
-import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
-import { MAIL_SENDER } from '../ports/mail-sender.port';
-import type { MailSender } from '../ports/mail-sender.port';
+import type { RegisterResult } from '../../shared/auth.types';
+import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
+import type { TokenProvider } from '../../ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
+import type { TokenRepository } from '../../ports/token.repository.port';
+import { USER_REPOSITORY } from '../../ports/user.repository.port';
+import type { UserRepository } from '../../ports/user.repository.port';
+import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
+import type { UnitOfWork } from '../../ports/unit-of-work.port';
+import { AuthUserMapper } from '../../../infrastructure/mappers/auth-user.mapper';
+import { MAIL_SENDER } from '../../ports/mail-sender.port';
+import type { MailSender } from '../../ports/mail-sender.port';
 
 @Injectable()
-export class RegisterUseCase {
-  private readonly logger = new Logger(RegisterUseCase.name);
+export class RegisterHandler {
+  private readonly logger = new Logger(RegisterHandler.name);
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,

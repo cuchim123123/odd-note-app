@@ -1,16 +1,16 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { TOKEN_PROVIDER } from '../ports/token-provider.port';
-import type { TokenProvider } from '../ports/token-provider.port';
-import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { UserRepository } from '../ports/user.repository.port';
-import { UNIT_OF_WORK } from '../ports/unit-of-work.port';
-import type { UnitOfWork } from '../ports/unit-of-work.port';
-import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
-import { InvalidTokenError } from '../../domain/errors/auth-error';
-import type { AuthUserProfile } from '../auth.types';
+import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
+import type { TokenProvider } from '../../ports/token-provider.port';
+import { USER_REPOSITORY } from '../../ports/user.repository.port';
+import type { UserRepository } from '../../ports/user.repository.port';
+import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
+import type { UnitOfWork } from '../../ports/unit-of-work.port';
+import { AuthUserMapper } from '../../../infrastructure/mappers/auth-user.mapper';
+import { InvalidTokenError } from '../../../domain/errors/auth-error';
+import type { AuthUserProfile } from '../../shared/auth.types';
 
 @Injectable()
-export class VerifyEmailUseCase {
+export class VerifyEmailHandler {
   constructor(
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,

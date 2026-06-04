@@ -10,60 +10,60 @@ import type { UserRepository } from '../application/ports/user.repository.port';
 import { AuthController } from '../presentation/auth.controller';
 
 // Use case types
-import type { RegisterUseCase } from '../application/use-cases/register.use-case';
-import type { LoginUseCase } from '../application/use-cases/login.use-case';
-import type { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
-import type { RefreshUseCase } from '../application/use-cases/refresh.use-case';
-import type { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.use-case';
-import type { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
-import type { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
-import type { UpdateProfileUseCase } from '../application/use-cases/update-profile.use-case';
-import type { VerifyEmailUseCase } from '../application/use-cases/verify-email.use-case';
-import type { ResendVerificationUseCase } from '../application/use-cases/resend-verification.use-case';
-import type { LogoutUseCase } from '../application/use-cases/logout.use-case';
+import type { RegisterHandler } from '../application/commands/register/register.handler';
+import type { LoginHandler } from '../application/commands/login/login.handler';
+import type { ChangePasswordHandler } from '../application/commands/change-password/change-password.handler';
+import type { RefreshTokensHandler } from '../application/commands/refresh-tokens/refresh-tokens.handler';
+import type { ForgotPasswordHandler } from '../application/commands/forgot-password/forgot-password.handler';
+import type { ResetPasswordHandler } from '../application/commands/reset-password/reset-password.handler';
+import type { GetCurrentUserHandler } from '../application/queries/get-current-user/get-current-user.handler';
+import type { UpdateProfileHandler } from '../application/commands/update-profile/update-profile.handler';
+import type { VerifyEmailHandler } from '../application/commands/verify-email/verify-email.handler';
+import type { ResendVerificationHandler } from '../application/commands/resend-verification/resend-verification.handler';
+import type { LogoutHandler } from '../application/commands/logout/logout.handler';
 
 function createController() {
-  const registerUseCase = {
+  const registerHandler = {
     execute: vi.fn(),
   };
 
-  const loginUseCase = {
+  const loginHandler = {
     execute: vi.fn(),
   };
 
-  const changePasswordUseCase = {
+  const changePasswordHandler = {
     execute: vi.fn(),
   };
 
-  const refreshUseCase = {
+  const refreshTokensHandler = {
     execute: vi.fn(),
   };
 
-  const forgotPasswordUseCase = {
+  const forgotPasswordHandler = {
     execute: vi.fn(),
   };
 
-  const resetPasswordUseCase = {
+  const resetPasswordHandler = {
     execute: vi.fn(),
   };
 
-  const getCurrentUserUseCase = {
+  const getCurrentUserHandler = {
     execute: vi.fn(),
   };
 
-  const updateProfileUseCase = {
+  const updateProfileHandler = {
     execute: vi.fn(),
   };
 
-  const verifyEmailUseCase = {
+  const verifyEmailHandler = {
     execute: vi.fn(),
   };
 
-  const resendVerificationUseCase = {
+  const resendVerificationHandler = {
     execute: vi.fn(),
   };
 
-  const logoutUseCase = {
+  const logoutHandler = {
     execute: vi.fn(),
   };
 
@@ -82,17 +82,17 @@ function createController() {
   };
 
   const controller = new AuthController(
-    registerUseCase as unknown as RegisterUseCase,
-    loginUseCase as unknown as LoginUseCase,
-    changePasswordUseCase as unknown as ChangePasswordUseCase,
-    refreshUseCase as unknown as RefreshUseCase,
-    forgotPasswordUseCase as unknown as ForgotPasswordUseCase,
-    resetPasswordUseCase as unknown as ResetPasswordUseCase,
-    getCurrentUserUseCase as unknown as GetCurrentUserUseCase,
-    updateProfileUseCase as unknown as UpdateProfileUseCase,
-    logoutUseCase as unknown as LogoutUseCase,
-    verifyEmailUseCase as unknown as VerifyEmailUseCase,
-    resendVerificationUseCase as unknown as ResendVerificationUseCase,
+    registerHandler as unknown as RegisterHandler,
+    loginHandler as unknown as LoginHandler,
+    changePasswordHandler as unknown as ChangePasswordHandler,
+    refreshTokensHandler as unknown as RefreshTokensHandler,
+    forgotPasswordHandler as unknown as ForgotPasswordHandler,
+    resetPasswordHandler as unknown as ResetPasswordHandler,
+    getCurrentUserHandler as unknown as GetCurrentUserHandler,
+    updateProfileHandler as unknown as UpdateProfileHandler,
+    logoutHandler as unknown as LogoutHandler,
+    verifyEmailHandler as unknown as VerifyEmailHandler,
+    resendVerificationHandler as unknown as ResendVerificationHandler,
     tokenProvider as unknown as TokenProvider,
     tokenRepo,
     userRepo as unknown as UserRepository,
@@ -100,17 +100,17 @@ function createController() {
 
   return {
     controller,
-    registerUseCase,
-    loginUseCase,
-    changePasswordUseCase,
-    refreshUseCase,
-    forgotPasswordUseCase,
-    resetPasswordUseCase,
-    getCurrentUserUseCase,
-    updateProfileUseCase,
-    logoutUseCase,
-    verifyEmailUseCase,
-    resendVerificationUseCase,
+    registerHandler,
+    loginHandler,
+    changePasswordHandler,
+    refreshTokensHandler,
+    forgotPasswordHandler,
+    resetPasswordHandler,
+    getCurrentUserHandler,
+    updateProfileHandler,
+    logoutHandler,
+    verifyEmailHandler,
+    resendVerificationHandler,
     tokenProvider,
     tokenRepo,
     userRepo,
@@ -122,79 +122,79 @@ describe('AuthController', () => {
     vi.clearAllMocks();
   });
 
-  it('delegates register to RegisterUseCase', async () => {
-    const { controller, registerUseCase } = createController();
+  it('delegates register to RegisterHandler', async () => {
+    const { controller, registerHandler } = createController();
     const input = { email: 'test@test.com', displayName: 'Test', password: 'Password123!' };
     const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: false }, tokens: { accessToken: 'a', refreshToken: 'r' } };
 
-    registerUseCase.execute.mockResolvedValue(expectedResult);
+    registerHandler.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.register(input);
 
-    expect(registerUseCase.execute).toHaveBeenCalledWith(input);
+    expect(registerHandler.execute).toHaveBeenCalledWith(input);
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates login to LoginUseCase', async () => {
-    const { controller, loginUseCase } = createController();
+  it('delegates login to LoginHandler', async () => {
+    const { controller, loginHandler } = createController();
     const input = { email: 'test@test.com', password: 'Password123!' };
     const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: true }, tokens: { accessToken: 'a', refreshToken: 'r' } };
 
-    loginUseCase.execute.mockResolvedValue(expectedResult);
+    loginHandler.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.login(input);
 
-    expect(loginUseCase.execute).toHaveBeenCalledWith(input);
+    expect(loginHandler.execute).toHaveBeenCalledWith(input);
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates verifyEmail to VerifyEmailUseCase', async () => {
-    const { controller, verifyEmailUseCase } = createController();
+  it('delegates verifyEmail to VerifyEmailHandler', async () => {
+    const { controller, verifyEmailHandler } = createController();
     const token = 'some-valid-token';
     const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: true } };
 
-    verifyEmailUseCase.execute.mockResolvedValue(expectedResult);
+    verifyEmailHandler.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.verifyEmail(token);
 
-    expect(verifyEmailUseCase.execute).toHaveBeenCalledWith(token);
+    expect(verifyEmailHandler.execute).toHaveBeenCalledWith(token);
     expect(result).toEqual(expectedResult);
   });
 
-  it('returns the current user profile from GetCurrentUserUseCase', async () => {
-    const { controller, getCurrentUserUseCase } = createController();
+  it('returns the current user profile from GetCurrentUserHandler', async () => {
+    const { controller, getCurrentUserHandler } = createController();
     const expectedResult = { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: false };
 
-    getCurrentUserUseCase.execute.mockResolvedValue(expectedResult);
+    getCurrentUserHandler.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.me('user-1');
 
-    expect(getCurrentUserUseCase.execute).toHaveBeenCalledWith('user-1');
+    expect(getCurrentUserHandler.execute).toHaveBeenCalledWith('user-1');
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates refresh to RefreshUseCase', async () => {
-    const { controller, refreshUseCase } = createController();
+  it('delegates refresh to RefreshTokensHandler', async () => {
+    const { controller, refreshTokensHandler } = createController();
     const input = { refreshToken: 'r' };
     const expectedResult = { accessToken: 'a2', refreshToken: 'r2' };
 
-    refreshUseCase.execute.mockResolvedValue(expectedResult);
+    refreshTokensHandler.execute.mockResolvedValue(expectedResult);
 
     const result = await controller.refresh(input);
 
-    expect(refreshUseCase.execute).toHaveBeenCalledWith(input.refreshToken);
+    expect(refreshTokensHandler.execute).toHaveBeenCalledWith(input.refreshToken);
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates logout to LogoutUseCase', async () => {
-    const { controller, logoutUseCase } = createController();
+  it('delegates logout to LogoutHandler', async () => {
+    const { controller, logoutHandler } = createController();
     const input = { refreshToken: 'r' };
 
-    logoutUseCase.execute.mockResolvedValue(undefined);
+    logoutHandler.execute.mockResolvedValue(undefined);
 
     const result = await controller.logout(input);
 
-    expect(logoutUseCase.execute).toHaveBeenCalledWith(input.refreshToken);
+    expect(logoutHandler.execute).toHaveBeenCalledWith(input.refreshToken);
     expect(result).toEqual({ success: true });
   });
 });

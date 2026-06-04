@@ -1,11 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { TOKEN_PROVIDER } from '../ports/token-provider.port';
-import type { TokenProvider } from '../ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { TokenRepository } from '../ports/token.repository.port';
+import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
+import type { TokenProvider } from '../../ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
+import type { TokenRepository } from '../../ports/token.repository.port';
 
 @Injectable()
-export class LogoutUseCase {
+export class LogoutHandler {
   constructor(
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,

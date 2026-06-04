@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { User as PrismaUser } from '@prisma/client';
 import { User as DomainUser } from '../../domain/entities/user.entity';
-import type { AuthUserProfile } from '../../application/auth.types';
+import type { AuthUserProfile } from '../../application/shared/auth.types';
 import type { EnvConfig } from '../../../config/config.module';
 
 @Injectable()

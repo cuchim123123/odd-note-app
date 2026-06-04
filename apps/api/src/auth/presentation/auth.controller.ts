@@ -10,18 +10,20 @@ import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { AccessTokenGuard } from '../../common/guards/access-token.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
-// Use cases
-import { RegisterUseCase } from '../application/use-cases/register.use-case';
-import { LoginUseCase } from '../application/use-cases/login.use-case';
-import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
-import { RefreshUseCase } from '../application/use-cases/refresh.use-case';
-import { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.use-case';
-import { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
-import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
-import { UpdateProfileUseCase } from '../application/use-cases/update-profile.use-case';
-import { LogoutUseCase } from '../application/use-cases/logout.use-case';
-import { VerifyEmailUseCase } from '../application/use-cases/verify-email.use-case';
-import { ResendVerificationUseCase } from '../application/use-cases/resend-verification.use-case';
+// Command handlers
+import { RegisterHandler } from '../application/commands/register/register.handler';
+import { LoginHandler } from '../application/commands/login/login.handler';
+import { ChangePasswordHandler } from '../application/commands/change-password/change-password.handler';
+import { RefreshTokensHandler } from '../application/commands/refresh-tokens/refresh-tokens.handler';
+import { ForgotPasswordHandler } from '../application/commands/forgot-password/forgot-password.handler';
+import { ResetPasswordHandler } from '../application/commands/reset-password/reset-password.handler';
+import { UpdateProfileHandler } from '../application/commands/update-profile/update-profile.handler';
+import { LogoutHandler } from '../application/commands/logout/logout.handler';
+import { VerifyEmailHandler } from '../application/commands/verify-email/verify-email.handler';
+import { ResendVerificationHandler } from '../application/commands/resend-verification/resend-verification.handler';
+
+// Query handlers
+import { GetCurrentUserHandler } from '../application/queries/get-current-user/get-current-user.handler';
 
 import { AuthErrorFilter } from './filters/auth-error.filter';
 
@@ -29,17 +31,17 @@ import { AuthErrorFilter } from './filters/auth-error.filter';
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly registerUseCase: RegisterUseCase,
-    private readonly loginUseCase: LoginUseCase,
-    private readonly changePasswordUseCase: ChangePasswordUseCase,
-    private readonly refreshUseCase: RefreshUseCase,
-    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
-    private readonly resetPasswordUseCase: ResetPasswordUseCase,
-    private readonly getCurrentUserUseCase: GetCurrentUserUseCase,
-    private readonly updateProfileUseCase: UpdateProfileUseCase,
-    private readonly logoutUseCase: LogoutUseCase,
-    private readonly verifyEmailUseCase: VerifyEmailUseCase,
-    private readonly resendVerificationUseCase: ResendVerificationUseCase,
+    private readonly registerHandler: RegisterHandler,
+    private readonly loginHandler: LoginHandler,
+    private readonly changePasswordHandler: ChangePasswordHandler,
+    private readonly refreshTokensHandler: RefreshTokensHandler,
+    private readonly forgotPasswordHandler: ForgotPasswordHandler,
+    private readonly resetPasswordHandler: ResetPasswordHandler,
+    private readonly getCurrentUserHandler: GetCurrentUserHandler,
+    private readonly updateProfileHandler: UpdateProfileHandler,
+    private readonly logoutHandler: LogoutHandler,
+    private readonly verifyEmailHandler: VerifyEmailHandler,
+    private readonly resendVerificationHandler: ResendVerificationHandler,
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
@@ -47,64 +49,64 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() input: RegisterDto) {
-    return await this.registerUseCase.execute(input);
+    return await this.registerHandler.execute(input);
   }
 
   @Post('login')
   async login(@Body() input: LoginDto) {
-    return await this.loginUseCase.execute(input);
+    return await this.loginHandler.execute(input);
   }
 
   @Get('verify-email/:token')
   async verifyEmail(@Param('token') token: string) {
-    return await this.verifyEmailUseCase.execute(token.trim());
+    return await this.verifyEmailHandler.execute(token.trim());
   }
 
   @Post('resend-verification')
   async resendVerification(@Body() input: ResendVerificationDto) {
-    await this.resendVerificationUseCase.execute(input.email!);
+    await this.resendVerificationHandler.execute(input.email!);
     return { success: true, message: 'If the email is registered and unverified, a new verification link has been sent.' };
   }
 
   @UseGuards(AccessTokenGuard)
   @Get('me')
   async me(@CurrentUser() userId: string) {
-    return await this.getCurrentUserUseCase.execute(userId);
+    return await this.getCurrentUserHandler.execute(userId);
   }
 
   @UseGuards(AccessTokenGuard)
   @Patch('profile')
   async updateProfile(@CurrentUser() userId: string, @Body() input: UpdateProfileDto) {
-    return await this.updateProfileUseCase.execute(userId, input);
+    return await this.updateProfileHandler.execute(userId, input);
   }
 
   @UseGuards(AccessTokenGuard)
   @Patch('change-password')
   async changePassword(@CurrentUser() userId: string, @Body() input: ChangePasswordDto) {
-    await this.changePasswordUseCase.execute(userId, input);
+    await this.changePasswordHandler.execute(userId, input);
     return { success: true, message: 'Password changed successfully' };
   }
 
   @Post('refresh')
   async refresh(@Body() input: RefreshTokenDto) {
-    return await this.refreshUseCase.execute(input.refreshToken!);
+    return await this.refreshTokensHandler.execute(input.refreshToken!);
   }
 
   @Post('logout')
   async logout(@Body() input: RefreshTokenDto) {
-    await this.logoutUseCase.execute(input.refreshToken!);
+    await this.logoutHandler.execute(input.refreshToken!);
     return { success: true };
   }
 
   @Post('forgot-password')
   async forgotPassword(@Body() input: ForgotPasswordDto) {
-    await this.forgotPasswordUseCase.execute(input.email!);
+    await this.forgotPasswordHandler.execute(input.email!);
     return { message: 'If the email exists, a reset link has been sent' };
   }
 
   @Post('reset-password')
   async resetPassword(@Body() input: ResetPasswordDto) {
-    await this.resetPasswordUseCase.execute(input.token!, input.password!);
+    await this.resetPasswordHandler.execute(input.token!, input.password!);
     return { message: 'Password reset successfully' };
   }
 
@@ -140,6 +142,6 @@ export class AuthController {
       return { message: 'Not available' };
     }
 
-    return await this.loginUseCase.execute(input);
+    return await this.loginHandler.execute(input);
   }
 }

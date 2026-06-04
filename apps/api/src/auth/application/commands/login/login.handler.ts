@@ -1,19 +1,19 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { InvalidCredentialsError } from '../../domain/errors/auth-error';
-import { PASSWORD_HASHER } from '../ports/password-hasher.port';
-import type { PasswordHasher } from '../ports/password-hasher.port';
+import { InvalidCredentialsError } from '../../../domain/errors/auth-error';
+import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
+import type { PasswordHasher } from '../../ports/password-hasher.port';
 import type { LoginInput } from '@odd-note-app/validation';
-import type { LoginResult } from '../auth.types';
-import { TOKEN_PROVIDER } from '../ports/token-provider.port';
-import type { TokenProvider } from '../ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { TokenRepository } from '../ports/token.repository.port';
-import { AuthUserMapper } from '../../infrastructure/mappers/auth-user.mapper';
-import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { UserRepository } from '../ports/user.repository.port';
+import type { LoginResult } from '../../shared/auth.types';
+import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
+import type { TokenProvider } from '../../ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
+import type { TokenRepository } from '../../ports/token.repository.port';
+import { AuthUserMapper } from '../../../infrastructure/mappers/auth-user.mapper';
+import { USER_REPOSITORY } from '../../ports/user.repository.port';
+import type { UserRepository } from '../../ports/user.repository.port';
 
 @Injectable()
-export class LoginUseCase {
+export class LoginHandler {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,

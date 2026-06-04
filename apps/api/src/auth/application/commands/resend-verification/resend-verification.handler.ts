@@ -1,16 +1,16 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { TOKEN_PROVIDER } from '../ports/token-provider.port';
-import type { TokenProvider } from '../ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../ports/token.repository.port';
-import type { TokenRepository } from '../ports/token.repository.port';
-import { USER_REPOSITORY } from '../ports/user.repository.port';
-import type { UserRepository } from '../ports/user.repository.port';
-import { MAIL_SENDER } from '../ports/mail-sender.port';
-import type { MailSender } from '../ports/mail-sender.port';
+import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
+import type { TokenProvider } from '../../ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
+import type { TokenRepository } from '../../ports/token.repository.port';
+import { USER_REPOSITORY } from '../../ports/user.repository.port';
+import type { UserRepository } from '../../ports/user.repository.port';
+import { MAIL_SENDER } from '../../ports/mail-sender.port';
+import type { MailSender } from '../../ports/mail-sender.port';
 
 @Injectable()
-export class ResendVerificationUseCase {
-  private readonly logger = new Logger(ResendVerificationUseCase.name);
+export class ResendVerificationHandler {
+  private readonly logger = new Logger(ResendVerificationHandler.name);
 
   constructor(
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
