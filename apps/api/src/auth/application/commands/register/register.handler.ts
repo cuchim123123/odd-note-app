@@ -1,5 +1,5 @@
-import { Logger, Inject } from '@nestjs/common';
-import { CommandHandler } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
+import { CommandHandler, EventBus } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
 import { UserAlreadyExistsError } from '../../../domain/errors/auth-error';
 import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
@@ -13,21 +13,20 @@ import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { MAIL_SENDER } from '../../ports/mail-sender.port';
-import type { MailSender } from '../../ports/mail-sender.port';
 import { RegisterCommand } from './register.command';
 import { VerificationToken, RefreshToken } from '../../../domain/entities/token.entity';
+import { User } from '../../../domain/entities/user.entity';
+import { UserRegisteredEvent } from '../../../domain/events/user-registered.event';
 
 @CommandHandler(RegisterCommand)
 export class RegisterHandler implements ICommandHandler<RegisterCommand> {
-  private readonly logger = new Logger(RegisterHandler.name);
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
-    @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(command: RegisterCommand): Promise<RegisterResult> {
@@ -40,20 +39,8 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     const passwordHash = await this.passwordHasher.hash(command.input.password);
 
     const { user, verificationToken } = await this.unitOfWork.execute(async (ctx) => {
-      let newUser;
-      try {
-        newUser = await ctx.userRepository.create({
-          email: command.input.email,
-          displayName: command.input.displayName,
-          passwordHash,
-        });
-      } catch (err: unknown) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if ((err as any)?.code === 'P2002') {
-          throw new UserAlreadyExistsError();
-        }
-        throw err;
-      }
+      const newUser = User.create(command.input.email, command.input.displayName, passwordHash);
+      await ctx.userRepository.save(newUser);
 
       const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generateVerificationToken();
 
@@ -64,14 +51,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
       return { user: newUser, verificationToken: rawToken };
     });
 
-    try {
-      await this.mailSender.sendVerificationEmail(user.email, user.displayName, verificationToken);
-    } catch (error) {
-      this.logger.error(
-        `Failed to send verification email for ${user.email}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-    }
+    this.eventBus.publish(new UserRegisteredEvent(user.email, user.displayName, verificationToken));
 
     const accessToken = this.tokenProvider.signAccessToken({ sub: user.id, displayName: user.displayName });
     const refresh = this.tokenProvider.generateRefreshToken(user.id);

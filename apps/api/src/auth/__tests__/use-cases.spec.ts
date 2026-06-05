@@ -47,6 +47,10 @@ function createMocks() {
     sendPasswordResetEmail: vi.fn(),
   };
 
+  const eventBus = {
+    publish: vi.fn(),
+  };
+
   const passwordHasher = {
     hash: vi.fn(),
     compare: vi.fn(),
@@ -64,14 +68,12 @@ function createMocks() {
       if (!raw) return null;
       return new User(raw.id, raw.email, raw.displayName, raw.passwordHash, raw.role, raw.isEmailVerified, raw.avatarUrl, raw.createdAt, raw.updatedAt);
     }),
-    create: vi.fn(async (data: { email: string; displayName: string; passwordHash: string }) => {
-      const raw = await prisma.user.create({ data });
-      return new User(raw.id, raw.email, raw.displayName, raw.passwordHash, 'USER', false, null, new Date(), new Date());
+    save: vi.fn(async () => {
+      // Mocking save implementation is basically a no-op in tests unless needed
     }),
     update: vi.fn(async (id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string; isEmailVerified?: boolean }) => {
       return prisma.user.update({ where: { id }, data });
     }),
-    save: vi.fn(async () => {}),
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,7 +96,7 @@ function createMocks() {
     passwordHasher as never,
     tokenProvider as never,
     tokenRepo as never,
-    mailSender as never,
+    eventBus as never,
   );
 
   const loginHandler = new LoginHandler(
@@ -127,6 +129,7 @@ function createMocks() {
     tokenProvider,
     tokenRepo,
     mailSender,
+    eventBus,
     passwordHasher,
   };
 }
@@ -138,7 +141,7 @@ describe('Auth Use Cases', () => {
 
   describe('RegisterHandler', () => {
     it('registers a user, sends verification, and returns user entity & tokens', async () => {
-      const { registerHandler, prisma, unitOfWork, tokenProvider, tokenRepo, mailSender, passwordHasher } = createMocks();
+      const { registerHandler, prisma, unitOfWork, tokenProvider, tokenRepo, eventBus, passwordHasher } = createMocks();
       passwordHasher.hash.mockResolvedValue('hashed-password');
 
       const createdUser = {
@@ -171,12 +174,12 @@ describe('Auth Use Cases', () => {
       });
       expect(unitOfWork.execute).toHaveBeenCalledTimes(1);
       expect(tokenRepo.saveVerificationToken).toHaveBeenCalled();
-      expect(mailSender.sendVerificationEmail).toHaveBeenCalledWith('user@example.com', 'User Example', 'verification-token');
+      expect(eventBus.publish).toHaveBeenCalled();
       expect(tokenProvider.signAccessToken).toHaveBeenCalled();
       expect(tokenProvider.generateRefreshToken).toHaveBeenCalled();
       expect(tokenRepo.saveRefreshToken).toHaveBeenCalled();
-      // Handler now returns the domain User entity, not the mapped profile
-      expect(result.user).toMatchObject({ id: 'user-123', email: 'user@example.com' });
+      expect(result.user.email).toBe('user@example.com');
+      expect(result.user.id).toBeDefined();
       expect(result.tokens).toEqual({
         accessToken: 'access-token',
         refreshToken: 'refresh-token',

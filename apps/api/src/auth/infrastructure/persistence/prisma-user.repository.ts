@@ -3,6 +3,7 @@ import type { PrismaTransactionClient } from './prisma-client.type';
 import type { UserRepository } from '../../application/ports/user.repository.port';
 import type { User } from '../../domain/entities/user.entity';
 import { UserPersistenceMapper } from './mappers/user-persistence.mapper';
+import { UserAlreadyExistsError } from '../../domain/errors/auth-error';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepository {
@@ -18,23 +19,37 @@ export class PrismaUserRepository implements UserRepository {
     return raw ? UserPersistenceMapper.toDomain(raw) : null;
   }
 
-  async create(data: { email: string; displayName: string; passwordHash: string }): Promise<User> {
-    const raw = await this.prisma.user.create({ data: { ...data, email: data.email.toLowerCase() } });
-    return UserPersistenceMapper.toDomain(raw);
-  }
-
   async save(user: User): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        email: user.email,
-        displayName: user.displayName,
-        passwordHash: user.passwordHash,
-        role: user.role,
-        isEmailVerified: user.isEmailVerified,
-        avatarUrl: user.avatarUrl,
-        updatedAt: user.updatedAt,
-      },
-    });
+    try {
+      await this.prisma.user.upsert({
+        where: { id: user.id },
+        update: {
+          email: user.email,
+          displayName: user.displayName,
+          passwordHash: user.passwordHash,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          avatarUrl: user.avatarUrl,
+          updatedAt: user.updatedAt,
+        },
+        create: {
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          passwordHash: user.passwordHash,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          avatarUrl: user.avatarUrl,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+      });
+    } catch (err: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((err as any)?.code === 'P2002') {
+        throw new UserAlreadyExistsError();
+      }
+      throw err;
+    }
   }
 }

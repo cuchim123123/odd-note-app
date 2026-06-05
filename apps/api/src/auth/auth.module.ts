@@ -35,6 +35,11 @@ import { ResendVerificationHandler } from './application/commands/resend-verific
 // Queries
 import { GetCurrentUserHandler } from './application/queries/get-current-user/get-current-user.handler';
 
+// Events
+import { UserRegisteredEventHandler } from './application/events/user-registered.handler';
+import { PasswordResetRequestedEventHandler } from './application/events/password-reset-requested.handler';
+import { VerificationRequestedEventHandler } from './application/events/verification-requested.handler';
+
 @Module({
   imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [AuthController],
@@ -55,6 +60,10 @@ import { GetCurrentUserHandler } from './application/queries/get-current-user/ge
     ResendVerificationHandler,
     // Queries
     GetCurrentUserHandler,
+    // Events
+    UserRegisteredEventHandler,
+    PasswordResetRequestedEventHandler,
+    VerificationRequestedEventHandler,
     // Port bindings
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },

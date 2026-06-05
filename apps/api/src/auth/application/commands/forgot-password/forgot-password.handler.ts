@@ -1,8 +1,7 @@
-import { Logger, Inject } from '@nestjs/common';
-import { CommandHandler } from '@nestjs/cqrs';
+import { Inject } from '@nestjs/common';
+import { CommandHandler, EventBus } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { MAIL_SENDER } from '../../ports/mail-sender.port';
-import type { MailSender } from '../../ports/mail-sender.port';
+import { PasswordResetRequestedEvent } from '../../domain/events/password-reset-requested.event';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
 import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
@@ -14,13 +13,11 @@ import { PasswordResetToken } from '../../../domain/entities/token.entity';
 
 @CommandHandler(ForgotPasswordCommand)
 export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordCommand> {
-  private readonly logger = new Logger(ForgotPasswordHandler.name);
-
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
-    @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(command: ForgotPasswordCommand): Promise<void> {
@@ -31,16 +28,10 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
       return;
     }
 
-    try {
-      const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generatePasswordResetToken();
+    const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generatePasswordResetToken();
+    const token = PasswordResetToken.create(tokenHash, user.id, expiresAt);
+    await this.tokenRepo.saveResetToken(token);
 
-      const token = PasswordResetToken.create(tokenHash, user.id, expiresAt);
-
-      await this.tokenRepo.saveResetToken(token);
-      await this.mailSender.sendPasswordResetEmail(user.email, rawToken);
-    } catch (error) {
-      // Log but don't throw - non-critical
-      this.logger.error('Failed to send password reset email:', error);
-    }
+    this.eventBus.publish(new PasswordResetRequestedEvent(user.email, rawToken));
   }
 }

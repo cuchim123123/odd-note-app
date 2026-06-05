@@ -1,4 +1,5 @@
 import { InvalidCredentialsError } from '../errors/auth-error';
+import * as crypto from 'crypto';
 
 export class User {
   constructor(
@@ -12,6 +13,20 @@ export class User {
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
   ) {}
+
+  public static create(email: string, displayName: string, passwordHash: string): User {
+    return new User(
+      crypto.randomUUID(),
+      email.toLowerCase(),
+      displayName,
+      passwordHash,
+      'USER',
+      false,
+      null,
+      new Date(),
+      new Date(),
+    );
+  }
 
   verifyEmail(): User {
     return new User(
