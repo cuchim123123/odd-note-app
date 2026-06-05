@@ -1,7 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import * as crypto from 'crypto';
 import type { AuthTokens } from '../../shared/auth.types';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
@@ -46,14 +45,7 @@ export class RefreshTokensHandler implements ICommandHandler<RefreshTokensComman
       const accessToken = this.tokenProvider.signAccessToken({ sub: user.id, displayName: user.displayName });
       const newRefresh = this.tokenProvider.generateRefreshToken(user.id);
 
-      const newRefreshTokenEntity = new RefreshToken(
-        crypto.randomUUID(),
-        newRefresh.tokenHash,
-        user.id,
-        newRefresh.expiresAt,
-        null,
-        new Date()
-      );
+      const newRefreshTokenEntity = RefreshToken.create(newRefresh.tokenHash, user.id, newRefresh.expiresAt);
 
       await ctx.tokenRepository.saveRefreshToken(newRefreshTokenEntity);
 

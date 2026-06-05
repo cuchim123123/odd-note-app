@@ -1,4 +1,5 @@
 import { TokenAlreadyUsedError, TokenExpiredError, InvalidTokenError } from '../errors/auth-error';
+import * as crypto from 'crypto';
 
 export abstract class Token {
   constructor(
@@ -24,6 +25,10 @@ export class VerificationToken extends Token {
     createdAt: Date,
   ) {
     super(id, tokenHash, userId, expiresAt, createdAt);
+  }
+
+  public static create(tokenHash: string, userId: string, expiresAt: Date): VerificationToken {
+    return new VerificationToken(crypto.randomUUID(), tokenHash, userId, expiresAt, null, new Date());
   }
 
   public consume(): VerificationToken {
@@ -57,6 +62,10 @@ export class PasswordResetToken extends Token {
     super(id, tokenHash, userId, expiresAt, createdAt);
   }
 
+  public static create(tokenHash: string, userId: string, expiresAt: Date): PasswordResetToken {
+    return new PasswordResetToken(crypto.randomUUID(), tokenHash, userId, expiresAt, null, new Date());
+  }
+
   public consume(): PasswordResetToken {
     if (this.isExpired()) {
       throw new TokenExpiredError('This password reset link has expired');
@@ -86,6 +95,10 @@ export class RefreshToken extends Token {
     createdAt: Date,
   ) {
     super(id, tokenHash, userId, expiresAt, createdAt);
+  }
+
+  public static create(tokenHash: string, userId: string, expiresAt: Date): RefreshToken {
+    return new RefreshToken(crypto.randomUUID(), tokenHash, userId, expiresAt, null, new Date());
   }
 
   public revoke(): RefreshToken {

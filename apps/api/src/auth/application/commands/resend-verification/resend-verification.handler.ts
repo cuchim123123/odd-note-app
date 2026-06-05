@@ -1,7 +1,6 @@
 import { Logger, Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import * as crypto from 'crypto';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
 import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
@@ -33,14 +32,7 @@ export class ResendVerificationHandler implements ICommandHandler<ResendVerifica
 
     const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generateVerificationToken();
 
-    const token = new VerificationToken(
-      crypto.randomUUID(),
-      tokenHash,
-      user.id,
-      expiresAt,
-      null,
-      new Date()
-    );
+    const token = VerificationToken.create(tokenHash, user.id, expiresAt);
 
     await this.tokenRepo.saveVerificationToken(token);
 

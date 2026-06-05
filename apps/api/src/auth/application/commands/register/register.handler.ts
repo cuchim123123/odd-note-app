@@ -1,7 +1,6 @@
 import { Logger, Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import * as crypto from 'crypto';
 import { UserAlreadyExistsError } from '../../../domain/errors/auth-error';
 import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
 import type { PasswordHasher } from '../../ports/password-hasher.port';
@@ -58,14 +57,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
 
       const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generateVerificationToken();
 
-      const tokenEntity = new VerificationToken(
-        crypto.randomUUID(),
-        tokenHash,
-        newUser.id,
-        expiresAt,
-        null,
-        new Date()
-      );
+      const tokenEntity = VerificationToken.create(tokenHash, newUser.id, expiresAt);
 
       await ctx.tokenRepository.saveVerificationToken(tokenEntity);
 
@@ -84,14 +76,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     const accessToken = this.tokenProvider.signAccessToken({ sub: user.id, displayName: user.displayName });
     const refresh = this.tokenProvider.generateRefreshToken(user.id);
     
-    const refreshTokenEntity = new RefreshToken(
-      crypto.randomUUID(),
-      refresh.tokenHash,
-      user.id,
-      refresh.expiresAt,
-      null,
-      new Date()
-    );
+    const refreshTokenEntity = RefreshToken.create(refresh.tokenHash, user.id, refresh.expiresAt);
 
     await this.tokenRepo.saveRefreshToken(refreshTokenEntity);
 
