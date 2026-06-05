@@ -1,8 +1,9 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Logger, Inject } from '@nestjs/common';
+import { CommandHandler } from '@nestjs/cqrs';
+import type { ICommandHandler } from '@nestjs/cqrs';
 import { UserAlreadyExistsError } from '../../../domain/errors/auth-error';
 import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
 import type { PasswordHasher } from '../../ports/password-hasher.port';
-import type { RegisterInput } from '@odd-note-app/validation';
 import type { RegisterResult } from '../../shared/auth.types';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
@@ -14,9 +15,10 @@ import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
 import { MAIL_SENDER } from '../../ports/mail-sender.port';
 import type { MailSender } from '../../ports/mail-sender.port';
+import { RegisterCommand } from './register.command';
 
-@Injectable()
-export class RegisterHandler {
+@CommandHandler(RegisterCommand)
+export class RegisterHandler implements ICommandHandler<RegisterCommand> {
   private readonly logger = new Logger(RegisterHandler.name);
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
@@ -27,21 +29,21 @@ export class RegisterHandler {
     @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
   ) {}
 
-  async execute(input: RegisterInput): Promise<RegisterResult> {
-    const existingUser = await this.userRepo.findByEmail(input.email);
+  async execute(command: RegisterCommand): Promise<RegisterResult> {
+    const existingUser = await this.userRepo.findByEmail(command.input.email);
 
     if (existingUser) {
       throw new UserAlreadyExistsError();
     }
 
-    const passwordHash = await this.passwordHasher.hash(input.password);
+    const passwordHash = await this.passwordHasher.hash(command.input.password);
 
     const { user, verificationToken } = await this.unitOfWork.execute(async (ctx) => {
       let newUser;
       try {
         newUser = await ctx.userRepository.create({
-          email: input.email,
-          displayName: input.displayName,
+          email: command.input.email,
+          displayName: command.input.displayName,
           passwordHash,
         });
       } catch (err: unknown) {

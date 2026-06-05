@@ -1,4 +1,6 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Logger, Inject } from '@nestjs/common';
+import { CommandHandler } from '@nestjs/cqrs';
+import type { ICommandHandler } from '@nestjs/cqrs';
 import { MAIL_SENDER } from '../../ports/mail-sender.port';
 import type { MailSender } from '../../ports/mail-sender.port';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
@@ -7,9 +9,10 @@ import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
 import type { TokenRepository } from '../../ports/token.repository.port';
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
+import { ForgotPasswordCommand } from './forgot-password.command';
 
-@Injectable()
-export class ForgotPasswordHandler {
+@CommandHandler(ForgotPasswordCommand)
+export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordCommand> {
   private readonly logger = new Logger(ForgotPasswordHandler.name);
 
   constructor(
@@ -19,8 +22,8 @@ export class ForgotPasswordHandler {
     @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
   ) {}
 
-  async execute(email: string): Promise<void> {
-    const user = await this.userRepo.findByEmail(email);
+  async execute(command: ForgotPasswordCommand): Promise<void> {
+    const user = await this.userRepo.findByEmail(command.email);
 
     if (!user) {
       // Don't reveal whether email exists (security)

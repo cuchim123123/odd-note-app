@@ -1,3 +1,3 @@
-export type ResendVerificationCommand = {
-  email: string;
-};
+export class ResendVerificationCommand {
+  constructor(public readonly email: string) {}
+}

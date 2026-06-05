@@ -1,5 +1,6 @@
-export type UpdateProfileCommand = {
-  userId: string;
-  displayName?: string | undefined;
-  avatarUrl?: string | null | undefined;
-};
+export class UpdateProfileCommand {
+  constructor(
+    public readonly userId: string,
+    public readonly input: { displayName?: string | undefined; avatarUrl?: string | null | undefined },
+  ) {}
+}

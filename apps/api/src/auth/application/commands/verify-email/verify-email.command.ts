@@ -1,3 +1,3 @@
-export type VerifyEmailCommand = {
-  token: string;
-};
+export class VerifyEmailCommand {
+  constructor(public readonly token: string) {}
+}

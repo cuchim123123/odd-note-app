@@ -1,3 +1,5 @@
 import type { LoginInput } from '@odd-note-app/validation';
 
-export type LoginCommand = LoginInput;
+export class LoginCommand {
+  constructor(public readonly input: LoginInput) {}
+}

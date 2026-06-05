@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '../config/config.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthController } from './presentation/auth.controller';
@@ -35,7 +36,7 @@ import { ResendVerificationHandler } from './application/commands/resend-verific
 import { GetCurrentUserHandler } from './application/queries/get-current-user/get-current-user.handler';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
+  imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [AuthController],
   providers: [
     UserProfileMapper,

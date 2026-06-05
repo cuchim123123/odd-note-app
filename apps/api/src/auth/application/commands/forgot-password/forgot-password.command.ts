@@ -1,3 +1,3 @@
-export type ForgotPasswordCommand = {
-  email: string;
-};
+export class ForgotPasswordCommand {
+  constructor(public readonly email: string) {}
+}

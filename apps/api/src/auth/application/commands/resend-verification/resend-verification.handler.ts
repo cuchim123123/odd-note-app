@@ -1,4 +1,6 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Logger, Inject } from '@nestjs/common';
+import { CommandHandler } from '@nestjs/cqrs';
+import type { ICommandHandler } from '@nestjs/cqrs';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
 import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
@@ -7,9 +9,10 @@ import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { MAIL_SENDER } from '../../ports/mail-sender.port';
 import type { MailSender } from '../../ports/mail-sender.port';
+import { ResendVerificationCommand } from './resend-verification.command';
 
-@Injectable()
-export class ResendVerificationHandler {
+@CommandHandler(ResendVerificationCommand)
+export class ResendVerificationHandler implements ICommandHandler<ResendVerificationCommand> {
   private readonly logger = new Logger(ResendVerificationHandler.name);
 
   constructor(
@@ -19,8 +22,8 @@ export class ResendVerificationHandler {
     @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
   ) {}
 
-  async execute(email: string): Promise<void> {
-    const user = await this.userRepo.findByEmail(email);
+  async execute(command: ResendVerificationCommand): Promise<void> {
+    const user = await this.userRepo.findByEmail(command.email);
 
     if (!user || user.isEmailVerified) {
       return;

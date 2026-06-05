@@ -1,4 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { CommandHandler } from '@nestjs/cqrs';
+import type { ICommandHandler } from '@nestjs/cqrs';
 import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
 import type { PasswordHasher } from '../../ports/password-hasher.port';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
@@ -7,10 +9,11 @@ import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { InvalidTokenError, TokenAlreadyUsedError, TokenExpiredError } from '../../../domain/errors/auth-error';
+import { InvalidTokenError, TokenAlreadyUsedError, TokenExpiredError, UserNotFoundError } from '../../../domain/errors/auth-error';
+import { ResetPasswordCommand } from './reset-password.command';
 
-@Injectable()
-export class ResetPasswordHandler {
+@CommandHandler(ResetPasswordCommand)
+export class ResetPasswordHandler implements ICommandHandler<ResetPasswordCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
@@ -18,8 +21,8 @@ export class ResetPasswordHandler {
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
   ) {}
 
-  async execute(token: string, newPassword: string): Promise<void> {
-    const tokenHash = this.tokenProvider.hashToken(token);
+  async execute(command: ResetPasswordCommand): Promise<void> {
+    const tokenHash = this.tokenProvider.hashToken(command.token);
 
     const userId = await this.unitOfWork.execute(async (ctx) => {
       const resetToken = await ctx.tokenRepository.findResetToken(tokenHash);
@@ -41,7 +44,14 @@ export class ResetPasswordHandler {
       return resetToken.userId;
     });
 
-    const hashedPassword = await this.passwordHasher.hash(newPassword);
-    await this.userRepo.update(userId, { passwordHash: hashedPassword });
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new UserNotFoundError();
+    }
+
+    const hashedPassword = await this.passwordHasher.hash(command.passwordHash);
+    const updatedUser = user.changePassword(hashedPassword);
+    
+    await this.userRepo.save(updatedUser);
   }
 }

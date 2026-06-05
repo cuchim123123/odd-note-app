@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserAlreadyExistsError, InvalidCredentialsError } from '../domain/errors/auth-error';
+import { RegisterCommand } from '../application/commands/register/register.command';
+import { LoginCommand } from '../application/commands/login/login.command';
 
 vi.mock('../../config', () => ({
   AuthConfigService: class AuthConfigService {
@@ -64,6 +66,7 @@ function createMocks() {
     update: vi.fn(async (id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string; isEmailVerified?: boolean }) => {
       return prisma.user.update({ where: { id }, data });
     }),
+    save: vi.fn(async () => {}),
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,11 +154,11 @@ describe('Auth Use Cases', () => {
       tokenProvider.signAccessToken.mockReturnValue('access-token');
       tokenProvider.generateRefreshToken.mockReturnValue({ rawToken: 'refresh-token', tokenHash: 'hashed-refresh', expiresAt: new Date() });
 
-      const result = await registerHandler.execute({
+      const result = await registerHandler.execute(new RegisterCommand({
         email: 'user@example.com',
         displayName: 'User Example',
         password: 'Password123!',
-      });
+      }));
 
       expect(passwordHasher.hash).toHaveBeenCalledWith('Password123!');
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
@@ -181,11 +184,11 @@ describe('Auth Use Cases', () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'existing-user' });
 
       await expect(
-        registerHandler.execute({
+        registerHandler.execute(new RegisterCommand({
           email: 'user@example.com',
           displayName: 'User Example',
           password: 'Password123!',
-        }),
+        }))
       ).rejects.toBeInstanceOf(UserAlreadyExistsError);
 
       expect(unitOfWork.execute).not.toHaveBeenCalled();
@@ -214,10 +217,10 @@ describe('Auth Use Cases', () => {
       tokenProvider.signAccessToken.mockReturnValue('access-token');
       tokenProvider.generateRefreshToken.mockReturnValue({ rawToken: 'refresh-token', tokenHash: 'hashed-refresh', expiresAt: new Date() });
 
-      const result = await loginHandler.execute({
+      const result = await loginHandler.execute(new LoginCommand({
         email: 'user@example.com',
         password: 'Password123!',
-      });
+      }));
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'user@example.com' },
@@ -248,10 +251,10 @@ describe('Auth Use Cases', () => {
       passwordHasher.compare.mockResolvedValue(false);
 
       await expect(
-        loginHandler.execute({
+        loginHandler.execute(new LoginCommand({
           email: 'user@example.com',
           password: 'wrong-password',
-        }),
+        }))
       ).rejects.toBeInstanceOf(InvalidCredentialsError);
 
       expect(tokenProvider.signAccessToken).not.toHaveBeenCalled();

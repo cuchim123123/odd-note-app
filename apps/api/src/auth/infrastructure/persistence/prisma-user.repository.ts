@@ -23,16 +23,18 @@ export class PrismaUserRepository implements UserRepository {
     return UserPersistenceMapper.toDomain(raw);
   }
 
-  async update(
-    id: string,
-    data: {
-      displayName?: string;
-      avatarUrl?: string | null;
-      passwordHash?: string;
-      isEmailVerified?: boolean;
-    },
-  ): Promise<User> {
-    const raw = await this.prisma.user.update({ where: { id }, data });
-    return UserPersistenceMapper.toDomain(raw);
+  async save(user: User): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: user.email,
+        displayName: user.displayName,
+        passwordHash: user.passwordHash,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        avatarUrl: user.avatarUrl,
+        updatedAt: user.updatedAt,
+      },
+    });
   }
 }

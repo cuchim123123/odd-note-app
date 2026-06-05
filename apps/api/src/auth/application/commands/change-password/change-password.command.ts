@@ -1,6 +1,6 @@
-import type { ChangePasswordOutput } from '@odd-note-app/validation';
-
-export type ChangePasswordCommand = {
-  userId: string;
-  input: ChangePasswordOutput;
-};
+export class ChangePasswordCommand {
+  constructor(
+    public readonly userId: string,
+    public readonly input: { oldPassword?: string; newPassword?: string },
+  ) {}
+}

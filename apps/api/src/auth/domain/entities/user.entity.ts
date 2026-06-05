@@ -38,4 +38,18 @@ export class User {
       new Date(),
     );
   }
+
+  changePassword(newPasswordHash: string): User {
+    return new User(
+      this.id,
+      this.email,
+      this.displayName,
+      newPasswordHash,
+      this.role,
+      this.isEmailVerified,
+      this.avatarUrl,
+      this.createdAt,
+      new Date(),
+    );
+  }
 }

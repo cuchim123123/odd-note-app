@@ -1,3 +1,5 @@
 import type { RegisterInput } from '@odd-note-app/validation';
 
-export type RegisterCommand = RegisterInput;
+export class RegisterCommand {
+  constructor(public readonly input: RegisterInput) {}
+}

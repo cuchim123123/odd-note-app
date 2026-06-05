@@ -1,4 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { CommandHandler } from '@nestjs/cqrs';
+import type { ICommandHandler } from '@nestjs/cqrs';
 import type { AuthTokens } from '../../shared/auth.types';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
@@ -9,9 +11,10 @@ import type { UserRepository } from '../../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
 import { InvalidTokenError } from '../../../domain/errors/auth-error';
+import { RefreshTokensCommand } from './refresh-tokens.command';
 
-@Injectable()
-export class RefreshTokensHandler {
+@CommandHandler(RefreshTokensCommand)
+export class RefreshTokensHandler implements ICommandHandler<RefreshTokensCommand> {
   constructor(
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
@@ -19,9 +22,9 @@ export class RefreshTokensHandler {
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
   ) {}
 
-  async execute(refreshToken: string): Promise<AuthTokens> {
-    const { userId } = this.tokenProvider.verifyRefreshToken(refreshToken);
-    const tokenHash = this.tokenProvider.hashToken(refreshToken);
+  async execute(command: RefreshTokensCommand): Promise<AuthTokens> {
+    const { userId } = this.tokenProvider.verifyRefreshToken(command.refreshToken);
+    const tokenHash = this.tokenProvider.hashToken(command.refreshToken);
 
     return this.unitOfWork.execute(async (ctx) => {
       const tokenRecord = await ctx.tokenRepository.findRefreshToken(tokenHash);

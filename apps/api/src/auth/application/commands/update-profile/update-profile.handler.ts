@@ -1,23 +1,27 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { CommandHandler } from '@nestjs/cqrs';
+import type { ICommandHandler } from '@nestjs/cqrs';
+import { UserNotFoundError } from '../../../domain/errors/auth-error';
 import type { User } from '../../../domain/entities/user.entity';
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
+import { UpdateProfileCommand } from './update-profile.command';
 
-@Injectable()
-export class UpdateProfileHandler {
+@CommandHandler(UpdateProfileCommand)
+export class UpdateProfileHandler implements ICommandHandler<UpdateProfileCommand> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
   ) {}
 
-  async execute(userId: string, input: { displayName?: string | undefined; avatarUrl?: string | null | undefined }): Promise<User> {
-    const data: { displayName?: string; avatarUrl?: string | null } = {};
-    if (input.displayName !== undefined) {
-      data.displayName = input.displayName.trim();
-    }
-    if (input.avatarUrl !== undefined) {
-      data.avatarUrl = input.avatarUrl;
+  async execute(command: UpdateProfileCommand): Promise<User> {
+    const user = await this.userRepo.findById(command.userId);
+    if (!user) {
+      throw new UserNotFoundError();
     }
 
-    return this.userRepo.update(userId, data);
+    const updatedUser = user.updateProfile(command.input.displayName, command.input.avatarUrl);
+    await this.userRepo.save(updatedUser);
+
+    return updatedUser;
   }
 }
