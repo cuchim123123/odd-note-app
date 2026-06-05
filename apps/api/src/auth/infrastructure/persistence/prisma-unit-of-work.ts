@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../../prisma/prisma.service';
-import type { UnitOfWork, TransactionContext } from '../../../application/ports/unit-of-work.port';
+import { PrismaService } from '../../../prisma/prisma.service';
+import type { UnitOfWork, TransactionContext } from '../../application/ports/unit-of-work.port';
 import { PrismaUserRepository } from './prisma-user.repository';
 import { PrismaTokenRepository } from './prisma-token.repository';
 

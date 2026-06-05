@@ -5,7 +5,7 @@ import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { AuthUserMapper } from '../../../infrastructure/mappers/auth-user.mapper';
+import { AuthUserMapper } from '../../../infrastructure/persistence/mappers/auth-user.mapper';
 import { InvalidTokenError } from '../../../domain/errors/auth-error';
 import type { AuthUserProfile } from '../../shared/auth.types';
 

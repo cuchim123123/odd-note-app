@@ -8,7 +8,7 @@ import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
 import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
 import type { TokenRepository } from '../../ports/token.repository.port';
-import { AuthUserMapper } from '../../../infrastructure/mappers/auth-user.mapper';
+import { AuthUserMapper } from '../../../infrastructure/persistence/mappers/auth-user.mapper';
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 
