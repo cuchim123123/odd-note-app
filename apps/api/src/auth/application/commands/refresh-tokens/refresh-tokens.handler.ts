@@ -1,6 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
+import * as crypto from 'crypto';
 import type { AuthTokens } from '../../shared/auth.types';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
@@ -12,6 +13,7 @@ import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
 import { InvalidTokenError } from '../../../domain/errors/auth-error';
 import { RefreshTokensCommand } from './refresh-tokens.command';
+import { RefreshToken } from '../../../domain/entities/token.entity';
 
 @CommandHandler(RefreshTokensCommand)
 export class RefreshTokensHandler implements ICommandHandler<RefreshTokensCommand> {
@@ -29,23 +31,14 @@ export class RefreshTokensHandler implements ICommandHandler<RefreshTokensComman
     return this.unitOfWork.execute(async (ctx) => {
       const tokenRecord = await ctx.tokenRepository.findRefreshToken(tokenHash);
 
-      if (
-        !tokenRecord ||
-        tokenRecord.userId !== userId ||
-        tokenRecord.revokedAt ||
-        tokenRecord.expiresAt < new Date()
-      ) {
+      if (!tokenRecord || tokenRecord.userId !== userId) {
         throw new InvalidTokenError();
       }
 
-      const now = new Date();
-      const revokeResult = await ctx.tokenRepository.updateRefreshTokenRevocation(tokenRecord.id, now);
+      const consumedToken = tokenRecord.consume();
+      await ctx.tokenRepository.saveRefreshToken(consumedToken);
 
-      if (revokeResult.count !== 1) {
-        throw new InvalidTokenError();
-      }
-
-      const user = await ctx.userRepository.findById(tokenRecord.userId);
+      const user = await ctx.userRepository.findById(consumedToken.userId);
       if (!user) {
         throw new InvalidTokenError();
       }
@@ -53,11 +46,16 @@ export class RefreshTokensHandler implements ICommandHandler<RefreshTokensComman
       const accessToken = this.tokenProvider.signAccessToken({ sub: user.id, displayName: user.displayName });
       const newRefresh = this.tokenProvider.generateRefreshToken(user.id);
 
-      await ctx.tokenRepository.createRefreshToken({
-        tokenHash: newRefresh.tokenHash,
-        expiresAt: newRefresh.expiresAt,
-        userId: user.id,
-      });
+      const newRefreshTokenEntity = new RefreshToken(
+        crypto.randomUUID(),
+        newRefresh.tokenHash,
+        user.id,
+        newRefresh.expiresAt,
+        null,
+        new Date()
+      );
+
+      await ctx.tokenRepository.saveRefreshToken(newRefreshTokenEntity);
 
       return { accessToken, refreshToken: newRefresh.rawToken };
     });

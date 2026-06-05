@@ -9,7 +9,7 @@ import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { InvalidTokenError, TokenAlreadyUsedError, TokenExpiredError, UserNotFoundError } from '../../../domain/errors/auth-error';
+import { InvalidTokenError, UserNotFoundError } from '../../../domain/errors/auth-error';
 import { ResetPasswordCommand } from './reset-password.command';
 
 @CommandHandler(ResetPasswordCommand)
@@ -31,17 +31,10 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
         throw new InvalidTokenError('Invalid password reset token');
       }
 
-      if (resetToken.usedAt) {
-        throw new TokenAlreadyUsedError('This password reset link has already been used');
-      }
+      const consumedToken = resetToken.consume();
+      await ctx.tokenRepository.saveResetToken(consumedToken);
 
-      if (new Date() > resetToken.expiresAt) {
-        throw new TokenExpiredError('This password reset link has expired');
-      }
-
-      await ctx.tokenRepository.markResetTokenUsed(resetToken.id);
-
-      return resetToken.userId;
+      return consumedToken.userId;
     });
 
     const user = await this.userRepo.findById(userId);

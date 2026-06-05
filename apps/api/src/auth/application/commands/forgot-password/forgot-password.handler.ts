@@ -1,6 +1,7 @@
 import { Logger, Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
+import * as crypto from 'crypto';
 import { MAIL_SENDER } from '../../ports/mail-sender.port';
 import type { MailSender } from '../../ports/mail-sender.port';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
@@ -10,6 +11,7 @@ import type { TokenRepository } from '../../ports/token.repository.port';
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { ForgotPasswordCommand } from './forgot-password.command';
+import { PasswordResetToken } from '../../../domain/entities/token.entity';
 
 @CommandHandler(ForgotPasswordCommand)
 export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordCommand> {
@@ -33,11 +35,16 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
     try {
       const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generatePasswordResetToken();
 
-      await this.tokenRepo.createResetToken({
+      const token = new PasswordResetToken(
+        crypto.randomUUID(),
         tokenHash,
+        user.id,
         expiresAt,
-        userId: user.id,
-      });
+        null,
+        new Date()
+      );
+
+      await this.tokenRepo.saveResetToken(token);
       await this.mailSender.sendPasswordResetEmail(user.email, rawToken);
     } catch (error) {
       // Log but don't throw - non-critical

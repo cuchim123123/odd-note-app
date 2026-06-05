@@ -1,6 +1,7 @@
 import { Logger, Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
+import * as crypto from 'crypto';
 import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
 import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
@@ -10,6 +11,7 @@ import type { UserRepository } from '../../ports/user.repository.port';
 import { MAIL_SENDER } from '../../ports/mail-sender.port';
 import type { MailSender } from '../../ports/mail-sender.port';
 import { ResendVerificationCommand } from './resend-verification.command';
+import { VerificationToken } from '../../../domain/entities/token.entity';
 
 @CommandHandler(ResendVerificationCommand)
 export class ResendVerificationHandler implements ICommandHandler<ResendVerificationCommand> {
@@ -31,11 +33,16 @@ export class ResendVerificationHandler implements ICommandHandler<ResendVerifica
 
     const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generateVerificationToken();
 
-    await this.tokenRepo.createVerificationToken({
+    const token = new VerificationToken(
+      crypto.randomUUID(),
       tokenHash,
+      user.id,
       expiresAt,
-      userId: user.id,
-    });
+      null,
+      new Date()
+    );
+
+    await this.tokenRepo.saveVerificationToken(token);
 
     try {
       await this.mailSender.sendVerificationEmail(user.email, user.displayName, rawToken);

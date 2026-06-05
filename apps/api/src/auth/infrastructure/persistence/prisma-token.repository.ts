@@ -1,66 +1,82 @@
 import { Injectable } from '@nestjs/common';
 import type { PrismaTransactionClient } from './prisma-client.type';
 import type { TokenRepository } from '../../application/ports/token.repository.port';
-import type { VerificationToken, PasswordResetToken, RefreshToken } from '../../domain/entities/token.entity';
+import { VerificationToken, PasswordResetToken, RefreshToken } from '../../domain/entities/token.entity';
 
 @Injectable()
 export class PrismaTokenRepository implements TokenRepository {
   constructor(private readonly prisma: PrismaTransactionClient) {}
 
   // Verification tokens
-  async createVerificationToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<VerificationToken> {
-    return this.prisma.verificationToken.create({ data });
+  async saveVerificationToken(token: VerificationToken): Promise<void> {
+    await this.prisma.verificationToken.upsert({
+      where: { id: token.id },
+      create: {
+        id: token.id,
+        tokenHash: token.tokenHash,
+        userId: token.userId,
+        expiresAt: token.expiresAt,
+        usedAt: token.usedAt,
+        createdAt: token.createdAt,
+      },
+      update: {
+        usedAt: token.usedAt,
+      },
+    });
   }
 
   async findVerificationToken(tokenHash: string): Promise<VerificationToken | null> {
-    return this.prisma.verificationToken.findUnique({ where: { tokenHash } });
-  }
-
-  async markVerificationTokenUsed(id: string, now: Date): Promise<{ count: number }> {
-    return this.prisma.verificationToken.updateMany({
-      where: {
-        id,
-        usedAt: null,
-        expiresAt: { gt: now },
-      },
-      data: { usedAt: now },
-    });
+    const raw = await this.prisma.verificationToken.findUnique({ where: { tokenHash } });
+    if (!raw) return null;
+    return new VerificationToken(raw.id, raw.tokenHash, raw.userId, raw.expiresAt, raw.usedAt, raw.createdAt);
   }
 
   // Password reset tokens
-  async createResetToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<PasswordResetToken> {
-    return this.prisma.passwordResetToken.create({ data });
+  async saveResetToken(token: PasswordResetToken): Promise<void> {
+    await this.prisma.passwordResetToken.upsert({
+      where: { id: token.id },
+      create: {
+        id: token.id,
+        tokenHash: token.tokenHash,
+        userId: token.userId,
+        expiresAt: token.expiresAt,
+        usedAt: token.usedAt,
+        createdAt: token.createdAt,
+      },
+      update: {
+        usedAt: token.usedAt,
+      },
+    });
   }
 
   async findResetToken(tokenHash: string): Promise<PasswordResetToken | null> {
-    return this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
-  }
-
-  async markResetTokenUsed(id: string): Promise<void> {
-    await this.prisma.passwordResetToken.update({ where: { id }, data: { usedAt: new Date() } });
+    const raw = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    if (!raw) return null;
+    return new PasswordResetToken(raw.id, raw.tokenHash, raw.userId, raw.expiresAt, raw.usedAt, raw.createdAt);
   }
 
   // Refresh tokens
-  async createRefreshToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<RefreshToken> {
-    return this.prisma.refreshToken.create({ data });
+  async saveRefreshToken(token: RefreshToken): Promise<void> {
+    await this.prisma.refreshToken.upsert({
+      where: { id: token.id },
+      create: {
+        id: token.id,
+        tokenHash: token.tokenHash,
+        userId: token.userId,
+        expiresAt: token.expiresAt,
+        revokedAt: token.revokedAt,
+        createdAt: token.createdAt,
+      },
+      update: {
+        revokedAt: token.revokedAt,
+      },
+    });
   }
 
   async findRefreshToken(tokenHash: string): Promise<RefreshToken | null> {
-    return this.prisma.refreshToken.findUnique({ where: { tokenHash } });
-  }
-
-  async revokeRefreshToken(tokenHash: string, revokedAt: Date): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { tokenHash, revokedAt: null, expiresAt: { gt: revokedAt } },
-      data: { revokedAt },
-    });
-  }
-
-  async updateRefreshTokenRevocation(id: string, revokedAt: Date): Promise<{ count: number }> {
-    return this.prisma.refreshToken.updateMany({
-      where: { id, revokedAt: null, expiresAt: { gt: revokedAt } },
-      data: { revokedAt },
-    });
+    const raw = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
+    if (!raw) return null;
+    return new RefreshToken(raw.id, raw.tokenHash, raw.userId, raw.expiresAt, raw.revokedAt, raw.createdAt);
   }
 
   // Cleanup

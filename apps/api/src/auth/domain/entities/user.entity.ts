@@ -1,3 +1,5 @@
+import { InvalidCredentialsError } from '../errors/auth-error';
+
 export class User {
   constructor(
     public readonly id: string,
@@ -51,5 +53,12 @@ export class User {
       this.createdAt,
       new Date(),
     );
+  }
+
+  async authenticate(password: string, hasher: { compare: (plain: string, hashed: string) => Promise<boolean> }): Promise<void> {
+    const isValid = await hasher.compare(password, this.passwordHash);
+    if (!isValid) {
+      throw new InvalidCredentialsError();
+    }
   }
 }

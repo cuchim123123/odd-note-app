@@ -2,22 +2,18 @@ import type { VerificationToken, PasswordResetToken, RefreshToken } from '../../
 
 export interface TokenRepository {
   // Verification tokens
-  createVerificationToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<VerificationToken>;
+  saveVerificationToken(token: VerificationToken): Promise<void>;
   findVerificationToken(tokenHash: string): Promise<VerificationToken | null>;
-  markVerificationTokenUsed(id: string, now: Date): Promise<{ count: number }>;
 
   // Password reset tokens
-  createResetToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<PasswordResetToken>;
+  saveResetToken(token: PasswordResetToken): Promise<void>;
   findResetToken(tokenHash: string): Promise<PasswordResetToken | null>;
-  markResetTokenUsed(id: string): Promise<void>;
 
   // Refresh tokens
-  createRefreshToken(data: { userId: string; tokenHash: string; expiresAt: Date }): Promise<RefreshToken>;
+  saveRefreshToken(token: RefreshToken): Promise<void>;
   findRefreshToken(tokenHash: string): Promise<RefreshToken | null>;
-  revokeRefreshToken(tokenHash: string, revokedAt: Date): Promise<void>;
-  updateRefreshTokenRevocation(id: string, revokedAt: Date): Promise<{ count: number }>;
 
-  // Cleanup
+  // Cleanup (Infrastructure concern)
   deleteExpiredOrUsedTokens(now: Date): Promise<{ refreshCount: number; verificationCount: number; resetCount: number }>;
 }
 export const TOKEN_REPOSITORY = Symbol('TokenRepository');

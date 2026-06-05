@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserAlreadyExistsError, InvalidCredentialsError } from '../domain/errors/auth-error';
 import { RegisterCommand } from '../application/commands/register/register.command';
+import { User } from '../domain/entities/user.entity';
 import { LoginCommand } from '../application/commands/login/login.command';
 
 vi.mock('../../config', () => ({
@@ -11,7 +12,6 @@ vi.mock('../../config', () => ({
   },
   JwtConfigService: class JwtConfigService {},
 }));
-
 
 import { RegisterHandler } from '../application/commands/register/register.handler';
 import { LoginHandler } from '../application/commands/login/login.handler';
@@ -55,13 +55,18 @@ function createMocks() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRepo: any = {
     findById: vi.fn(async (id: string) => {
-      return prisma.user.findUnique({ where: { id } });
+      const raw = await prisma.user.findUnique({ where: { id } });
+      if (!raw) return null;
+      return new User(raw.id, raw.email, raw.displayName, raw.passwordHash, raw.role, raw.isEmailVerified, raw.avatarUrl, raw.createdAt, raw.updatedAt);
     }),
     findByEmail: vi.fn(async (email: string) => {
-      return prisma.user.findUnique({ where: { email } });
+      const raw = await prisma.user.findUnique({ where: { email } });
+      if (!raw) return null;
+      return new User(raw.id, raw.email, raw.displayName, raw.passwordHash, raw.role, raw.isEmailVerified, raw.avatarUrl, raw.createdAt, raw.updatedAt);
     }),
     create: vi.fn(async (data: { email: string; displayName: string; passwordHash: string }) => {
-      return prisma.user.create({ data });
+      const raw = await prisma.user.create({ data });
+      return new User(raw.id, raw.email, raw.displayName, raw.passwordHash, 'USER', false, null, new Date(), new Date());
     }),
     update: vi.fn(async (id: string, data: { displayName?: string; avatarUrl?: string | null; passwordHash?: string; isEmailVerified?: boolean }) => {
       return prisma.user.update({ where: { id }, data });
@@ -71,9 +76,9 @@ function createMocks() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tokenRepo: any = {
-    createVerificationToken: vi.fn(),
-    createRefreshToken: vi.fn(),
-    createResetToken: vi.fn(),
+    saveVerificationToken: vi.fn(),
+    saveRefreshToken: vi.fn(),
+    saveResetToken: vi.fn(),
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -165,11 +170,11 @@ describe('Auth Use Cases', () => {
         where: { email: 'user@example.com' },
       });
       expect(unitOfWork.execute).toHaveBeenCalledTimes(1);
-      expect(tokenRepo.createVerificationToken).toHaveBeenCalled();
+      expect(tokenRepo.saveVerificationToken).toHaveBeenCalled();
       expect(mailSender.sendVerificationEmail).toHaveBeenCalledWith('user@example.com', 'User Example', 'verification-token');
       expect(tokenProvider.signAccessToken).toHaveBeenCalled();
       expect(tokenProvider.generateRefreshToken).toHaveBeenCalled();
-      expect(tokenRepo.createRefreshToken).toHaveBeenCalled();
+      expect(tokenRepo.saveRefreshToken).toHaveBeenCalled();
       // Handler now returns the domain User entity, not the mapped profile
       expect(result.user).toMatchObject({ id: 'user-123', email: 'user@example.com' });
       expect(result.tokens).toEqual({
@@ -181,7 +186,7 @@ describe('Auth Use Cases', () => {
     it('rejects registration when email already exists', async () => {
       const { registerHandler, prisma, unitOfWork, tokenProvider } = createMocks();
 
-      prisma.user.findUnique.mockResolvedValue({ id: 'existing-user' });
+      prisma.user.findUnique.mockResolvedValue({ id: 'existing-user', email: 'user@example.com' });
 
       await expect(
         registerHandler.execute(new RegisterCommand({
@@ -228,7 +233,7 @@ describe('Auth Use Cases', () => {
       expect(passwordHasher.compare).toHaveBeenCalledWith('Password123!', 'hashed-password');
       expect(tokenProvider.signAccessToken).toHaveBeenCalled();
       expect(tokenProvider.generateRefreshToken).toHaveBeenCalled();
-      expect(tokenRepo.createRefreshToken).toHaveBeenCalled();
+      expect(tokenRepo.saveRefreshToken).toHaveBeenCalled();
       // Handler now returns the domain User entity, not the mapped profile
       expect(result.user).toMatchObject({ id: 'user-123', email: 'user@example.com' });
       expect(result.tokens).toEqual({
@@ -247,6 +252,9 @@ describe('Auth Use Cases', () => {
         passwordHash: 'hashed-password',
         role: 'USER',
         isEmailVerified: true,
+        avatarUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
       passwordHasher.compare.mockResolvedValue(false);
 

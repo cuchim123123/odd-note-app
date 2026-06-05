@@ -17,8 +17,11 @@ export class LogoutHandler implements ICommandHandler<LogoutCommand> {
   async execute(command: LogoutCommand): Promise<void> {
     this.tokenProvider.verifyRefreshToken(command.refreshToken);
     const tokenHash = this.tokenProvider.hashToken(command.refreshToken);
-    const now = new Date();
 
-    await this.tokenRepo.revokeRefreshToken(tokenHash, now);
+    const tokenRecord = await this.tokenRepo.findRefreshToken(tokenHash);
+    if (tokenRecord) {
+      const revokedToken = tokenRecord.revoke();
+      await this.tokenRepo.saveRefreshToken(revokedToken);
+    }
   }
 }

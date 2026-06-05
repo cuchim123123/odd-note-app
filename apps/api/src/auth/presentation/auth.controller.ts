@@ -31,7 +31,9 @@ import { UserProfileMapper } from './mappers/user-profile.mapper';
 import { AuthErrorFilter } from './filters/auth-error.filter';
 import type { AuthResult } from '../application/shared/auth.types';
 import type { User } from '../domain/entities/user.entity';
+import { PasswordResetToken } from '../domain/entities/token.entity';
 import type { AuthTokens } from '../application/shared/auth.types';
+import * as crypto from 'crypto';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')
@@ -128,11 +130,15 @@ export class AuthController {
     }
 
     const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generatePasswordResetToken();
-    await this.tokenRepo.createResetToken({
+    const tokenEntity = new PasswordResetToken(
+      crypto.randomUUID(),
       tokenHash,
+      user.id,
       expiresAt,
-      userId: user.id,
-    });
+      null,
+      new Date()
+    );
+    await this.tokenRepo.saveResetToken(tokenEntity);
     return { token: rawToken };
   }
 

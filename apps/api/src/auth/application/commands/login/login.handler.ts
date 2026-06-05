@@ -1,6 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
+import * as crypto from 'crypto';
 import { InvalidCredentialsError } from '../../../domain/errors/auth-error';
 import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
 import type { PasswordHasher } from '../../ports/password-hasher.port';
@@ -12,6 +13,7 @@ import type { TokenRepository } from '../../ports/token.repository.port';
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { LoginCommand } from './login.command';
+import { RefreshToken } from '../../../domain/entities/token.entity';
 
 @CommandHandler(LoginCommand)
 export class LoginHandler implements ICommandHandler<LoginCommand> {
@@ -29,20 +31,21 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
       throw new InvalidCredentialsError();
     }
 
-    const isPasswordValid = await this.passwordHasher.compare(command.input.password!, user.passwordHash);
-
-    if (!isPasswordValid) {
-      throw new InvalidCredentialsError();
-    }
+    await user.authenticate(command.input.password!, this.passwordHasher);
 
     const accessToken = this.tokenProvider.signAccessToken({ sub: user.id, displayName: user.displayName });
     const refresh = this.tokenProvider.generateRefreshToken(user.id);
 
-    await this.tokenRepo.createRefreshToken({
-      tokenHash: refresh.tokenHash,
-      expiresAt: refresh.expiresAt,
-      userId: user.id,
-    });
+    const refreshTokenEntity = new RefreshToken(
+      crypto.randomUUID(),
+      refresh.tokenHash,
+      user.id,
+      refresh.expiresAt,
+      null,
+      new Date()
+    );
+
+    await this.tokenRepo.saveRefreshToken(refreshTokenEntity);
 
     return {
       user,
