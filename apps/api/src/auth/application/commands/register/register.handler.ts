@@ -12,7 +12,7 @@ import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { AuthUserMapper } from '../../../infrastructure/persistence/mappers/auth-user.mapper';
+
 import { MAIL_SENDER } from '../../ports/mail-sender.port';
 import type { MailSender } from '../../ports/mail-sender.port';
 
@@ -25,7 +25,6 @@ export class RegisterHandler {
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
-    private readonly authUserMapper: AuthUserMapper,
     @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
   ) {}
 
@@ -84,7 +83,7 @@ export class RegisterHandler {
     });
 
     return {
-      user: this.authUserMapper.toProfile(user),
+      user,
       tokens: { accessToken, refreshToken: refresh.rawToken },
     };
   }

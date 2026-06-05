@@ -1,7 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { UserNotFoundError } from '../../../domain/errors/auth-error';
-import { AuthUserMapper } from '../../../infrastructure/persistence/mappers/auth-user.mapper';
-import type { AuthUserProfile } from '../../shared/auth.types';
+import type { User } from '../../../domain/entities/user.entity';
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 
@@ -9,16 +8,15 @@ import type { UserRepository } from '../../ports/user.repository.port';
 export class GetCurrentUserHandler {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
-    private readonly authUserMapper: AuthUserMapper,
   ) {}
 
-  async execute(userId: string): Promise<AuthUserProfile> {
+  async execute(userId: string): Promise<User> {
     const user = await this.userRepo.findById(userId);
 
     if (!user) {
       throw new UserNotFoundError();
     }
 
-    return this.authUserMapper.toProfile(user);
+    return user;
   }
 }

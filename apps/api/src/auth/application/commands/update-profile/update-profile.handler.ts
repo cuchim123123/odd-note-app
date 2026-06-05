@@ -1,6 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { AuthUserMapper } from '../../../infrastructure/persistence/mappers/auth-user.mapper';
-import type { AuthUserProfile } from '../../shared/auth.types';
+import type { User } from '../../../domain/entities/user.entity';
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 
@@ -8,10 +7,9 @@ import type { UserRepository } from '../../ports/user.repository.port';
 export class UpdateProfileHandler {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
-    private readonly authUserMapper: AuthUserMapper,
   ) {}
 
-  async execute(userId: string, input: { displayName?: string | undefined; avatarUrl?: string | null | undefined }): Promise<AuthUserProfile> {
+  async execute(userId: string, input: { displayName?: string | undefined; avatarUrl?: string | null | undefined }): Promise<User> {
     const data: { displayName?: string; avatarUrl?: string | null } = {};
     if (input.displayName !== undefined) {
       data.displayName = input.displayName.trim();
@@ -20,8 +18,6 @@ export class UpdateProfileHandler {
       data.avatarUrl = input.avatarUrl;
     }
 
-    const user = await this.userRepo.update(userId, data);
-
-    return this.authUserMapper.toProfile(user);
+    return this.userRepo.update(userId, data);
   }
 }

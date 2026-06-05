@@ -25,6 +25,8 @@ import { ResendVerificationHandler } from '../application/commands/resend-verifi
 // Query handlers
 import { GetCurrentUserHandler } from '../application/queries/get-current-user/get-current-user.handler';
 
+// Presentation
+import { UserProfileMapper } from './mappers/user-profile.mapper';
 import { AuthErrorFilter } from './filters/auth-error.filter';
 
 @UseFilters(AuthErrorFilter)
@@ -42,6 +44,7 @@ export class AuthController {
     private readonly logoutHandler: LogoutHandler,
     private readonly verifyEmailHandler: VerifyEmailHandler,
     private readonly resendVerificationHandler: ResendVerificationHandler,
+    private readonly userProfileMapper: UserProfileMapper,
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
@@ -49,17 +52,20 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() input: RegisterDto) {
-    return await this.registerHandler.execute(input);
+    const { user, tokens } = await this.registerHandler.execute(input);
+    return { user: this.userProfileMapper.toProfile(user), tokens };
   }
 
   @Post('login')
   async login(@Body() input: LoginDto) {
-    return await this.loginHandler.execute(input);
+    const { user, tokens } = await this.loginHandler.execute(input);
+    return { user: this.userProfileMapper.toProfile(user), tokens };
   }
 
   @Get('verify-email/:token')
   async verifyEmail(@Param('token') token: string) {
-    return await this.verifyEmailHandler.execute(token.trim());
+    const { user } = await this.verifyEmailHandler.execute(token.trim());
+    return { user: this.userProfileMapper.toProfile(user) };
   }
 
   @Post('resend-verification')
@@ -71,13 +77,15 @@ export class AuthController {
   @UseGuards(AccessTokenGuard)
   @Get('me')
   async me(@CurrentUser() userId: string) {
-    return await this.getCurrentUserHandler.execute(userId);
+    const user = await this.getCurrentUserHandler.execute(userId);
+    return this.userProfileMapper.toProfile(user);
   }
 
   @UseGuards(AccessTokenGuard)
   @Patch('profile')
   async updateProfile(@CurrentUser() userId: string, @Body() input: UpdateProfileDto) {
-    return await this.updateProfileHandler.execute(userId, input);
+    const user = await this.updateProfileHandler.execute(userId, input);
+    return this.userProfileMapper.toProfile(user);
   }
 
   @UseGuards(AccessTokenGuard)
@@ -142,6 +150,7 @@ export class AuthController {
       return { message: 'Not available' };
     }
 
-    return await this.loginHandler.execute(input);
+    const { user, tokens } = await this.loginHandler.execute(input);
+    return { user: this.userProfileMapper.toProfile(user), tokens };
   }
 }

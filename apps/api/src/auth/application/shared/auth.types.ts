@@ -1,3 +1,9 @@
+import type { User } from '../../domain/entities/user.entity';
+
+/**
+ * HTTP response shape — used only by the presentation layer (controller + UserProfileMapper).
+ * Lives here as a shared type since both handler return types and controller response shapes reference it.
+ */
 export type AuthUserProfile = {
   id: string;
   email: string;
@@ -12,13 +18,12 @@ export type AuthTokens = {
   refreshToken: string;
 };
 
-export type AccessTokenPayload = {
-  sub?: string;
-  type?: string;
-};
-
+/**
+ * Command handler return types — carry the domain User entity, not the mapped profile.
+ * The controller maps User → AuthUserProfile via UserProfileMapper before sending the HTTP response.
+ */
 export type AuthResult = {
-  user: AuthUserProfile;
+  user: User;
   tokens: AuthTokens;
 };
 

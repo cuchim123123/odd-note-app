@@ -5,9 +5,8 @@ import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
 import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { AuthUserMapper } from '../../../infrastructure/persistence/mappers/auth-user.mapper';
 import { InvalidTokenError } from '../../../domain/errors/auth-error';
-import type { AuthUserProfile } from '../../shared/auth.types';
+import type { User } from '../../../domain/entities/user.entity';
 
 @Injectable()
 export class VerifyEmailHandler {
@@ -15,10 +14,9 @@ export class VerifyEmailHandler {
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
-    private readonly authUserMapper: AuthUserMapper,
   ) {}
 
-  async execute(token: string): Promise<{ user: AuthUserProfile }> {
+  async execute(token: string): Promise<{ user: User }> {
     const tokenHash = this.tokenProvider.hashToken(token);
 
     const userId = await this.unitOfWork.execute(async (ctx) => {
@@ -39,6 +37,6 @@ export class VerifyEmailHandler {
     });
 
     const updatedUser = await this.userRepo.update(userId, { isEmailVerified: true });
-    return { user: this.authUserMapper.toProfile(updatedUser) };
+    return { user: updatedUser };
   }
 }

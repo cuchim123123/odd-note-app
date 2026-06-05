@@ -50,12 +50,6 @@ function createMocks() {
     compare: vi.fn(),
   };
 
-  const authUserMapper = {
-    toProfile: vi.fn(),
-  };
-
-
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRepo: any = {
     findById: vi.fn(async (id: string) => {
@@ -92,7 +86,6 @@ function createMocks() {
     passwordHasher as never,
     tokenProvider as never,
     tokenRepo as never,
-    authUserMapper as never,
     mailSender as never,
   );
 
@@ -101,7 +94,6 @@ function createMocks() {
     passwordHasher as never,
     tokenProvider as never,
     tokenRepo as never,
-    authUserMapper as never,
   );
 
   const changePasswordHandler = new ChangePasswordHandler(
@@ -126,7 +118,6 @@ function createMocks() {
     authConfig,
     tokenProvider,
     tokenRepo,
-    authUserMapper,
     mailSender,
     passwordHasher,
   };
@@ -138,8 +129,8 @@ describe('Auth Use Cases', () => {
   });
 
   describe('RegisterHandler', () => {
-    it('registers a user, sends verification, and returns profile & tokens', async () => {
-      const { registerHandler, prisma, unitOfWork, tokenProvider, tokenRepo, authUserMapper, mailSender, passwordHasher } = createMocks();
+    it('registers a user, sends verification, and returns user entity & tokens', async () => {
+      const { registerHandler, prisma, unitOfWork, tokenProvider, tokenRepo, mailSender, passwordHasher } = createMocks();
       passwordHasher.hash.mockResolvedValue('hashed-password');
 
       const createdUser = {
@@ -149,6 +140,7 @@ describe('Auth Use Cases', () => {
         passwordHash: 'hashed-password',
         role: 'USER',
         isEmailVerified: false,
+        avatarUrl: null,
         createdAt: new Date('2026-05-12T00:00:00.000Z'),
         updatedAt: new Date('2026-05-12T00:00:00.000Z'),
       };
@@ -158,13 +150,6 @@ describe('Auth Use Cases', () => {
       tokenProvider.generateVerificationToken.mockReturnValue({ rawToken: 'verification-token', tokenHash: 'hashed-verification', expiresAt: new Date() });
       tokenProvider.signAccessToken.mockReturnValue('access-token');
       tokenProvider.generateRefreshToken.mockReturnValue({ rawToken: 'refresh-token', tokenHash: 'hashed-refresh', expiresAt: new Date() });
-      authUserMapper.toProfile.mockReturnValue({
-        id: 'user-123',
-        email: 'user@example.com',
-        displayName: 'User Example',
-        role: 'USER',
-        isEmailVerified: false,
-      });
 
       const result = await registerHandler.execute({
         email: 'user@example.com',
@@ -182,19 +167,11 @@ describe('Auth Use Cases', () => {
       expect(tokenProvider.signAccessToken).toHaveBeenCalled();
       expect(tokenProvider.generateRefreshToken).toHaveBeenCalled();
       expect(tokenRepo.createRefreshToken).toHaveBeenCalled();
-      expect(authUserMapper.toProfile).toHaveBeenCalledWith(createdUser);
-      expect(result).toEqual({
-        user: {
-          id: 'user-123',
-          email: 'user@example.com',
-          displayName: 'User Example',
-          role: 'USER',
-          isEmailVerified: false,
-        },
-        tokens: {
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        },
+      // Handler now returns the domain User entity, not the mapped profile
+      expect(result.user).toMatchObject({ id: 'user-123', email: 'user@example.com' });
+      expect(result.tokens).toEqual({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
       });
     });
 
@@ -217,27 +194,25 @@ describe('Auth Use Cases', () => {
   });
 
   describe('LoginHandler', () => {
-    it('authenticates with valid credentials and returns auth data', async () => {
-      const { loginHandler, prisma, tokenProvider, tokenRepo, authUserMapper, passwordHasher } = createMocks();
+    it('authenticates with valid credentials and returns user entity & tokens', async () => {
+      const { loginHandler, prisma, tokenProvider, tokenRepo, passwordHasher } = createMocks();
 
-      prisma.user.findUnique.mockResolvedValue({
+      const existingUser = {
         id: 'user-123',
         email: 'user@example.com',
         displayName: 'User Example',
         passwordHash: 'hashed-password',
         role: 'USER',
         isEmailVerified: true,
-      });
+        avatarUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      prisma.user.findUnique.mockResolvedValue(existingUser);
       passwordHasher.compare.mockResolvedValue(true);
       tokenProvider.signAccessToken.mockReturnValue('access-token');
       tokenProvider.generateRefreshToken.mockReturnValue({ rawToken: 'refresh-token', tokenHash: 'hashed-refresh', expiresAt: new Date() });
-      authUserMapper.toProfile.mockReturnValue({
-        id: 'user-123',
-        email: 'user@example.com',
-        displayName: 'User Example',
-        role: 'USER',
-        isEmailVerified: true,
-      });
 
       const result = await loginHandler.execute({
         email: 'user@example.com',
@@ -251,19 +226,11 @@ describe('Auth Use Cases', () => {
       expect(tokenProvider.signAccessToken).toHaveBeenCalled();
       expect(tokenProvider.generateRefreshToken).toHaveBeenCalled();
       expect(tokenRepo.createRefreshToken).toHaveBeenCalled();
-      expect(authUserMapper.toProfile).toHaveBeenCalledWith(expect.objectContaining({ id: 'user-123' }));
-      expect(result).toEqual({
-        user: {
-          id: 'user-123',
-          email: 'user@example.com',
-          displayName: 'User Example',
-          role: 'USER',
-          isEmailVerified: true,
-        },
-        tokens: {
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        },
+      // Handler now returns the domain User entity, not the mapped profile
+      expect(result.user).toMatchObject({ id: 'user-123', email: 'user@example.com' });
+      expect(result.tokens).toEqual({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
       });
     });
 

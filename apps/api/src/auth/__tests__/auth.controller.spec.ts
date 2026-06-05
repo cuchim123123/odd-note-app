@@ -9,7 +9,7 @@ import type { TokenProvider } from '../application/ports/token-provider.port';
 import type { UserRepository } from '../application/ports/user.repository.port';
 import { AuthController } from '../presentation/auth.controller';
 
-// Use case types
+// Handler types
 import type { RegisterHandler } from '../application/commands/register/register.handler';
 import type { LoginHandler } from '../application/commands/login/login.handler';
 import type { ChangePasswordHandler } from '../application/commands/change-password/change-password.handler';
@@ -21,6 +21,10 @@ import type { UpdateProfileHandler } from '../application/commands/update-profil
 import type { VerifyEmailHandler } from '../application/commands/verify-email/verify-email.handler';
 import type { ResendVerificationHandler } from '../application/commands/resend-verification/resend-verification.handler';
 import type { LogoutHandler } from '../application/commands/logout/logout.handler';
+import type { UserProfileMapper } from '../presentation/mappers/user-profile.mapper';
+
+// Shared profile shape returned by the profile mapper
+const mockProfile = { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER' as const, isEmailVerified: false, avatarUrl: null };
 
 function createController() {
   const registerHandler = {
@@ -67,6 +71,11 @@ function createController() {
     execute: vi.fn(),
   };
 
+  // Presentation mapper — always returns mockProfile for simplicity
+  const userProfileMapper = {
+    toProfile: vi.fn(() => mockProfile),
+  };
+
   const tokenProvider = {
     generatePasswordResetToken: vi.fn(),
   };
@@ -93,6 +102,7 @@ function createController() {
     logoutHandler as unknown as LogoutHandler,
     verifyEmailHandler as unknown as VerifyEmailHandler,
     resendVerificationHandler as unknown as ResendVerificationHandler,
+    userProfileMapper as unknown as UserProfileMapper,
     tokenProvider as unknown as TokenProvider,
     tokenRepo,
     userRepo as unknown as UserRepository,
@@ -111,6 +121,7 @@ function createController() {
     logoutHandler,
     verifyEmailHandler,
     resendVerificationHandler,
+    userProfileMapper,
     tokenProvider,
     tokenRepo,
     userRepo,
@@ -122,58 +133,64 @@ describe('AuthController', () => {
     vi.clearAllMocks();
   });
 
-  it('delegates register to RegisterHandler', async () => {
-    const { controller, registerHandler } = createController();
+  it('delegates register to registerHandler and maps to profile', async () => {
+    const { controller, registerHandler, userProfileMapper } = createController();
     const input = { email: 'test@test.com', displayName: 'Test', password: 'Password123!' };
-    const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: false }, tokens: { accessToken: 'a', refreshToken: 'r' } };
+    const domainUser = { id: '1', email: 'test@test.com', displayName: 'Test' };
+    const tokens = { accessToken: 'a', refreshToken: 'r' };
 
-    registerHandler.execute.mockResolvedValue(expectedResult);
+    registerHandler.execute.mockResolvedValue({ user: domainUser, tokens });
 
     const result = await controller.register(input);
 
     expect(registerHandler.execute).toHaveBeenCalledWith(input);
-    expect(result).toEqual(expectedResult);
+    expect(userProfileMapper.toProfile).toHaveBeenCalledWith(domainUser);
+    expect(result).toEqual({ user: mockProfile, tokens });
   });
 
-  it('delegates login to LoginHandler', async () => {
-    const { controller, loginHandler } = createController();
+  it('delegates login to loginHandler and maps to profile', async () => {
+    const { controller, loginHandler, userProfileMapper } = createController();
     const input = { email: 'test@test.com', password: 'Password123!' };
-    const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: true }, tokens: { accessToken: 'a', refreshToken: 'r' } };
+    const domainUser = { id: '1', email: 'test@test.com', displayName: 'Test' };
+    const tokens = { accessToken: 'a', refreshToken: 'r' };
 
-    loginHandler.execute.mockResolvedValue(expectedResult);
+    loginHandler.execute.mockResolvedValue({ user: domainUser, tokens });
 
     const result = await controller.login(input);
 
     expect(loginHandler.execute).toHaveBeenCalledWith(input);
-    expect(result).toEqual(expectedResult);
+    expect(userProfileMapper.toProfile).toHaveBeenCalledWith(domainUser);
+    expect(result).toEqual({ user: mockProfile, tokens });
   });
 
-  it('delegates verifyEmail to VerifyEmailHandler', async () => {
-    const { controller, verifyEmailHandler } = createController();
+  it('delegates verifyEmail to verifyEmailHandler and maps to profile', async () => {
+    const { controller, verifyEmailHandler, userProfileMapper } = createController();
     const token = 'some-valid-token';
-    const expectedResult = { user: { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: true } };
+    const domainUser = { id: '1', email: 'test@test.com', isEmailVerified: true };
 
-    verifyEmailHandler.execute.mockResolvedValue(expectedResult);
+    verifyEmailHandler.execute.mockResolvedValue({ user: domainUser });
 
     const result = await controller.verifyEmail(token);
 
     expect(verifyEmailHandler.execute).toHaveBeenCalledWith(token);
-    expect(result).toEqual(expectedResult);
+    expect(userProfileMapper.toProfile).toHaveBeenCalledWith(domainUser);
+    expect(result).toEqual({ user: mockProfile });
   });
 
-  it('returns the current user profile from GetCurrentUserHandler', async () => {
-    const { controller, getCurrentUserHandler } = createController();
-    const expectedResult = { id: '1', email: 'test@test.com', displayName: 'Test', role: 'USER', isEmailVerified: false };
+  it('delegates me to getCurrentUserHandler and maps to profile', async () => {
+    const { controller, getCurrentUserHandler, userProfileMapper } = createController();
+    const domainUser = { id: '1', email: 'test@test.com', displayName: 'Test' };
 
-    getCurrentUserHandler.execute.mockResolvedValue(expectedResult);
+    getCurrentUserHandler.execute.mockResolvedValue(domainUser);
 
     const result = await controller.me('user-1');
 
     expect(getCurrentUserHandler.execute).toHaveBeenCalledWith('user-1');
-    expect(result).toEqual(expectedResult);
+    expect(userProfileMapper.toProfile).toHaveBeenCalledWith(domainUser);
+    expect(result).toEqual(mockProfile);
   });
 
-  it('delegates refresh to RefreshTokensHandler', async () => {
+  it('delegates refresh to refreshTokensHandler', async () => {
     const { controller, refreshTokensHandler } = createController();
     const input = { refreshToken: 'r' };
     const expectedResult = { accessToken: 'a2', refreshToken: 'r2' };
@@ -186,7 +203,7 @@ describe('AuthController', () => {
     expect(result).toEqual(expectedResult);
   });
 
-  it('delegates logout to LogoutHandler', async () => {
+  it('delegates logout to logoutHandler', async () => {
     const { controller, logoutHandler } = createController();
     const input = { refreshToken: 'r' };
 

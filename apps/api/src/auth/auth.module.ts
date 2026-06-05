@@ -7,7 +7,7 @@ import { JwtTokenProvider } from './infrastructure/security/jwt-token-provider';
 import { AuthConfigModule, JwtConfigModule } from '../config';
 import { MAIL_SENDER } from './application/ports/mail-sender.port';
 import { NodemailerMailSender } from './infrastructure/messaging/nodemailer-mail-sender';
-import { AuthUserMapper } from './infrastructure/persistence/mappers/auth-user.mapper';
+import { UserProfileMapper } from './presentation/mappers/user-profile.mapper';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { TokenCleanupCron } from './infrastructure/scheduling/token-cleanup.cron';
 import { USER_REPOSITORY } from './application/ports/user.repository.port';
@@ -38,7 +38,7 @@ import { GetCurrentUserHandler } from './application/queries/get-current-user/ge
   imports: [ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [AuthController],
   providers: [
-    AuthUserMapper,
+    UserProfileMapper,
     TokenCleanupCron,
     AccessTokenGuard,
     // Commands

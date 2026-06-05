@@ -8,7 +8,7 @@ import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
 import type { TokenProvider } from '../../ports/token-provider.port';
 import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
 import type { TokenRepository } from '../../ports/token.repository.port';
-import { AuthUserMapper } from '../../../infrastructure/persistence/mappers/auth-user.mapper';
+
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
 import type { UserRepository } from '../../ports/user.repository.port';
 
@@ -19,7 +19,6 @@ export class LoginHandler {
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
     @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
-    private readonly authUserMapper: AuthUserMapper,
   ) {}
 
   async execute(input: LoginInput): Promise<LoginResult> {
@@ -45,7 +44,7 @@ export class LoginHandler {
     });
 
     return {
-      user: this.authUserMapper.toProfile(user),
+      user,
       tokens: { accessToken, refreshToken: refresh.rawToken },
     };
   }
