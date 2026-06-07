@@ -31,6 +31,7 @@ import { UpdateProfileHandler } from './application/commands/update-profile/upda
 import { LogoutHandler } from './application/commands/logout/logout.handler';
 import { VerifyEmailHandler } from './application/commands/verify-email/verify-email.handler';
 import { ResendVerificationHandler } from './application/commands/resend-verification/resend-verification.handler';
+import { GenerateTestResetTokenHandler } from './application/commands/generate-test-reset-token/generate-test-reset-token.handler';
 
 // Queries
 import { GetCurrentUserHandler } from './application/queries/get-current-user/get-current-user.handler';
@@ -58,6 +59,7 @@ import { VerificationRequestedEventHandler } from './application/events/verifica
     LogoutHandler,
     VerifyEmailHandler,
     ResendVerificationHandler,
+    GenerateTestResetTokenHandler,
     // Queries
     GetCurrentUserHandler,
     // Events
@@ -88,6 +90,7 @@ import { VerificationRequestedEventHandler } from './application/events/verifica
     LogoutHandler,
     VerifyEmailHandler,
     ResendVerificationHandler,
+    GenerateTestResetTokenHandler,
     // Queries
     GetCurrentUserHandler,
   ],

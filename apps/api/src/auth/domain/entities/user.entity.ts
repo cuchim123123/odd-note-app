@@ -1,4 +1,4 @@
-import { InvalidCredentialsError } from '../errors/auth-error';
+import { InvalidCredentialsError, IncorrectPasswordError } from '../errors/auth-error';
 import * as crypto from 'crypto';
 
 export class User {
@@ -74,6 +74,13 @@ export class User {
     const isValid = await hasher.compare(password, this.passwordHash);
     if (!isValid) {
       throw new InvalidCredentialsError();
+    }
+  }
+
+  async verifyCurrentPassword(password: string, hasher: { compare: (plain: string, hashed: string) => Promise<boolean> }): Promise<void> {
+    const isValid = await hasher.compare(password, this.passwordHash);
+    if (!isValid) {
+      throw new IncorrectPasswordError();
     }
   }
 }

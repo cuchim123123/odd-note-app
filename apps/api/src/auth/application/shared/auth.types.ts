@@ -1,17 +1,6 @@
 import type { User } from '../../domain/entities/user.entity';
 
-/**
- * HTTP response shape — used only by the presentation layer (controller + UserProfileMapper).
- * Lives here as a shared type since both handler return types and controller response shapes reference it.
- */
-export type AuthUserProfile = {
-  id: string;
-  email: string;
-  displayName: string;
-  role: 'USER' | 'ADMIN';
-  isEmailVerified: boolean;
-  avatarUrl: string | null;
-};
+
 
 export type AuthTokens = {
   accessToken: string;

@@ -1,7 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { UserNotFoundError, IncorrectPasswordError } from '../../../domain/errors/auth-error';
+import { UserNotFoundError } from '../../../domain/errors/auth-error';
 import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
 import type { PasswordHasher } from '../../ports/password-hasher.port';
 import { USER_REPOSITORY } from '../../ports/user.repository.port';
@@ -22,10 +22,7 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
       throw new UserNotFoundError();
     }
 
-    const isPasswordValid = await this.passwordHasher.compare(command.input.oldPassword!, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new IncorrectPasswordError();
-    }
+    await user.verifyCurrentPassword(command.input.oldPassword!, this.passwordHasher);
 
     const passwordHash = await this.passwordHasher.hash(command.input.newPassword!);
     const updatedUser = user.changePassword(passwordHash);

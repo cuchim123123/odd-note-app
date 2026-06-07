@@ -1,7 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { User as DomainUser } from '../../domain/entities/user.entity';
-import type { AuthUserProfile } from '../../application/shared/auth.types';
 import type { EnvConfig } from '../../../config/config.module';
+
+export type AuthUserProfile = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: 'USER' | 'ADMIN';
+  isEmailVerified: boolean;
+  avatarUrl: string | null;
+};
 
 /**
  * Presentation-layer mapper: converts a domain User entity into the

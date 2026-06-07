@@ -95,7 +95,6 @@ function createMocks() {
     unitOfWork as never,
     passwordHasher as never,
     tokenProvider as never,
-    tokenRepo as never,
     eventBus as never,
   );
 

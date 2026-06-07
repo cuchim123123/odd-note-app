@@ -1,11 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards, Inject, UseFilters } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards, UseFilters } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { USER_REPOSITORY } from '../application/ports/user.repository.port';
-import type { UserRepository } from '../application/ports/user.repository.port';
-import { TOKEN_PROVIDER } from '../application/ports/token-provider.port';
-import type { TokenProvider } from '../application/ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../application/ports/token.repository.port';
-import type { TokenRepository } from '../application/ports/token.repository.port';
+
 import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ResendVerificationDto, UpdateProfileDto } from './dto';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { AccessTokenGuard } from '../../common/guards/access-token.guard';
@@ -22,6 +17,7 @@ import { UpdateProfileCommand } from '../application/commands/update-profile/upd
 import { LogoutCommand } from '../application/commands/logout/logout.command';
 import { VerifyEmailCommand } from '../application/commands/verify-email/verify-email.command';
 import { ResendVerificationCommand } from '../application/commands/resend-verification/resend-verification.command';
+import { GenerateTestResetTokenCommand } from '../application/commands/generate-test-reset-token/generate-test-reset-token.command';
 
 // Queries
 import { GetCurrentUserQuery } from '../application/queries/get-current-user/get-current-user.query';
@@ -31,7 +27,6 @@ import { UserProfileMapper } from './mappers/user-profile.mapper';
 import { AuthErrorFilter } from './filters/auth-error.filter';
 import type { AuthResult } from '../application/shared/auth.types';
 import type { User } from '../domain/entities/user.entity';
-import { PasswordResetToken } from '../domain/entities/token.entity';
 import type { AuthTokens } from '../application/shared/auth.types';
 
 @UseFilters(AuthErrorFilter)
@@ -41,9 +36,6 @@ export class AuthController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
     private readonly userProfileMapper: UserProfileMapper,
-    @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
-    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
-    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
   ) {}
 
   @Post('register')
@@ -123,15 +115,13 @@ export class AuthController {
       return { message: 'Not available' };
     }
 
-    const user = await this.userRepo.findByEmail(body.email);
-    if (!user) {
+    const result = await this.commandBus.execute<{ token?: string }>(new GenerateTestResetTokenCommand(body.email));
+    
+    if (!result.token) {
       return { message: 'If the email exists, a reset link has been sent' };
     }
 
-    const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generatePasswordResetToken();
-    const tokenEntity = PasswordResetToken.create(tokenHash, user.id, expiresAt);
-    await this.tokenRepo.saveResetToken(tokenEntity);
-    return { token: rawToken };
+    return { token: result.token };
   }
 
   // Development-only: test login endpoint that returns auth tokens for test automation.
