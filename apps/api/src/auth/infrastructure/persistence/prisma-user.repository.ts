@@ -4,10 +4,14 @@ import type { UserRepository } from '../../application/ports/user.repository.por
 import type { User } from '../../domain/entities/user.entity';
 import { UserPersistenceMapper } from './mappers/user-persistence.mapper';
 import { UserAlreadyExistsError } from '../../domain/errors/auth-error';
+import type { AggregateTracker } from './aggregate-tracker';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepository {
-  constructor(private readonly prisma: PrismaTransactionClient) {}
+  constructor(
+    private readonly prisma: PrismaTransactionClient,
+    private readonly tracker?: AggregateTracker
+  ) {}
 
   async findById(id: string): Promise<User | null> {
     const raw = await this.prisma.user.findUnique({ where: { id } });
@@ -20,11 +24,14 @@ export class PrismaUserRepository implements UserRepository {
   }
 
   async save(user: User): Promise<void> {
+    if (this.tracker) {
+      this.tracker.track(user);
+    }
     try {
       await this.prisma.user.upsert({
         where: { id: user.id },
         update: {
-          email: user.email,
+          email: user.email.value,
           displayName: user.displayName,
           passwordHash: user.passwordHash,
           role: user.role,
@@ -34,7 +41,7 @@ export class PrismaUserRepository implements UserRepository {
         },
         create: {
           id: user.id,
-          email: user.email,
+          email: user.email.value,
           displayName: user.displayName,
           passwordHash: user.passwordHash,
           role: user.role,

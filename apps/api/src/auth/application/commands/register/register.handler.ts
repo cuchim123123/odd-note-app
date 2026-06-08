@@ -1,5 +1,5 @@
 import { Inject } from '@nestjs/common';
-import { CommandHandler, EventBus } from '@nestjs/cqrs';
+import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
 import { UserAlreadyExistsError } from '../../../domain/errors/auth-error';
 import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
@@ -15,7 +15,6 @@ import type { UnitOfWork } from '../../ports/unit-of-work.port';
 import { RegisterCommand } from './register.command';
 import { VerificationToken, RefreshToken } from '../../../domain/entities/token.entity';
 import { User } from '../../../domain/entities/user.entity';
-import { UserRegisteredEvent } from '../../../domain/events/user-registered.event';
 
 @CommandHandler(RegisterCommand)
 export class RegisterHandler implements ICommandHandler<RegisterCommand> {
@@ -24,8 +23,6 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
-
-    private readonly eventBus: EventBus,
   ) {}
 
   async execute(command: RegisterCommand): Promise<RegisterResult> {
@@ -37,7 +34,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
 
     const passwordHash = await this.passwordHasher.hash(command.input.password);
 
-    const { user, verificationToken, tokens } = await this.unitOfWork.execute(async (ctx) => {
+    const { user, tokens } = await this.unitOfWork.execute(async (ctx) => {
       const newUser = User.create(command.input.email, command.input.displayName, passwordHash);
       await ctx.userRepository.save(newUser);
 
@@ -50,14 +47,18 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
       const refreshTokenEntity = RefreshToken.create(refresh.tokenHash, newUser.id, refresh.expiresAt);
       await ctx.tokenRepository.saveRefreshToken(refreshTokenEntity);
 
+      // Schedule email sending as an internal command
+      await ctx.outbox.scheduleInternalCommand('SendVerificationEmail', {
+        email: newUser.email.value,
+        displayName: newUser.displayName,
+        verificationToken: rawToken,
+      });
+
       return { 
         user: newUser, 
-        verificationToken: rawToken,
         tokens: { accessToken, refreshToken: refresh.rawToken },
       };
     });
-
-    this.eventBus.publish(new UserRegisteredEvent(user.email, user.displayName, verificationToken));
 
     return {
       user,

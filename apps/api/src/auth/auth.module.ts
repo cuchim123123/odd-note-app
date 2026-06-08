@@ -11,6 +11,7 @@ import { NodemailerMailSender } from './infrastructure/messaging/nodemailer-mail
 import { UserProfileMapper } from './presentation/mappers/user-profile.mapper';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { TokenCleanupCron } from './infrastructure/scheduling/token-cleanup.cron';
+import { OutboxProcessor } from './infrastructure/scheduling/outbox.processor';
 import { USER_REPOSITORY } from './application/ports/user.repository.port';
 import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository';
 import { TOKEN_REPOSITORY } from './application/ports/token.repository.port';
@@ -19,6 +20,8 @@ import { UNIT_OF_WORK } from './application/ports/unit-of-work.port';
 import { PrismaUnitOfWork } from './infrastructure/persistence/prisma-unit-of-work';
 import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { BcryptPasswordHasher } from './infrastructure/security/bcrypt-password-hasher';
+import { INTEGRATION_EVENT_MAPPER } from './application/ports/integration-event-mapper.port';
+import { DefaultIntegrationEventMapper } from './application/mappers/integration-event.mapper';
 
 // Commands
 import { RegisterHandler } from './application/commands/register/register.handler';
@@ -35,11 +38,6 @@ import { GenerateTestResetTokenHandler } from './application/commands/generate-t
 
 // Queries
 import { GetCurrentUserHandler } from './application/queries/get-current-user/get-current-user.handler';
-
-// Events
-import { UserRegisteredEventHandler } from './application/events/user-registered.handler';
-import { PasswordResetRequestedEventHandler } from './application/events/password-reset-requested.handler';
-import { VerificationRequestedEventHandler } from './application/events/verification-requested.handler';
 
 @Module({
   imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
@@ -62,10 +60,6 @@ import { VerificationRequestedEventHandler } from './application/events/verifica
     GenerateTestResetTokenHandler,
     // Queries
     GetCurrentUserHandler,
-    // Events
-    UserRegisteredEventHandler,
-    PasswordResetRequestedEventHandler,
-    VerificationRequestedEventHandler,
     // Port bindings
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },
@@ -73,6 +67,8 @@ import { VerificationRequestedEventHandler } from './application/events/verifica
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasher },
     { provide: TOKEN_PROVIDER, useClass: JwtTokenProvider },
     { provide: MAIL_SENDER, useClass: NodemailerMailSender },
+    { provide: INTEGRATION_EVENT_MAPPER, useClass: DefaultIntegrationEventMapper },
+    OutboxProcessor,
   ],
   exports: [
     USER_REPOSITORY,

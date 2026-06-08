@@ -1,23 +1,29 @@
 import { InvalidCredentialsError, IncorrectPasswordError } from '../errors/auth-error';
 import * as crypto from 'crypto';
+import { AggregateRoot } from '../shared/aggregate-root';
+import { EmailAddress } from '../value-objects/email-address';
+import { UserRegisteredDomainEvent } from '../events/user-registered.domain-event';
 
-export class User {
+export class User extends AggregateRoot {
   constructor(
     public readonly id: string,
-    public readonly email: string,
-    public readonly displayName: string,
-    public readonly passwordHash: string,
+    public readonly email: EmailAddress,
+    public displayName: string,
+    public passwordHash: string,
     public readonly role: 'USER' | 'ADMIN',
-    public readonly isEmailVerified: boolean,
-    public readonly avatarUrl: string | null,
+    public isEmailVerified: boolean,
+    public avatarUrl: string | null,
     public readonly createdAt: Date,
-    public readonly updatedAt: Date,
-  ) {}
+    public updatedAt: Date,
+  ) {
+    super();
+  }
 
   public static create(email: string, displayName: string, passwordHash: string): User {
-    return new User(
+    const emailAddress = EmailAddress.create(email);
+    const user = new User(
       crypto.randomUUID(),
-      email.toLowerCase(),
+      emailAddress,
       displayName,
       passwordHash,
       'USER',
@@ -26,48 +32,29 @@ export class User {
       new Date(),
       new Date(),
     );
+    
+    user.addDomainEvent(new UserRegisteredDomainEvent(user.id, user.email.value));
+    return user;
   }
 
-  verifyEmail(): User {
-    return new User(
-      this.id,
-      this.email,
-      this.displayName,
-      this.passwordHash,
-      this.role,
-      true,
-      this.avatarUrl,
-      this.createdAt,
-      new Date(),
-    );
+  verifyEmail(): this {
+    this.isEmailVerified = true;
+    this.updatedAt = new Date();
+    // this.addDomainEvent(new EmailVerifiedDomainEvent(this.id)); // If added later
+    return this;
   }
 
-  updateProfile(displayName?: string, avatarUrl?: string | null): User {
-    return new User(
-      this.id,
-      this.email,
-      displayName ? displayName.trim() : this.displayName,
-      this.passwordHash,
-      this.role,
-      this.isEmailVerified,
-      avatarUrl !== undefined ? avatarUrl : this.avatarUrl,
-      this.createdAt,
-      new Date(),
-    );
+  updateProfile(displayName?: string, avatarUrl?: string | null): this {
+    if (displayName) this.displayName = displayName.trim();
+    if (avatarUrl !== undefined) this.avatarUrl = avatarUrl;
+    this.updatedAt = new Date();
+    return this;
   }
 
-  changePassword(newPasswordHash: string): User {
-    return new User(
-      this.id,
-      this.email,
-      this.displayName,
-      newPasswordHash,
-      this.role,
-      this.isEmailVerified,
-      this.avatarUrl,
-      this.createdAt,
-      new Date(),
-    );
+  changePassword(newPasswordHash: string): this {
+    this.passwordHash = newPasswordHash;
+    this.updatedAt = new Date();
+    return this;
   }
 
   async authenticate(password: string, hasher: { compare: (plain: string, hashed: string) => Promise<boolean> }): Promise<void> {

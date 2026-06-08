@@ -174,3 +174,15 @@ model UserNotePin {
   @@index([userId])
   @@index([noteId])
 }
+
+model OutboxMessage {
+  id        String   @id @default(cuid())
+  type      String   // 'INTEGRATION_EVENT' or 'INTERNAL_COMMAND'
+  topic     String   // e.g. 'UserRegistered', 'SendVerificationEmail'
+  payload   String   // JSON payload
+  status    String   @default("PENDING") // 'PENDING', 'PROCESSED', 'FAILED'
+  createdAt DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([status, createdAt])
+}

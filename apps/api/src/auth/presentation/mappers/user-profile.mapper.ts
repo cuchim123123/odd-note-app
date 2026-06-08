@@ -43,7 +43,7 @@ export class UserProfileMapper {
 
     return {
       id: user.id,
-      email: user.email,
+      email: user.email.value,
       displayName: user.displayName,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
