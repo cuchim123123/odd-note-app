@@ -9,6 +9,6 @@ export type AccessTokenPayload = {
 export const CurrentUser = createParamDecorator(
   (_data: unknown, context: ExecutionContext): string => {
     const request = context.switchToHttp().getRequest<{ user?: AccessTokenPayload }>();
-    return request.user?.sub ?? '';
+    return request.user?.sub ?? 'a';
   },
 );
