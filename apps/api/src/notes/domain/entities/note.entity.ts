@@ -130,7 +130,7 @@ export class NoteEntity extends AggregateRoot {
       throw new Error(`Share ${shareId} not found`);
     }
 
-    const share = this.props.shares[shareIndex];
+
     this.props.shares.splice(shareIndex, 1);
     
     if (this.props.shares.length === 0) {
@@ -142,7 +142,7 @@ export class NoteEntity extends AggregateRoot {
     this.addDomainEvent(new NoteShareRevokedDomainEvent(
       this.id,
       this.ownerId,
-      share.id,
+      shareId,
     ));
   }
 
