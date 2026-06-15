@@ -12,6 +12,10 @@ import { NotesCrdtService } from './notes-crdt.service';
 
 import { CreateNoteHttpController } from './commands/create-note/create-note.http.controller';
 import { CreateNoteHandler } from './commands/create-note/create-note.handler';
+import { UpdateNoteHttpController } from './commands/update-note/update-note.http.controller';
+import { UpdateNoteHandler } from './commands/update-note/update-note.handler';
+import { DeleteNoteHttpController } from './commands/delete-note/delete-note.http.controller';
+import { DeleteNoteHandler } from './commands/delete-note/delete-note.handler';
 import { NOTE_REPOSITORY } from './application/ports/note.repository.port';
 import { PrismaNoteRepository } from './infrastructure/persistence/prisma-note.repository';
 import { DRAFT_CACHE_PORT } from './application/ports/draft-cache.port';
@@ -21,7 +25,12 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
 
 @Module({
   imports: [PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
-  controllers: [NotesController, CreateNoteHttpController],
+  controllers: [
+    NotesController, 
+    CreateNoteHttpController,
+    UpdateNoteHttpController,
+    DeleteNoteHttpController,
+  ],
   providers: [
     NotesService, 
     NotesShareService, 
@@ -29,6 +38,8 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
     NotesCrdtService, 
     MailerService,
     CreateNoteHandler,
+    UpdateNoteHandler,
+    DeleteNoteHandler,
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },

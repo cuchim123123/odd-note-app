@@ -14,7 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { z } from 'zod';
 import { JwtConfigService } from '../config';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import { createNoteSchema, createNoteShareSchema, updateNoteSchema, updateNoteShareSchema } from '@odd-note-app/validation';
+import { createNoteShareSchema, updateNoteShareSchema } from '@odd-note-app/validation';
 import { NotesService } from './notes.service';
 import { NotesShareService } from './notes-share.service';
 import { NotesProtectionService } from './notes-protection.service';
@@ -66,38 +66,11 @@ export class NotesController {
     return await this.notesService.getById(userId, this.parseNoteId(noteId), unlockToken);
   }
 
-  @Post()
-  async create(
-    @Body(new ZodValidationPipe(createNoteSchema)) body: { title: string; content?: string; labels?: string[] },
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.create(userId, body);
-  }
 
-  @Patch(':noteId')
-  async update(
-    @Param('noteId') noteId: string,
-    @Body(new ZodValidationPipe(updateNoteSchema)) body: {
-      title?: string;
-      content?: string;
-      isPinned?: boolean;
-      isShared?: boolean;
-      labels?: string[];
-    },
-    @Headers('authorization') authorizationHeader?: string,
-    @Headers('x-note-unlock-token') unlockToken?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.update(userId, this.parseNoteId(noteId), body, unlockToken);
-  }
 
-  @Delete(':noteId')
-  async delete(@Param('noteId') noteId: string, @Headers('authorization') authorizationHeader?: string) {
-    const userId = this.resolveUserId(authorizationHeader);
-    await this.notesService.delete(userId, this.parseNoteId(noteId));
-    return { removed: true };
-  }
+
+
+
 
   @Get(':noteId/shares')
   async listShares(@Param('noteId') noteId: string, @Headers('authorization') authorizationHeader?: string) {
