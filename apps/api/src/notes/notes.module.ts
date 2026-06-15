@@ -26,6 +26,10 @@ import { SetPasswordHttpController } from './commands/set-password/set-password.
 import { SetPasswordHandler } from './commands/set-password/set-password.handler';
 import { RemovePasswordHttpController } from './commands/remove-password/remove-password.http.controller';
 import { RemovePasswordHandler } from './commands/remove-password/remove-password.handler';
+import { SaveDraftHttpController } from './commands/save-draft/save-draft.http.controller';
+import { SaveDraftHandler } from './commands/save-draft/save-draft.handler';
+import { ClearDraftHttpController } from './commands/clear-draft/clear-draft.http.controller';
+import { ClearDraftHandler } from './commands/clear-draft/clear-draft.handler';
 import { NOTE_REPOSITORY } from './application/ports/note.repository.port';
 import { PrismaNoteRepository } from './infrastructure/persistence/prisma-note.repository';
 import { DRAFT_CACHE_PORT } from './application/ports/draft-cache.port';
@@ -45,6 +49,8 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
     RevokeShareHttpController,
     SetPasswordHttpController,
     RemovePasswordHttpController,
+    SaveDraftHttpController,
+    ClearDraftHttpController,
   ],
   providers: [
     NotesService, 
@@ -60,6 +66,8 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
     RevokeShareHandler,
     SetPasswordHandler,
     RemovePasswordHandler,
+    SaveDraftHandler,
+    ClearDraftHandler,
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },

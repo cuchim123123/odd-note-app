@@ -24,10 +24,7 @@ const notePasswordSchema = z.object({
   password: z.string().trim().min(1, 'Password is required'),
 });
 
-const noteDraftSchema = z.object({
-  title: z.string(),
-  content: z.string(),
-});
+
 
 type AccessTokenPayload = {
   sub?: string;
@@ -133,24 +130,9 @@ export class NotesController {
     return await this.notesService.getDraft(userId, this.parseNoteId(noteId), unlockToken);
   }
 
-  @Post(':noteId/draft')
-  async saveDraft(
-    @Param('noteId') noteId: string,
-    @Body(new ZodValidationPipe(noteDraftSchema)) body: { title: string; content: string },
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.saveDraft(userId, this.parseNoteId(noteId), body);
-  }
 
-  @Delete(':noteId/draft')
-  async clearDraft(
-    @Param('noteId') noteId: string,
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.clearDraft(userId, this.parseNoteId(noteId));
-  }
+
+
 
   @Post('labels/rename')
   async renameLabel(
