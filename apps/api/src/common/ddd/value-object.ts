@@ -1,6 +1,5 @@
-interface ValueObjectProps {
-  [index: string]: unknown;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ValueObjectProps = Record<string, any>;
 
 export abstract class ValueObject<T extends ValueObjectProps> {
   public readonly props: T;

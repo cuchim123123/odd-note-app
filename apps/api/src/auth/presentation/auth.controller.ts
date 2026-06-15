@@ -115,7 +115,7 @@ export class AuthController {
       return { message: 'Not available' };
     }
 
-    const result = await this.commandBus.execute<{ token?: string }>(new GenerateTestResetTokenCommand(body.email));
+    const result = await this.commandBus.execute(new GenerateTestResetTokenCommand(body.email)) as { token?: string };
     
     if (!result.token) {
       return { message: 'If the email exists, a reset link has been sent' };

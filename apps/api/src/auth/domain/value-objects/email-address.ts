@@ -1,4 +1,4 @@
-import { ValueObject } from '../shared/value-object';
+import { ValueObject } from '../../../common/ddd/value-object';
 import { InvalidCredentialsError } from '../errors/auth-error';
 
 export interface EmailAddressProps {

@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../../domain/shared/domain-event';
+import type { DomainEvent } from '../../../common/ddd/domain-event';
 import { UserRegisteredDomainEvent } from '../../domain/events/user-registered.domain-event';
 
 export type OutboxMessageDraft = {

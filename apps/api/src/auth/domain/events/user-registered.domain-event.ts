@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../shared/domain-event';
+import type { DomainEvent } from '../../../common/ddd/domain-event';
 
 export class UserRegisteredDomainEvent implements DomainEvent {
   public readonly occurredOn: Date;

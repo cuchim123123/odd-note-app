@@ -5,8 +5,7 @@ vi.mock('../../config', () => ({
   JwtConfigService: class JwtConfigService {},
 }));
 
-import type { TokenProvider } from '../application/ports/token-provider.port';
-import type { UserRepository } from '../application/ports/user.repository.port';
+
 import { AuthController } from '../presentation/auth.controller';
 import type { UserProfileMapper } from '../presentation/mappers/user-profile.mapper';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
@@ -53,9 +52,9 @@ function createController() {
     commandBus as unknown as CommandBus,
     queryBus as unknown as QueryBus,
     userProfileMapper as unknown as UserProfileMapper,
-    tokenProvider as unknown as TokenProvider,
-    tokenRepo,
-    userRepo as unknown as UserRepository,
+
+
+
   );
 
   return {

@@ -1,4 +1,4 @@
-import { OutboxPort } from '../../application/ports/outbox.port';
+import type { OutboxPort } from '../../application/ports/outbox.port';
 import type { PrismaTransactionClient } from './prisma-client.type';
 
 export class PrismaOutboxRepository implements OutboxPort {
