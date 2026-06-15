@@ -22,6 +22,10 @@ import { UpdateShareHttpController } from './commands/update-share/update-share.
 import { UpdateShareHandler } from './commands/update-share/update-share.handler';
 import { RevokeShareHttpController } from './commands/revoke-share/revoke-share.http.controller';
 import { RevokeShareHandler } from './commands/revoke-share/revoke-share.handler';
+import { SetPasswordHttpController } from './commands/set-password/set-password.http.controller';
+import { SetPasswordHandler } from './commands/set-password/set-password.handler';
+import { RemovePasswordHttpController } from './commands/remove-password/remove-password.http.controller';
+import { RemovePasswordHandler } from './commands/remove-password/remove-password.handler';
 import { NOTE_REPOSITORY } from './application/ports/note.repository.port';
 import { PrismaNoteRepository } from './infrastructure/persistence/prisma-note.repository';
 import { DRAFT_CACHE_PORT } from './application/ports/draft-cache.port';
@@ -39,6 +43,8 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
     ShareNoteHttpController,
     UpdateShareHttpController,
     RevokeShareHttpController,
+    SetPasswordHttpController,
+    RemovePasswordHttpController,
   ],
   providers: [
     NotesService, 
@@ -52,6 +58,8 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
     ShareNoteHandler,
     UpdateShareHandler,
     RevokeShareHandler,
+    SetPasswordHandler,
+    RemovePasswordHandler,
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },
