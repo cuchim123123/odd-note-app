@@ -16,6 +16,12 @@ import { UpdateNoteHttpController } from './commands/update-note/update-note.htt
 import { UpdateNoteHandler } from './commands/update-note/update-note.handler';
 import { DeleteNoteHttpController } from './commands/delete-note/delete-note.http.controller';
 import { DeleteNoteHandler } from './commands/delete-note/delete-note.handler';
+import { ShareNoteHttpController } from './commands/share-note/share-note.http.controller';
+import { ShareNoteHandler } from './commands/share-note/share-note.handler';
+import { UpdateShareHttpController } from './commands/update-share/update-share.http.controller';
+import { UpdateShareHandler } from './commands/update-share/update-share.handler';
+import { RevokeShareHttpController } from './commands/revoke-share/revoke-share.http.controller';
+import { RevokeShareHandler } from './commands/revoke-share/revoke-share.handler';
 import { NOTE_REPOSITORY } from './application/ports/note.repository.port';
 import { PrismaNoteRepository } from './infrastructure/persistence/prisma-note.repository';
 import { DRAFT_CACHE_PORT } from './application/ports/draft-cache.port';
@@ -30,6 +36,9 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
     CreateNoteHttpController,
     UpdateNoteHttpController,
     DeleteNoteHttpController,
+    ShareNoteHttpController,
+    UpdateShareHttpController,
+    RevokeShareHttpController,
   ],
   providers: [
     NotesService, 
@@ -40,6 +49,9 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
     CreateNoteHandler,
     UpdateNoteHandler,
     DeleteNoteHandler,
+    ShareNoteHandler,
+    UpdateShareHandler,
+    RevokeShareHandler,
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },

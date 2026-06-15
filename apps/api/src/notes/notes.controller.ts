@@ -6,7 +6,7 @@ import {
   Get,
   Headers,
   Param,
-  Patch,
+
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -14,7 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { z } from 'zod';
 import { JwtConfigService } from '../config';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import { createNoteShareSchema, updateNoteShareSchema } from '@odd-note-app/validation';
+
 import { NotesService } from './notes.service';
 import { NotesShareService } from './notes-share.service';
 import { NotesProtectionService } from './notes-protection.service';
@@ -78,36 +78,11 @@ export class NotesController {
     return await this.notesShareService.listShares(userId, this.parseNoteId(noteId));
   }
 
-  @Post(':noteId/shares')
-  async createShare(
-    @Param('noteId') noteId: string,
-    @Body(new ZodValidationPipe(createNoteShareSchema)) body: { recipientEmail: string; permission: 'READ' | 'EDIT' },
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesShareService.createShare(userId, this.parseNoteId(noteId), body);
-  }
 
-  @Patch(':noteId/shares/:shareId')
-  async updateShare(
-    @Param('noteId') noteId: string,
-    @Param('shareId') shareId: string,
-    @Body(new ZodValidationPipe(updateNoteShareSchema)) body: { permission: 'READ' | 'EDIT' },
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesShareService.updateShare(userId, this.parseNoteId(noteId), this.parseNoteId(shareId), body);
-  }
 
-  @Delete(':noteId/shares/:shareId')
-  async deleteShare(
-    @Param('noteId') noteId: string,
-    @Param('shareId') shareId: string,
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesShareService.deleteShare(userId, this.parseNoteId(noteId), this.parseNoteId(shareId));
-  }
+
+
+
 
   @Get(':noteId/protection-status')
   async getProtectionStatus(
