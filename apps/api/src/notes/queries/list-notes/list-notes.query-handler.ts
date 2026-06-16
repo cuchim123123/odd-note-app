@@ -3,7 +3,6 @@ import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { ListNotesQuery } from './list-notes.query';
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../application/ports/document-sync.port';
-import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '../../application/ports/note-protection.port';
 import type { NoteResponseDto } from '../../presentation/dto/note.response.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
 
@@ -17,8 +16,6 @@ export class ListNotesQueryHandler implements IQueryHandler<ListNotesQuery> {
     private readonly prisma: PrismaService,
     @Inject(DOCUMENT_SYNC_PORT)
     private readonly documentSyncPort: IDocumentSyncPort,
-    @Inject(NOTE_PROTECTION_PORT)
-    private readonly protectionPort: INoteProtectionPort,
   ) {}
 
   async execute(query: ListNotesQuery): Promise<NoteResponseDto[]> {

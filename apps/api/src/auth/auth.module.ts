@@ -105,24 +105,13 @@ import { GetCurrentUserHttpController } from './application/queries/get-current-
     OutboxProcessor,
   ],
   exports: [
+    // Port tokens exported for modules that may need to resolve user/token data
+    // (e.g., a future UserModule). All cross-module communication must use CommandBus/QueryBus.
     USER_REPOSITORY,
     TOKEN_REPOSITORY,
     UNIT_OF_WORK,
     PASSWORD_HASHER,
-    // Commands
-    RegisterHandler,
-    LoginHandler,
-    ChangePasswordHandler,
-    RefreshTokensHandler,
-    ForgotPasswordHandler,
-    ResetPasswordHandler,
-    UpdateProfileHandler,
-    LogoutHandler,
-    VerifyEmailHandler,
-    ResendVerificationHandler,
-    GenerateTestResetTokenHandler,
-    // Queries
-    GetCurrentUserHandler,
   ],
 })
 export class AuthModule {}
+

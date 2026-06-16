@@ -6,8 +6,6 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { RedisModule } from '../redis/redis.module';
 import { MailerService } from '../common/mailer/mailer.service';
 import { NotesCrdtService } from './notes-crdt.service';
-// Still needed by collaboration.gateway.ts (Phase 3 will remove this)
-import { NotesProtectionService } from './notes-protection.service';
 
 // ─── Commands ──────────────────────────────────────────────────────────────
 import { CreateNoteHttpController } from './commands/create-note/create-note.http.controller';
@@ -79,6 +77,8 @@ import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma
     RenameLabelHttpController,
     DeleteLabelHttpController,
     // Queries
+    // IMPORTANT: Registration order dictates route evaluation.
+    // Specific routes (shared-with-me) MUST precede wildcard routes (:noteId)
     ListNotesHttpController,
     ListSharedWithMeHttpController,
     GetNoteByIdHttpController,
@@ -87,11 +87,9 @@ import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma
     GetDraftHttpController,
   ],
   providers: [
-    // Infrastructure services still needed by slices during this transition
+    // Infrastructure services needed by adapters
     NotesCrdtService,
     MailerService,
-    // Legacy service — still exported for collaboration.gateway.ts (remove in Phase 3)
-    NotesProtectionService,
     // Command Handlers
     CreateNoteHandler,
     UpdateNoteHandler,
@@ -120,9 +118,8 @@ import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma
     { provide: NOTE_PROTECTION_PORT, useClass: PrismaNoteProtectionAdapter },
   ],
   exports: [
-    // Exported for collaboration.gateway.ts until Phase 3
-    NotesProtectionService,
-    NotesCrdtService,
+    // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it
+    NOTE_PROTECTION_PORT,
   ],
 })
 export class NotesModule {}
