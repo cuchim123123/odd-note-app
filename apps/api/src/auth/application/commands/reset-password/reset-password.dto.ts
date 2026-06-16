@@ -1,8 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { forgotPasswordSchema, resetPasswordSchema } from '@odd-note-app/validation';
-
-export class ForgotPasswordDto extends createZodDto(forgotPasswordSchema) {}
+import { resetPasswordSchema } from '@odd-note-app/validation';
 
 const resetPasswordDtoSchema = z.intersection(
   resetPasswordSchema,

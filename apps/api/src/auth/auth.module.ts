@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '../config/config.module';
 import { PrismaModule } from '../prisma/prisma.module';
-import { AuthController } from './presentation/auth.controller';
 import { TOKEN_PROVIDER } from './application/ports/token-provider.port';
 import { JwtTokenProvider } from './infrastructure/security/jwt-token-provider';
 import { AuthConfigModule, JwtConfigModule } from '../config';
@@ -25,23 +24,58 @@ import { DefaultIntegrationEventMapper } from './application/mappers/integration
 
 // Commands
 import { RegisterHandler } from './application/commands/register/register.handler';
+import { RegisterHttpController } from './application/commands/register/register.http.controller';
+
 import { LoginHandler } from './application/commands/login/login.handler';
+import { LoginHttpController } from './application/commands/login/login.http.controller';
+
 import { ChangePasswordHandler } from './application/commands/change-password/change-password.handler';
+import { ChangePasswordHttpController } from './application/commands/change-password/change-password.http.controller';
+
 import { RefreshTokensHandler } from './application/commands/refresh-tokens/refresh-tokens.handler';
+import { RefreshTokensHttpController } from './application/commands/refresh-tokens/refresh-tokens.http.controller';
+
 import { ForgotPasswordHandler } from './application/commands/forgot-password/forgot-password.handler';
+import { ForgotPasswordHttpController } from './application/commands/forgot-password/forgot-password.http.controller';
+
 import { ResetPasswordHandler } from './application/commands/reset-password/reset-password.handler';
+import { ResetPasswordHttpController } from './application/commands/reset-password/reset-password.http.controller';
+
 import { UpdateProfileHandler } from './application/commands/update-profile/update-profile.handler';
+import { UpdateProfileHttpController } from './application/commands/update-profile/update-profile.http.controller';
+
 import { LogoutHandler } from './application/commands/logout/logout.handler';
+import { LogoutHttpController } from './application/commands/logout/logout.http.controller';
+
 import { VerifyEmailHandler } from './application/commands/verify-email/verify-email.handler';
+import { VerifyEmailHttpController } from './application/commands/verify-email/verify-email.http.controller';
+
 import { ResendVerificationHandler } from './application/commands/resend-verification/resend-verification.handler';
+import { ResendVerificationHttpController } from './application/commands/resend-verification/resend-verification.http.controller';
+
 import { GenerateTestResetTokenHandler } from './application/commands/generate-test-reset-token/generate-test-reset-token.handler';
+import { GenerateTestResetTokenHttpController } from './application/commands/generate-test-reset-token/generate-test-reset-token.http.controller';
 
 // Queries
 import { GetCurrentUserHandler } from './application/queries/get-current-user/get-current-user.handler';
+import { GetCurrentUserHttpController } from './application/queries/get-current-user/get-current-user.http.controller';
 
 @Module({
   imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
-  controllers: [AuthController],
+  controllers: [
+    RegisterHttpController,
+    LoginHttpController,
+    VerifyEmailHttpController,
+    ResendVerificationHttpController,
+    GetCurrentUserHttpController,
+    UpdateProfileHttpController,
+    ChangePasswordHttpController,
+    RefreshTokensHttpController,
+    LogoutHttpController,
+    ForgotPasswordHttpController,
+    ResetPasswordHttpController,
+    GenerateTestResetTokenHttpController,
+  ],
   providers: [
     UserProfileMapper,
     TokenCleanupCron,
@@ -92,4 +126,3 @@ import { GetCurrentUserHandler } from './application/queries/get-current-user/ge
   ],
 })
 export class AuthModule {}
-
