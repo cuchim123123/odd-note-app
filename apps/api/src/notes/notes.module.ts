@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
 import { AuthConfigModule, JwtConfigModule } from '../config';
 import { ConfigModule } from '../config/config.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RedisModule } from '../redis/redis.module';
 import { MailerService } from '../common/mailer/mailer.service';
-import { NotesController } from './notes.controller';
-import { NotesService } from './notes.service';
-import { NotesShareService } from './notes-share.service';
-import { NotesProtectionService } from './notes-protection.service';
 import { NotesCrdtService } from './notes-crdt.service';
+// Still needed by collaboration.gateway.ts (Phase 3 will remove this)
+import { NotesProtectionService } from './notes-protection.service';
 
+// ─── Commands ──────────────────────────────────────────────────────────────
 import { CreateNoteHttpController } from './commands/create-note/create-note.http.controller';
 import { CreateNoteHandler } from './commands/create-note/create-note.handler';
 import { UpdateNoteHttpController } from './commands/update-note/update-note.http.controller';
@@ -26,10 +26,32 @@ import { SetPasswordHttpController } from './commands/set-password/set-password.
 import { SetPasswordHandler } from './commands/set-password/set-password.handler';
 import { RemovePasswordHttpController } from './commands/remove-password/remove-password.http.controller';
 import { RemovePasswordHandler } from './commands/remove-password/remove-password.handler';
+import { VerifyPasswordHttpController } from './commands/verify-password/verify-password.http.controller';
+import { VerifyPasswordHandler } from './commands/verify-password/verify-password.handler';
 import { SaveDraftHttpController } from './commands/save-draft/save-draft.http.controller';
 import { SaveDraftHandler } from './commands/save-draft/save-draft.handler';
 import { ClearDraftHttpController } from './commands/clear-draft/clear-draft.http.controller';
 import { ClearDraftHandler } from './commands/clear-draft/clear-draft.handler';
+import { RenameLabelHttpController } from './commands/rename-label/rename-label.http.controller';
+import { RenameLabelHandler } from './commands/rename-label/rename-label.handler';
+import { DeleteLabelHttpController } from './commands/delete-label/delete-label.http.controller';
+import { DeleteLabelHandler } from './commands/delete-label/delete-label.handler';
+
+// ─── Queries ────────────────────────────────────────────────────────────────
+import { ListNotesHttpController } from './queries/list-notes/list-notes.http.controller';
+import { ListNotesQueryHandler } from './queries/list-notes/list-notes.query-handler';
+import { ListSharedWithMeHttpController } from './queries/list-shared-with-me/list-shared-with-me.http.controller';
+import { ListSharedWithMeQueryHandler } from './queries/list-shared-with-me/list-shared-with-me.query-handler';
+import { GetNoteByIdHttpController } from './queries/get-note-by-id/get-note-by-id.http.controller';
+import { GetNoteByIdQueryHandler } from './queries/get-note-by-id/get-note-by-id.query-handler';
+import { ListSharesHttpController } from './queries/list-shares/list-shares.http.controller';
+import { ListSharesQueryHandler } from './queries/list-shares/list-shares.query-handler';
+import { GetProtectionStatusHttpController } from './queries/get-protection-status/get-protection-status.http.controller';
+import { GetProtectionStatusQueryHandler } from './queries/get-protection-status/get-protection-status.query-handler';
+import { GetDraftHttpController } from './queries/get-draft/get-draft.http.controller';
+import { GetDraftQueryHandler } from './queries/get-draft/get-draft.query-handler';
+
+// ─── Ports & Adapters ────────────────────────────────────────────────────────
 import { NOTE_REPOSITORY } from './application/ports/note.repository.port';
 import { PrismaNoteRepository } from './infrastructure/persistence/prisma-note.repository';
 import { DRAFT_CACHE_PORT } from './application/ports/draft-cache.port';
@@ -40,9 +62,9 @@ import { NOTE_PROTECTION_PORT } from './application/ports/note-protection.port';
 import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma-note-protection.adapter';
 
 @Module({
-  imports: [PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
+  imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
   controllers: [
-    NotesController, 
+    // Commands
     CreateNoteHttpController,
     UpdateNoteHttpController,
     DeleteNoteHttpController,
@@ -51,15 +73,26 @@ import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma
     RevokeShareHttpController,
     SetPasswordHttpController,
     RemovePasswordHttpController,
+    VerifyPasswordHttpController,
     SaveDraftHttpController,
     ClearDraftHttpController,
+    RenameLabelHttpController,
+    DeleteLabelHttpController,
+    // Queries
+    ListNotesHttpController,
+    ListSharedWithMeHttpController,
+    GetNoteByIdHttpController,
+    ListSharesHttpController,
+    GetProtectionStatusHttpController,
+    GetDraftHttpController,
   ],
   providers: [
-    NotesService, 
-    NotesShareService, 
-    NotesProtectionService, 
-    NotesCrdtService, 
+    // Infrastructure services still needed by slices during this transition
+    NotesCrdtService,
     MailerService,
+    // Legacy service — still exported for collaboration.gateway.ts (remove in Phase 3)
+    NotesProtectionService,
+    // Command Handlers
     CreateNoteHandler,
     UpdateNoteHandler,
     DeleteNoteHandler,
@@ -68,13 +101,28 @@ import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma
     RevokeShareHandler,
     SetPasswordHandler,
     RemovePasswordHandler,
+    VerifyPasswordHandler,
     SaveDraftHandler,
     ClearDraftHandler,
+    RenameLabelHandler,
+    DeleteLabelHandler,
+    // Query Handlers
+    ListNotesQueryHandler,
+    ListSharedWithMeQueryHandler,
+    GetNoteByIdQueryHandler,
+    ListSharesQueryHandler,
+    GetProtectionStatusQueryHandler,
+    GetDraftQueryHandler,
+    // Port → Adapter bindings
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },
     { provide: NOTE_PROTECTION_PORT, useClass: PrismaNoteProtectionAdapter },
   ],
-  exports: [NotesProtectionService, NotesService],
+  exports: [
+    // Exported for collaboration.gateway.ts until Phase 3
+    NotesProtectionService,
+    NotesCrdtService,
+  ],
 })
 export class NotesModule {}
