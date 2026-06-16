@@ -1,51 +1,45 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Inject, NotFoundException } from '@nestjs/common';
 import { UpdateNoteCommand } from './update-note.command';
+import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../application/ports/document-sync.port';
+import { NoteTitle } from '../../domain/value-objects/note-title.vo';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 @CommandHandler(UpdateNoteCommand)
 export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
   constructor(
+    @Inject(NOTE_REPOSITORY)
+    private readonly noteRepository: INoteRepository,
     @Inject(DOCUMENT_SYNC_PORT)
     private readonly documentSyncPort: IDocumentSyncPort,
-    private readonly prisma: PrismaService, // Temporary until full UoW
+    private readonly prisma: PrismaService, // Still needed for pin/label — personal user data outside the Note aggregate
   ) {}
 
   async execute(command: UpdateNoteCommand): Promise<{ id: string }> {
-    const { userId, noteId, title, content, isPinned, isShared, labels } = command;
+    const { userId, noteId, title, content, isPinned, labels } = command;
 
-    const existing = await this.prisma.note.findFirst({
-      where: {
-        id: noteId,
-        OR: [{ userId }, { shares: { some: { recipientId: userId, permission: 'EDIT' } } }],
-      },
-    });
-
-    if (!existing) {
+    // Load aggregate — enforces existence check
+    const note = await this.noteRepository.findById(noteId);
+    if (!note) {
       throw new NotFoundException('Note not found');
     }
 
-    const isOwner = existing.userId === userId;
-    if (!isOwner) {
-      const editShare = await this.prisma.noteShare.findFirst({
-        where: { noteId, recipientId: userId, permission: 'EDIT' },
-      });
-
-      if (!editShare) {
-        throw new UnauthorizedException('You do not have permission to edit this note');
-      }
+    // Domain invariant: canEdit() checks owner OR EDIT share permission
+    if (!note.canEdit(userId)) {
+      // canEdit() uses the aggregate's in-memory share list
+      throw new NotFoundException('Note not found or you do not have permission to edit it');
     }
 
-    const updatedNote = await this.prisma.note.update({
-      where: { id: noteId },
-      data: {
-        title: title?.trim() ?? existing.title,
-        content: content ?? existing.content,
-        isShared: isShared ?? existing.isShared,
-      },
-    });
+    // Mutate aggregate — value objects enforce title constraints
+    if (title !== undefined) {
+      note.rename(NoteTitle.create(title), userId);
+    }
 
+    // Persist aggregate state
+    await this.noteRepository.save(note);
+
+    // Personal user data (pin/labels) are outside the Note aggregate — they're user preferences
     let personalIsPinned = false;
     if (isPinned !== undefined) {
       const upsertedPin = await this.prisma.userNotePin.upsert({
@@ -69,14 +63,17 @@ export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
       });
     }
 
-    await this.documentSyncPort.persistSnapshot(
-      updatedNote.id,
-      updatedNote.title,
-      updatedNote.content,
-      personalIsPinned,
-      updatedNote.updatedAt,
-    );
+    // Sync document state (Yjs / Redis)
+    if (content !== undefined) {
+      await this.documentSyncPort.persistSnapshot(
+        noteId,
+        note.title,
+        content,
+        personalIsPinned,
+        note.updatedAt,
+      );
+    }
 
-    return { id: updatedNote.id };
+    return { id: note.id };
   }
 }

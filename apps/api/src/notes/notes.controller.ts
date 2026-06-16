@@ -6,7 +6,6 @@ import {
   Get,
   Headers,
   Param,
-
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -20,9 +19,6 @@ import { NotesShareService } from './notes-share.service';
 import { NotesProtectionService } from './notes-protection.service';
 
 const noteIdSchema = z.string().trim().min(1, 'noteId is required');
-const notePasswordSchema = z.object({
-  password: z.string().trim().min(1, 'Password is required'),
-});
 
 
 
@@ -89,49 +85,6 @@ export class NotesController {
     const userId = this.resolveUserId(authorizationHeader);
     return await this.notesProtectionService.getProtectionStatus(userId, this.parseNoteId(noteId));
   }
-
-  @Post(':noteId/set-password')
-  async setPassword(
-    @Param('noteId') noteId: string,
-    @Body(new ZodValidationPipe(notePasswordSchema)) body: { password: string },
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesProtectionService.setPassword(userId, this.parseNoteId(noteId), body.password.trim());
-  }
-
-  @Post(':noteId/verify-password')
-  async verifyPassword(
-    @Param('noteId') noteId: string,
-    @Body(new ZodValidationPipe(notePasswordSchema)) body: { password: string },
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesProtectionService.verifyPassword(userId, this.parseNoteId(noteId), body.password.trim());
-  }
-
-  @Delete(':noteId/password')
-  async removePassword(
-    @Param('noteId') noteId: string,
-    @Body(new ZodValidationPipe(notePasswordSchema)) body: { password: string },
-    @Headers('authorization') authorizationHeader?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesProtectionService.removePassword(userId, this.parseNoteId(noteId), body.password.trim());
-  }
-
-  @Get(':noteId/draft')
-  async getDraft(
-    @Param('noteId') noteId: string,
-    @Headers('authorization') authorizationHeader?: string,
-    @Headers('x-note-unlock-token') unlockToken?: string,
-  ) {
-    const userId = this.resolveUserId(authorizationHeader);
-    return await this.notesService.getDraft(userId, this.parseNoteId(noteId), unlockToken);
-  }
-
-
-
 
 
   @Post('labels/rename')

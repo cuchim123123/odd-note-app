@@ -9,23 +9,20 @@ export class SetPasswordHandler implements ICommandHandler<SetPasswordCommand> {
   constructor(
     @Inject(NOTE_PROTECTION_PORT)
     private readonly protectionPort: INoteProtectionPort,
-    private readonly prisma: PrismaService, // Temporary until UoW
+    private readonly prisma: PrismaService,
   ) {}
 
-  async execute(command: SetPasswordCommand): Promise<void> {
-    const { userId, noteId, passwordHash } = command;
+  async execute(command: SetPasswordCommand): Promise<{ isProtected: true }> {
+    const { userId, noteId, password } = command;
 
-    const note = await this.prisma.note.findFirst({
-      where: { id: noteId, userId },
-    });
-
+    const note = await this.prisma.note.findFirst({ where: { id: noteId, userId } });
     if (!note) {
-      throw new NotFoundException('Note not found or you do not have permission to protect it');
+      throw new NotFoundException('Note not found or you are not the owner');
     }
 
-    await this.protectionPort.setPassword(userId, noteId, passwordHash);
+    // Hashing is the adapter's responsibility — we pass the raw password
+    await this.protectionPort.setPassword(userId, noteId, password);
 
-    // Update Note isProtected field
-
+    return { isProtected: true };
   }
 }

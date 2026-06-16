@@ -1,28 +1,32 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ShareNoteCommand } from './share-note.command';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
+import { Inject } from '@nestjs/common';
+import { SharePermission } from '../../domain/value-objects/share-permission.vo';
 import { MailerService } from '../../../common/mailer/mailer.service';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { NoteAlreadySharedError } from '../../domain/errors/note.errors';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
   constructor(
-    private readonly prisma: PrismaService, // Temporary until full UoW
+    @Inject(NOTE_REPOSITORY)
+    private readonly noteRepository: INoteRepository,
+    private readonly prisma: PrismaService, // For user lookup and noteShare persistence (outside Note aggregate)
     private readonly mailer: MailerService,
   ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
     const { userId, noteId, recipientEmail, permission } = command;
 
-    const note = await this.prisma.note.findFirst({
-      where: { id: noteId, userId },
-      include: { shares: { select: { recipientEmail: true } } },
-    });
-
+    // Load aggregate
+    const note = await this.noteRepository.findById(noteId);
     if (!note) {
       throw new NotFoundException('Note not found or you do not have permission to share it');
     }
 
+    // Lookup recipient from user store (cross-aggregate query — acceptable in handler)
     const recipient = await this.prisma.user.findUnique({
       where: { email: recipientEmail },
       select: { id: true, email: true },
@@ -36,11 +40,23 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       throw new BadRequestException('You cannot share a note with yourself');
     }
 
-    const alreadyShared = note.shares.some((s) => s.recipientEmail === recipientEmail);
-    if (alreadyShared) {
-      throw new BadRequestException('Note is already shared with this user');
+    // Domain invariant: shareWith() throws NoteAlreadySharedError and NotePermissionDeniedError
+    // via the aggregate's internal guards
+    const permissionVO = SharePermission.create(permission);
+    try {
+      note.shareWith(recipient.id, recipient.email, permissionVO, userId);
+    } catch (err) {
+      if (err instanceof NoteAlreadySharedError) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
     }
 
+    // Persist aggregate state (shareWith added the share to props.shares)
+    await this.noteRepository.save(note);
+
+    // Persist the NoteShare join record (required for DB querying)
+    // The aggregate tracks share state in memory; the DB record is its persistence representation
     const share = await this.prisma.noteShare.create({
       data: {
         noteId,
@@ -51,11 +67,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       },
     });
 
-    await this.prisma.note.update({
-      where: { id: noteId },
-      data: { isShared: true },
-    });
-
+    // Fetch owner name for email
     const owner = await this.prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } });
     await this.mailer.sendNoteSharedEmail({
       to: recipient.email,
@@ -63,9 +75,11 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       senderName: owner?.displayName ?? 'A user',
       noteTitle: note.title,
       noteId: note.id,
-      permission: permission,
+      permission,
       appUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     });
+
+    // TODO Phase 4: NoteSharedDomainEvent → Outbox → Notifications module via Integration Events
 
     return { id: share.id };
   }

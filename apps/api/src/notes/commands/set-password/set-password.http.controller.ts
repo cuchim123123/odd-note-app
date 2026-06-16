@@ -5,7 +5,6 @@ import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { SetPasswordCommand } from './set-password.command';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { z } from 'zod';
-import * as bcrypt from 'bcryptjs';
 
 const notePasswordSchema = z.object({
   password: z.string().trim().min(1, 'Password is required'),
@@ -22,10 +21,9 @@ export class SetPasswordHttpController {
     @Param('noteId') noteId: string,
     @Body(new ZodValidationPipe(notePasswordSchema)) body: { password: string },
   ) {
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(body.password, salt);
-
-    await this.commandBus.execute(new SetPasswordCommand(userId, noteId, passwordHash));
-    return { success: true };
+    // No bcrypt here — controller only validates input shape and dispatches
+    return (await this.commandBus.execute(
+      new SetPasswordCommand(userId, noteId, body.password),
+    )) as { isProtected: true };
   }
 }

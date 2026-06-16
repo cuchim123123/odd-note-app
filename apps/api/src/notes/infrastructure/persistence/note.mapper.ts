@@ -1,0 +1,65 @@
+import { NoteEntity } from '../../domain/entities/note.entity';
+import type { NoteProps, NoteShare } from '../../domain/entities/note.entity';
+import { NoteTitle } from '../../domain/value-objects/note-title.vo';
+import { SharePermission } from '../../domain/value-objects/share-permission.vo';
+
+/**
+ * Prisma record shape we expect when loading a Note with its shares.
+ * This is a local structural type — no Prisma generated types in domain/application.
+ */
+export interface PrismaNoteFull {
+  id: string;
+  userId: string;
+  title: string;
+  isShared: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  shares: Array<{
+    id: string;
+    recipientId: string | null;
+    recipientEmail: string;
+    permission: string; // 'READ' | 'EDIT' from Prisma enum
+  }>;
+}
+
+export class NoteMapper {
+  static toDomain(record: PrismaNoteFull): NoteEntity {
+    const shares: NoteShare[] = record.shares
+      .filter((s) => s.recipientId !== null)
+      .map((s) => ({
+        id: s.id,
+        recipientId: s.recipientId as string,
+        recipientEmail: s.recipientEmail,
+        permission: SharePermission.create(s.permission),
+      }));
+
+
+    const props: NoteProps = {
+      ownerId: record.userId,
+      title: NoteTitle.create(record.title),
+      isShared: record.isShared,
+      shares,
+      isProtected: false, // isProtected is derived from NoteProtection records, not a Note column
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    };
+
+    return NoteEntity.load(record.id, props);
+  }
+
+  static toPersistence(note: NoteEntity): {
+    id: string;
+    userId: string;
+    title: string;
+    isShared: boolean;
+    updatedAt: Date;
+  } {
+    return {
+      id: note.id,
+      userId: note.ownerId,
+      title: note.title,
+      isShared: note.isShared,
+      updatedAt: note.updatedAt,
+    };
+  }
+}

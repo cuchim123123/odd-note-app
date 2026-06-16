@@ -36,6 +36,8 @@ import { DRAFT_CACHE_PORT } from './application/ports/draft-cache.port';
 import { RedisDraftCacheAdapter } from './infrastructure/cache/redis-draft-cache.adapter';
 import { DOCUMENT_SYNC_PORT } from './application/ports/document-sync.port';
 import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-sync.adapter';
+import { NOTE_PROTECTION_PORT } from './application/ports/note-protection.port';
+import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma-note-protection.adapter';
 
 @Module({
   imports: [PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
@@ -71,6 +73,7 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },
+    { provide: NOTE_PROTECTION_PORT, useClass: PrismaNoteProtectionAdapter },
   ],
   exports: [NotesProtectionService, NotesService],
 })
