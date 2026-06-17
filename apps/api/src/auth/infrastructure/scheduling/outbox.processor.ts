@@ -1,9 +1,11 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventBus } from '@nestjs/cqrs';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type { OutboxMessage } from '@prisma/client';
 import { MAIL_SENDER } from '../../application/ports/mail-sender.port';
 import type { MailSender } from '../../application/ports/mail-sender.port';
+import { IntegrationEvent } from '../../../common/ddd/integration-event';
 
 @Injectable()
 export class OutboxProcessor {
@@ -11,7 +13,8 @@ export class OutboxProcessor {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(MAIL_SENDER) private readonly mailSender: MailSender
+    @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
+    private readonly eventBus: EventBus,
   ) {}
 
   @Cron(CronExpression.EVERY_10_SECONDS)
@@ -87,7 +90,8 @@ export class OutboxProcessor {
   }
 
   private async processIntegrationEvent(topic: string, payload: Record<string, unknown>): Promise<void> {
-    // Simulate publishing to Kafka or another message broker
-    this.logger.log(`[SIMULATED KAFKA PUBLISH] Topic: ${topic}, Payload: ${JSON.stringify(payload)}`);
+    // Publish via NestJS EventBus for cross-module communication
+    this.logger.debug(`[INTEGRATION EVENT] Topic: ${topic}, Payload: ${JSON.stringify(payload)}`);
+    this.eventBus.publish(new IntegrationEvent(topic, payload));
   }
 }
