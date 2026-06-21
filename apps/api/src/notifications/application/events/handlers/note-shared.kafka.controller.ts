@@ -1,23 +1,29 @@
-import { EventsHandler, type IEventHandler } from '@nestjs/cqrs';
+import { Controller, Logger } from '@nestjs/common';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { CommandBus } from '@nestjs/cqrs';
-import { IntegrationEvent } from '../../../../common/ddd/integration-event';
 import { CreateNotificationCommand } from '../../commands/create-notification/create-notification.command';
-import { Logger } from '@nestjs/common';
 
-@EventsHandler(IntegrationEvent)
-export class NoteSharedIntegrationEventHandler implements IEventHandler<IntegrationEvent> {
-  private readonly logger = new Logger(NoteSharedIntegrationEventHandler.name);
+interface NoteSharedPayload {
+  noteId: string;
+  shareId: string;
+  ownerId: string;
+  recipientId: string;
+  recipientEmail: string;
+  permission: string;
+  noteTitle: string;
+}
+
+@Controller()
+export class NoteSharedKafkaController {
+  private readonly logger = new Logger(NoteSharedKafkaController.name);
 
   constructor(private readonly commandBus: CommandBus) {}
 
-  async handle(event: IntegrationEvent) {
-    if (event.topic !== 'NoteShared') {
-      return;
-    }
+  @EventPattern('NoteShared')
+  async handleNoteSharedEvent(@Payload() message: NoteSharedPayload) {
+    this.logger.log(`Handling NoteShared Kafka event for recipient: ${message.recipientEmail}`);
 
-    this.logger.log(`Handling NoteShared integration event for recipient: ${event.payload.recipientEmail}`);
-
-    const payload = event.payload as {
+    const payload = message as {
       noteId: string;
       shareId: string;
       ownerId: string;

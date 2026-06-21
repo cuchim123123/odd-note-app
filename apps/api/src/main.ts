@@ -1,4 +1,6 @@
 import { NestFactory } from '@nestjs/core';
+import type { MicroserviceOptions } from '@nestjs/microservices';
+import { Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
 import { ZodValidationPipe } from 'nestjs-zod';
 import type { EnvConfig } from './config/config.module';
@@ -20,6 +22,22 @@ async function bootstrap(): Promise<void> {
   });
 
   const port = env.API_PORT;
+  
+  // Connect Kafka Microservice
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        brokers: [process.env.KAFKA_BROKER ?? 'localhost:9092'],
+        clientId: 'odd-note-api-client',
+      },
+      consumer: {
+        groupId: 'odd-note-consumer-group',
+      },
+    },
+  });
+
+  await app.startAllMicroservices();
   await app.listen(port, '0.0.0.0');
 }
 

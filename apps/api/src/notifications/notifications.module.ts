@@ -24,8 +24,8 @@ import { DeleteNotificationHandler } from './application/commands/delete-notific
 import { GetNotificationsHandler } from './application/queries/get-notifications/get-notifications.handler';
 import { GetUnreadCountHandler } from './application/queries/get-unread-count/get-unread-count.handler';
 
-// Event Handlers
-import { NoteSharedIntegrationEventHandler } from './application/events/handlers/note-shared.integration-event.handler';
+// Event Handlers (Kafka Consumers)
+import { NoteSharedKafkaController } from './application/events/handlers/note-shared.kafka.controller';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule],
@@ -38,7 +38,6 @@ import { NoteSharedIntegrationEventHandler } from './application/events/handlers
     DeleteNotificationHandler,
     GetNotificationsHandler,
     GetUnreadCountHandler,
-    NoteSharedIntegrationEventHandler,
   ],
   controllers: [
     GetNotificationsHttpController,
@@ -46,6 +45,7 @@ import { NoteSharedIntegrationEventHandler } from './application/events/handlers
     MarkAsReadHttpController,
     MarkAllAsReadHttpController,
     DeleteNotificationHttpController,
+    NoteSharedKafkaController,
   ],
   exports: [],
 })

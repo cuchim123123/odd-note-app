@@ -1,21 +1,27 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import type { OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { EventBus } from '@nestjs/cqrs';
+import { ClientKafka } from '@nestjs/microservices';
 import { PrismaService } from '../../../prisma/prisma.service';
 import type { OutboxMessage } from '@prisma/client';
 import { MAIL_SENDER } from '../../application/ports/mail-sender.port';
 import type { MailSender } from '../../application/ports/mail-sender.port';
-import { IntegrationEvent } from '../../../common/ddd/integration-event';
+import { KAFKA_CLIENT_TOKEN } from '../../../config/kafka-config.module';
 
 @Injectable()
-export class OutboxProcessor {
+export class OutboxProcessor implements OnModuleInit {
   private readonly logger = new Logger(OutboxProcessor.name);
 
   constructor(
     private readonly prisma: PrismaService,
     @Inject(MAIL_SENDER) private readonly mailSender: MailSender,
-    private readonly eventBus: EventBus,
+    @Inject(KAFKA_CLIENT_TOKEN) private readonly kafkaClient: ClientKafka,
   ) {}
+
+  async onModuleInit() {
+    this.kafkaClient.subscribeToResponseOf('NoteShared'); // Optional, mainly for req-res
+    await this.kafkaClient.connect();
+  }
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   async processOutboxMessages() {
@@ -90,8 +96,8 @@ export class OutboxProcessor {
   }
 
   private async processIntegrationEvent(topic: string, payload: Record<string, unknown>): Promise<void> {
-    // Publish via NestJS EventBus for cross-module communication
-    this.logger.debug(`[INTEGRATION EVENT] Topic: ${topic}, Payload: ${JSON.stringify(payload)}`);
-    this.eventBus.publish(new IntegrationEvent(topic, payload));
+    // Publish via Kafka for cross-module communication
+    this.logger.debug(`[KAFKA PUBLISH] Topic: ${topic}, Payload: ${JSON.stringify(payload)}`);
+    this.kafkaClient.emit(topic, payload);
   }
 }

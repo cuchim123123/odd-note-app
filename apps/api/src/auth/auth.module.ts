@@ -5,6 +5,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { TOKEN_PROVIDER } from './application/ports/token-provider.port';
 import { JwtTokenProvider } from './infrastructure/security/jwt-token-provider';
 import { AuthConfigModule, JwtConfigModule } from '../config';
+import { KafkaConfigModule } from '../config/kafka-config.module';
 import { MAIL_SENDER } from './application/ports/mail-sender.port';
 import { NodemailerMailSender } from './infrastructure/messaging/nodemailer-mail-sender';
 import { UserProfileMapper } from './presentation/mappers/user-profile.mapper';
@@ -61,7 +62,7 @@ import { GetCurrentUserHandler } from './application/queries/get-current-user/ge
 import { GetCurrentUserHttpController } from './application/queries/get-current-user/get-current-user.http.controller';
 
 @Module({
-  imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
+  imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule, KafkaConfigModule],
   controllers: [
     RegisterHttpController,
     LoginHttpController,
