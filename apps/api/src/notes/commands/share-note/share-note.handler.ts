@@ -8,16 +8,19 @@ import { MailerService } from '../../../common/mailer/mailer.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NoteAlreadySharedError } from '../../domain/errors/note.errors';
 import { NOTE_OUTBOX_PORT, type INoteOutboxPort } from '../../application/ports/note-outbox.port';
+import { NOTE_SHARE_REPOSITORY, type INoteShareRepository } from '../../application/ports/note-share.repository.port';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
   constructor(
     @Inject(NOTE_REPOSITORY)
     private readonly noteRepository: INoteRepository,
-    private readonly prisma: PrismaService, // For user lookup and noteShare persistence (outside Note aggregate)
-    private readonly mailer: MailerService,
+    @Inject(NOTE_SHARE_REPOSITORY)
+    private readonly noteShareRepository: INoteShareRepository,
     @Inject(NOTE_OUTBOX_PORT)
     private readonly outbox: INoteOutboxPort,
+    private readonly prisma: PrismaService, // Cross-aggregate user lookup — see Phase 7 for IUserReadPort
+    private readonly mailer: MailerService,
   ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
@@ -29,22 +32,19 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       throw new NotFoundException('Note not found or you do not have permission to share it');
     }
 
-    // Lookup recipient from user store (cross-aggregate query — acceptable in handler)
+    // Cross-aggregate user lookup — acceptable in handler until IUserReadPort (Phase 7)
     const recipient = await this.prisma.user.findUnique({
       where: { email: recipientEmail },
       select: { id: true, email: true },
     });
-
     if (!recipient) {
       throw new NotFoundException('Recipient user not found');
     }
-
     if (recipient.id === userId) {
       throw new BadRequestException('You cannot share a note with yourself');
     }
 
-    // Domain invariant: shareWith() throws NoteAlreadySharedError and NotePermissionDeniedError
-    // via the aggregate's internal guards
+    // Domain invariant: shareWith() throws NoteAlreadySharedError / NotePermissionDeniedError
     const permissionVO = SharePermission.create(permission);
     try {
       note.shareWith(recipient.id, recipient.email, permissionVO, userId);
@@ -55,23 +55,23 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       throw err;
     }
 
-    // Persist aggregate state (shareWith added the share to props.shares)
+    // Persist aggregate state
     await this.noteRepository.save(note);
 
-    // Persist the NoteShare join record (required for DB querying)
-    // The aggregate tracks share state in memory; the DB record is its persistence representation
-    const share = await this.prisma.noteShare.create({
-      data: {
-        noteId,
-        ownerId: userId,
-        recipientId: recipient.id,
-        recipientEmail: recipient.email,
-        permission,
-      },
+    // Persist NoteShare record via port (no raw Prisma in application layer)
+    const share = await this.noteShareRepository.create({
+      noteId,
+      ownerId: userId,
+      recipientId: recipient.id,
+      recipientEmail: recipient.email,
+      permission,
     });
 
-    // Fetch owner name for email
-    const owner = await this.prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } });
+    // Fetch owner display name for the notification email — Phase 7 will move this to IUserReadPort
+    const owner = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { displayName: true },
+    });
     await this.mailer.sendNoteSharedEmail({
       to: recipient.email,
       recipientName: recipient.email.split('@')[0] ?? 'User',
@@ -82,7 +82,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       appUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     });
 
-    // Dispatch NoteShared integration event via the outbox port (Hexagonal boundary respected)
+    // Dispatch NoteShared integration event via outbox port
     await this.outbox.scheduleIntegrationEvent('NoteShared', {
       noteId,
       shareId: share.id,

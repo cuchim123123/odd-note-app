@@ -3,14 +3,15 @@ import { Inject, NotFoundException } from '@nestjs/common';
 import { UpdateShareCommand } from './update-share.command';
 import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
 import { SharePermission } from '../../domain/value-objects/share-permission.vo';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { NOTE_SHARE_REPOSITORY, type INoteShareRepository } from '../../application/ports/note-share.repository.port';
 
 @CommandHandler(UpdateShareCommand)
 export class UpdateShareHandler implements ICommandHandler<UpdateShareCommand> {
   constructor(
     @Inject(NOTE_REPOSITORY)
     private readonly noteRepository: INoteRepository,
-    private readonly prisma: PrismaService, // For DB-level share update
+    @Inject(NOTE_SHARE_REPOSITORY)
+    private readonly noteShareRepository: INoteShareRepository,
   ) {}
 
   async execute(command: UpdateShareCommand): Promise<{ id: string }> {
@@ -27,17 +28,15 @@ export class UpdateShareHandler implements ICommandHandler<UpdateShareCommand> {
       throw new NotFoundException('Share record not found');
     }
 
-    // Domain invariant: updateShare() verifies only the owner can change permission
+    // Domain invariant: updateShare() enforces owner-only permission change
     const newPermissionVO = SharePermission.create(permission);
     note.updateShare(shareId, newPermissionVO, userId);
 
-    // Persist aggregate + update DB share record
+    // Persist aggregate state
     await this.noteRepository.save(note);
 
-    const updatedShare = await this.prisma.noteShare.update({
-      where: { id: shareId },
-      data: { permission },
-    });
+    // Persist DB share record update via port
+    const updatedShare = await this.noteShareRepository.updatePermission(shareId, permission);
 
     return { id: updatedShare.id };
   }

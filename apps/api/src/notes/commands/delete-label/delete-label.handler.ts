@@ -1,11 +1,15 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { BadRequestException } from '@nestjs/common';
 import { DeleteLabelCommand } from './delete-label.command';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
+import { Inject } from '@nestjs/common';
 
 @CommandHandler(DeleteLabelCommand)
 export class DeleteLabelHandler implements ICommandHandler<DeleteLabelCommand> {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(USER_PREFERENCES_REPOSITORY)
+    private readonly userPreferencesRepository: IUserPreferencesRepository,
+  ) {}
 
   async execute(command: DeleteLabelCommand): Promise<{ updatedCount: number }> {
     const { userId, labelName } = command;
@@ -13,12 +17,7 @@ export class DeleteLabelHandler implements ICommandHandler<DeleteLabelCommand> {
 
     if (!label) throw new BadRequestException('Label name cannot be empty');
 
-    const result = await this.prisma.$executeRaw`
-      UPDATE "UserNoteLabel"
-      SET labels = array_remove(labels, ${label})
-      WHERE "userId" = ${userId} AND ${label} = ANY(labels)
-    `;
-
-    return { updatedCount: Number(result) };
+    const updatedCount = await this.userPreferencesRepository.deleteLabel(userId, label);
+    return { updatedCount };
   }
 }

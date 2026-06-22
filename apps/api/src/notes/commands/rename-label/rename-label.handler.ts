@@ -1,11 +1,15 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { BadRequestException } from '@nestjs/common';
 import { RenameLabelCommand } from './rename-label.command';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
+import { Inject } from '@nestjs/common';
 
 @CommandHandler(RenameLabelCommand)
 export class RenameLabelHandler implements ICommandHandler<RenameLabelCommand> {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(USER_PREFERENCES_REPOSITORY)
+    private readonly userPreferencesRepository: IUserPreferencesRepository,
+  ) {}
 
   async execute(command: RenameLabelCommand): Promise<{ updatedCount: number }> {
     const { userId, oldName, newName } = command;
@@ -16,12 +20,7 @@ export class RenameLabelHandler implements ICommandHandler<RenameLabelCommand> {
 
     if (oldName === newName) return { updatedCount: 0 };
 
-    const result = await this.prisma.$executeRaw`
-      UPDATE "UserNoteLabel"
-      SET labels = array_replace(labels, ${oldName}, ${newName})
-      WHERE "userId" = ${userId} AND ${oldName} = ANY(labels)
-    `;
-
-    return { updatedCount: Number(result) };
+    const updatedCount = await this.userPreferencesRepository.renameLabel(userId, oldName, newName);
+    return { updatedCount };
   }
 }

@@ -60,6 +60,10 @@ import { NOTE_PROTECTION_PORT } from './application/ports/note-protection.port';
 import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma-note-protection.adapter';
 import { NOTE_OUTBOX_PORT } from './application/ports/note-outbox.port';
 import { PrismaOutboxAdapter } from './infrastructure/outbox/prisma-outbox.adapter';
+import { NOTE_SHARE_REPOSITORY } from './application/ports/note-share.repository.port';
+import { PrismaNoteShareRepository } from './infrastructure/persistence/prisma-note-share.repository';
+import { USER_PREFERENCES_REPOSITORY } from './application/ports/user-preferences.repository.port';
+import { PrismaUserPreferencesRepository } from './infrastructure/persistence/prisma-user-preferences.repository';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
@@ -119,6 +123,8 @@ import { PrismaOutboxAdapter } from './infrastructure/outbox/prisma-outbox.adapt
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },
     { provide: NOTE_PROTECTION_PORT, useClass: PrismaNoteProtectionAdapter },
     { provide: NOTE_OUTBOX_PORT, useClass: PrismaOutboxAdapter },
+    { provide: NOTE_SHARE_REPOSITORY, useClass: PrismaNoteShareRepository },
+    { provide: USER_PREFERENCES_REPOSITORY, useClass: PrismaUserPreferencesRepository },
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it

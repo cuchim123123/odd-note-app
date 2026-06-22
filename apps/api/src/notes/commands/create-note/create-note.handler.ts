@@ -4,9 +4,9 @@ import { CreateNoteCommand } from './create-note.command';
 import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../application/ports/document-sync.port';
 import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../application/ports/draft-cache.port';
+import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
 import { NoteEntity } from '../../domain/entities/note.entity';
 import { NoteTitle } from '../../domain/value-objects/note-title.vo';
-import { PrismaService } from '../../../prisma/prisma.service';
 
 @CommandHandler(CreateNoteCommand)
 export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
@@ -17,12 +17,13 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
     private readonly documentSyncPort: IDocumentSyncPort,
     @Inject(DRAFT_CACHE_PORT)
     private readonly draftCachePort: IDraftCachePort,
-    private readonly prisma: PrismaService, // Temporary until UoW / Label Repository is fully implemented
+    @Inject(USER_PREFERENCES_REPOSITORY)
+    private readonly userPreferencesRepository: IUserPreferencesRepository,
   ) {}
 
   async execute(command: CreateNoteCommand): Promise<{ id: string }> {
     const title = NoteTitle.create(command.title);
-    
+
     // Create Note aggregate root
     const note = NoteEntity.create(command.userId, title);
 
@@ -35,27 +36,18 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
         note.id,
         note.title,
         command.content,
-        false, // not pinned by default
-        note.updatedAt
+        false,
+        note.updatedAt,
       );
     }
 
-    // Handle labels (Personal aspect, outside of the Note aggregate itself)
+    // Labels are user-scoped personal data — persisted via preferences port
     if (command.labels && command.labels.length > 0) {
-      await this.prisma.userNoteLabel.create({
-        data: {
-          userId: command.userId,
-          noteId: note.id,
-          labels: command.labels,
-        },
-      });
+      await this.userPreferencesRepository.createLabel(command.userId, note.id, command.labels);
     }
 
-    // Clear any draft that might have existed
+    // Clear any draft that may have existed for 'new' note
     await this.draftCachePort.clearDraft(command.userId, 'new');
-
-    // Dispatch domain events - handled by Outbox/EventBus (to be implemented via generic repository hook or decorator)
-    // For now, NestJS CQRS will require EventBus if we use EventPublisher
 
     return { id: note.id };
   }
