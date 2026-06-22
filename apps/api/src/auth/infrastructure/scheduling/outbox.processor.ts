@@ -19,7 +19,6 @@ export class OutboxProcessor implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.kafkaClient.subscribeToResponseOf('NoteShared'); // Optional, mainly for req-res
     await this.kafkaClient.connect();
   }
 

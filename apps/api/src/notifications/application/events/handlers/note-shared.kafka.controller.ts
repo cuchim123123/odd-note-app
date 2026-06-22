@@ -23,28 +23,18 @@ export class NoteSharedKafkaController {
   async handleNoteSharedEvent(@Payload() message: NoteSharedPayload) {
     this.logger.log(`Handling NoteShared Kafka event for recipient: ${message.recipientEmail}`);
 
-    const payload = message as {
-      noteId: string;
-      shareId: string;
-      ownerId: string;
-      recipientId: string;
-      recipientEmail: string;
-      permission: string;
-      noteTitle: string;
-    };
-
-    const notificationMessage = `A note "${payload.noteTitle}" has been shared with you (Permission: ${payload.permission})`;
+    const notificationMessage = `A note "${message.noteTitle}" has been shared with you (Permission: ${message.permission})`;
 
     await this.commandBus.execute(
       new CreateNotificationCommand(
-        payload.recipientId,
+        message.recipientId,
         'note_shared',
         'Note Shared',
         notificationMessage,
         {
-          noteId: payload.noteId,
-          shareId: payload.shareId,
-          permission: payload.permission,
+          noteId: message.noteId,
+          shareId: message.shareId,
+          permission: message.permission,
         },
       ),
     );

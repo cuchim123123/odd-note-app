@@ -58,6 +58,8 @@ import { DOCUMENT_SYNC_PORT } from './application/ports/document-sync.port';
 import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-sync.adapter';
 import { NOTE_PROTECTION_PORT } from './application/ports/note-protection.port';
 import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma-note-protection.adapter';
+import { NOTE_OUTBOX_PORT } from './application/ports/note-outbox.port';
+import { PrismaOutboxAdapter } from './infrastructure/outbox/prisma-outbox.adapter';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
@@ -116,6 +118,7 @@ import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },
     { provide: NOTE_PROTECTION_PORT, useClass: PrismaNoteProtectionAdapter },
+    { provide: NOTE_OUTBOX_PORT, useClass: PrismaOutboxAdapter },
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it

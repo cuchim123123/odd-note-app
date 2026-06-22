@@ -3,4 +3,4 @@ export * from './domain-error';
 export * from './domain-event';
 export * from './entity';
 export * from './value-object';
-export * from './integration-event';
+

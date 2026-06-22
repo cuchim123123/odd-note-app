@@ -7,6 +7,7 @@ import { SharePermission } from '../../domain/value-objects/share-permission.vo'
 import { MailerService } from '../../../common/mailer/mailer.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NoteAlreadySharedError } from '../../domain/errors/note.errors';
+import { NOTE_OUTBOX_PORT, type INoteOutboxPort } from '../../application/ports/note-outbox.port';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -15,6 +16,8 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     private readonly noteRepository: INoteRepository,
     private readonly prisma: PrismaService, // For user lookup and noteShare persistence (outside Note aggregate)
     private readonly mailer: MailerService,
+    @Inject(NOTE_OUTBOX_PORT)
+    private readonly outbox: INoteOutboxPort,
   ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
@@ -79,22 +82,15 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       appUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     });
 
-    // Phase 4: NoteSharedDomainEvent -> Outbox -> Notifications module via Integration Events
-    await this.prisma.outboxMessage.create({
-      data: {
-        type: 'INTEGRATION_EVENT',
-        topic: 'NoteShared',
-        payload: JSON.stringify({
-          noteId,
-          shareId: share.id,
-          ownerId: userId,
-          recipientId: recipient.id,
-          recipientEmail: recipient.email,
-          permission,
-          noteTitle: note.title,
-        }),
-        status: 'PENDING',
-      },
+    // Dispatch NoteShared integration event via the outbox port (Hexagonal boundary respected)
+    await this.outbox.scheduleIntegrationEvent('NoteShared', {
+      noteId,
+      shareId: share.id,
+      ownerId: userId,
+      recipientId: recipient.id,
+      recipientEmail: recipient.email,
+      permission,
+      noteTitle: note.title,
     });
 
     return { id: share.id };
