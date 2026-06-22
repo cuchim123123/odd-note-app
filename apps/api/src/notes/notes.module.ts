@@ -64,6 +64,8 @@ import { NOTE_SHARE_REPOSITORY } from './application/ports/note-share.repository
 import { PrismaNoteShareRepository } from './infrastructure/persistence/prisma-note-share.repository';
 import { USER_PREFERENCES_REPOSITORY } from './application/ports/user-preferences.repository.port';
 import { PrismaUserPreferencesRepository } from './infrastructure/persistence/prisma-user-preferences.repository';
+import { USER_READ_PORT } from './application/ports/user-read.port';
+import { PrismaUserReadAdapter } from './infrastructure/persistence/prisma-user-read.adapter';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
@@ -125,6 +127,7 @@ import { PrismaUserPreferencesRepository } from './infrastructure/persistence/pr
     { provide: NOTE_OUTBOX_PORT, useClass: PrismaOutboxAdapter },
     { provide: NOTE_SHARE_REPOSITORY, useClass: PrismaNoteShareRepository },
     { provide: USER_PREFERENCES_REPOSITORY, useClass: PrismaUserPreferencesRepository },
+    { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it

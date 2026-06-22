@@ -1,14 +1,14 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { ShareNoteCommand } from './share-note.command';
 import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
-import { Inject } from '@nestjs/common';
-import { SharePermission } from '../../domain/value-objects/share-permission.vo';
-import { MailerService } from '../../../common/mailer/mailer.service';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { NoteAlreadySharedError } from '../../domain/errors/note.errors';
 import { NOTE_OUTBOX_PORT, type INoteOutboxPort } from '../../application/ports/note-outbox.port';
 import { NOTE_SHARE_REPOSITORY, type INoteShareRepository } from '../../application/ports/note-share.repository.port';
+import { USER_READ_PORT, type IUserReadPort } from '../../application/ports/user-read.port';
+import { SharePermission } from '../../domain/value-objects/share-permission.vo';
+import { NoteAlreadySharedError } from '../../domain/errors/note.errors';
+import { MailerService } from '../../../common/mailer/mailer.service';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -19,7 +19,8 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     private readonly noteShareRepository: INoteShareRepository,
     @Inject(NOTE_OUTBOX_PORT)
     private readonly outbox: INoteOutboxPort,
-    private readonly prisma: PrismaService, // Cross-aggregate user lookup — see Phase 7 for IUserReadPort
+    @Inject(USER_READ_PORT)
+    private readonly userReadPort: IUserReadPort,
     private readonly mailer: MailerService,
   ) {}
 
@@ -32,11 +33,8 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       throw new NotFoundException('Note not found or you do not have permission to share it');
     }
 
-    // Cross-aggregate user lookup — acceptable in handler until IUserReadPort (Phase 7)
-    const recipient = await this.prisma.user.findUnique({
-      where: { email: recipientEmail },
-      select: { id: true, email: true },
-    });
+    // Cross-aggregate user read via port (no raw Prisma in application layer)
+    const recipient = await this.userReadPort.findByEmail(recipientEmail);
     if (!recipient) {
       throw new NotFoundException('Recipient user not found');
     }
@@ -58,7 +56,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     // Persist aggregate state
     await this.noteRepository.save(note);
 
-    // Persist NoteShare record via port (no raw Prisma in application layer)
+    // Persist NoteShare record via port
     const share = await this.noteShareRepository.create({
       noteId,
       ownerId: userId,
@@ -67,11 +65,8 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       permission,
     });
 
-    // Fetch owner display name for the notification email — Phase 7 will move this to IUserReadPort
-    const owner = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { displayName: true },
-    });
+    // Fetch owner display name for the notification email via port
+    const owner = await this.userReadPort.findById(userId);
     await this.mailer.sendNoteSharedEmail({
       to: recipient.email,
       recipientName: recipient.email.split('@')[0] ?? 'User',
