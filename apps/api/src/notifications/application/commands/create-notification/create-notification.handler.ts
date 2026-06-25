@@ -32,7 +32,7 @@ export class CreateNotificationHandler implements ICommandHandler<CreateNotifica
       type,
       title,
       message,
-      data ? JSON.stringify(data) : null,
+      data ?? null,
       eventId ?? null,
     );
 
