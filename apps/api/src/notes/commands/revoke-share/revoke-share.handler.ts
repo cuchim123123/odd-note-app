@@ -1,8 +1,10 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { RevokeShareCommand } from './revoke-share.command';
 import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
 import { NOTE_SHARE_REPOSITORY, type INoteShareRepository } from '../../application/ports/note-share.repository.port';
+import { NoteNotFoundError } from '../../domain/errors/note.errors';
+import { ShareNotFoundError } from '../../domain/errors/share.errors';
 
 @CommandHandler(RevokeShareCommand)
 export class RevokeShareHandler implements ICommandHandler<RevokeShareCommand> {
@@ -16,24 +18,15 @@ export class RevokeShareHandler implements ICommandHandler<RevokeShareCommand> {
   async execute(command: RevokeShareCommand): Promise<void> {
     const { userId, noteId, shareId } = command;
 
-    // Load aggregate — includes share list
     const note = await this.noteRepository.findById(noteId);
-    if (!note) {
-      throw new NotFoundException('Note not found or you do not have permission to modify its shares');
-    }
+    if (!note) throw new NoteNotFoundError(noteId);
 
     const shareExists = note.shares.some((s) => s.id === shareId);
-    if (!shareExists) {
-      throw new NotFoundException('Share record not found');
-    }
+    if (!shareExists) throw new ShareNotFoundError(shareId);
 
-    // Domain invariant: revokeShare() enforces owner-only, emits NoteShareRevokedDomainEvent
     note.revokeShare(shareId, userId);
 
-    // Persist updated aggregate (isShared flag may have changed)
     await this.noteRepository.save(note);
-
-    // Remove DB share record via port
     await this.noteShareRepository.delete(shareId);
   }
 }

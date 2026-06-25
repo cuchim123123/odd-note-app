@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ShareNoteHandler } from '../commands/share-note/share-note.handler';
 import { ShareNoteCommand } from '../commands/share-note/share-note.command';
 import { NoteEntity } from '../domain/entities/note.entity';
 import { NoteTitle } from '../domain/value-objects/note-title.vo';
+import { NoteNotFoundError } from '../domain/errors/note.errors';
+import { RecipientNotFoundError, SelfShareError } from '../domain/errors/share.errors';
+import { NoteAlreadySharedError } from '../domain/errors/note.errors';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -68,34 +70,34 @@ describe('ShareNoteHandler', () => {
     expect(result.id).toBe('share-abc');
   });
 
-  it('throws NotFoundException when note does not exist', async () => {
+  it('throws NoteNotFoundError when note does not exist', async () => {
     const { handler } = createMocks({ noteToReturn: null });
 
     await expect(
       handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'recipient@example.com', 'READ')),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(NoteNotFoundError);
   });
 
-  it('throws NotFoundException when recipient email does not exist', async () => {
+  it('throws RecipientNotFoundError when recipient email does not exist', async () => {
     const { handler, userReadPort } = createMocks();
     userReadPort.findByEmail.mockResolvedValue(null);
 
     await expect(
       handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'nobody@example.com', 'READ')),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(RecipientNotFoundError);
   });
 
-  it('throws BadRequestException when owner tries to share with themselves', async () => {
+  it('throws SelfShareError when owner tries to share with themselves', async () => {
     const { handler, userReadPort } = createMocks();
     // recipient id == owner id
     userReadPort.findByEmail.mockResolvedValue({ id: 'owner-1', email: 'owner@example.com' });
 
     await expect(
       handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'owner@example.com', 'READ')),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(SelfShareError);
   });
 
-  it('throws BadRequestException when note is already shared with that recipient', async () => {
+  it('throws NoteAlreadySharedError when note is already shared with that recipient', async () => {
     const note = buildNote('owner-1');
     const { handler, userReadPort } = createMocks({ noteToReturn: note });
 
@@ -109,7 +111,7 @@ describe('ShareNoteHandler', () => {
     // Second share to the same recipient must fail
     await expect(
       handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'recipient@example.com', 'EDIT')),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(NoteAlreadySharedError);
   });
 
   it('saves the aggregate after shareWith mutates it', async () => {

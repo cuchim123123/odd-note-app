@@ -1,14 +1,18 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import type { MicroserviceOptions } from '@nestjs/microservices';
 import { Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
 import { ZodValidationPipe } from 'nestjs-zod';
 import type { EnvConfig } from './config/config.module';
+import { DomainExceptionFilter } from './common/filters/domain-exception.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());
+
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new DomainExceptionFilter(httpAdapter));
 
   const env = app.get<EnvConfig>('ENV_CONFIG');
 

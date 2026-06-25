@@ -23,3 +23,9 @@ export class InvalidNoteTitleError extends DomainError {
     super(message, 'INVALID_NOTE_TITLE');
   }
 }
+
+export class IncorrectPasswordError extends DomainError {
+  constructor() {
+    super('The provided password is incorrect', 'INCORRECT_PASSWORD');
+  }
+}

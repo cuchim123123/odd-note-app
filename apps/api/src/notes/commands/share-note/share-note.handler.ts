@@ -1,5 +1,4 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { ShareNoteCommand } from './share-note.command';
 import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
@@ -7,7 +6,8 @@ import { NOTE_OUTBOX_PORT, type INoteOutboxPort } from '../../application/ports/
 import { NOTE_SHARE_REPOSITORY, type INoteShareRepository } from '../../application/ports/note-share.repository.port';
 import { USER_READ_PORT, type IUserReadPort } from '../../application/ports/user-read.port';
 import { SharePermission } from '../../domain/value-objects/share-permission.vo';
-import { NoteAlreadySharedError } from '../../domain/errors/note.errors';
+import { NoteNotFoundError, NoteAlreadySharedError } from '../../domain/errors/note.errors';
+import { RecipientNotFoundError, SelfShareError } from '../../domain/errors/share.errors';
 import { MailerService } from '../../../common/mailer/mailer.service';
 
 @CommandHandler(ShareNoteCommand)
@@ -27,36 +27,23 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
     const { userId, noteId, recipientEmail, permission } = command;
 
-    // Load aggregate
     const note = await this.noteRepository.findById(noteId);
-    if (!note) {
-      throw new NotFoundException('Note not found or you do not have permission to share it');
-    }
+    if (!note) throw new NoteNotFoundError(noteId);
 
-    // Cross-aggregate user read via port (no raw Prisma in application layer)
     const recipient = await this.userReadPort.findByEmail(recipientEmail);
-    if (!recipient) {
-      throw new NotFoundException('Recipient user not found');
-    }
-    if (recipient.id === userId) {
-      throw new BadRequestException('You cannot share a note with yourself');
-    }
+    if (!recipient) throw new RecipientNotFoundError(recipientEmail);
+    if (recipient.id === userId) throw new SelfShareError();
 
-    // Domain invariant: shareWith() throws NoteAlreadySharedError / NotePermissionDeniedError
     const permissionVO = SharePermission.create(permission);
     try {
       note.shareWith(recipient.id, recipient.email, permissionVO, userId);
     } catch (err) {
-      if (err instanceof NoteAlreadySharedError) {
-        throw new BadRequestException(err.message);
-      }
+      if (err instanceof NoteAlreadySharedError) throw err;
       throw err;
     }
 
-    // Persist aggregate state
     await this.noteRepository.save(note);
 
-    // Persist NoteShare record via port
     const share = await this.noteShareRepository.create({
       noteId,
       ownerId: userId,
@@ -65,7 +52,6 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       permission,
     });
 
-    // Fetch owner display name for the notification email via port
     const owner = await this.userReadPort.findById(userId);
     await this.mailer.sendNoteSharedEmail({
       to: recipient.email,
@@ -77,7 +63,6 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       appUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     });
 
-    // Dispatch NoteShared integration event via outbox port
     await this.outbox.scheduleIntegrationEvent('NoteShared', {
       noteId,
       shareId: share.id,
