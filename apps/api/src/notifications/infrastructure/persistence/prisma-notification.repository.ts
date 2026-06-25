@@ -16,6 +16,7 @@ export class PrismaNotificationRepository implements INotificationRepository {
       message: record.message,
       read: record.read,
       data: record.data,
+      eventId: record.eventId ?? null,
       createdAt: record.createdAt,
     });
   }
@@ -31,12 +32,18 @@ export class PrismaNotificationRepository implements INotificationRepository {
         message: notification.message,
         read: notification.read,
         data: notification.data,
+        eventId: notification.eventId,
         createdAt: notification.createdAt,
       },
       update: {
         read: notification.read,
       },
     });
+  }
+
+  async existsByEventId(eventId: string): Promise<boolean> {
+    const count = await this.prisma.notification.count({ where: { eventId } });
+    return count > 0;
   }
 
   async findById(id: string): Promise<NotificationEntity | null> {

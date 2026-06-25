@@ -138,6 +138,7 @@ model Notification {
   message   String
   read      Boolean  @default(false)
   data      String?  // JSON string for additional context (noteId, shareId, etc)
+  eventId   String?  @unique // source DomainEvent.eventId — used for idempotent processing
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

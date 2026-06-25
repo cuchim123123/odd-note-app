@@ -6,7 +6,10 @@ export interface NotificationProps {
   title: string;
   message: string;
   read: boolean;
+  /** Raw JSON string — serialization is an infrastructure concern handled by the mapper. */
   data: string | null;
+  /** Source DomainEvent.eventId — used for idempotent notification creation. */
+  eventId: string | null;
   createdAt: Date;
 }
 
@@ -17,6 +20,7 @@ export class NotificationEntity extends Entity<NotificationProps> {
   get message(): string { return this.props.message; }
   get read(): boolean { return this.props.read; }
   get data(): string | null { return this.props.data; }
+  get eventId(): string | null { return this.props.eventId; }
   get createdAt(): Date { return this.props.createdAt; }
 
   public markAsRead(): void {
@@ -31,6 +35,7 @@ export class NotificationEntity extends Entity<NotificationProps> {
     title: string,
     message: string,
     data: string | null = null,
+    eventId: string | null = null,
   ): NotificationEntity {
     return new NotificationEntity({
       userId,
@@ -39,6 +44,7 @@ export class NotificationEntity extends Entity<NotificationProps> {
       message,
       read: false,
       data,
+      eventId,
       createdAt: new Date(),
     }, crypto.randomUUID());
   }

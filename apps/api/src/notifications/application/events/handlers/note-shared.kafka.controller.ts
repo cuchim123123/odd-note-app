@@ -11,6 +11,8 @@ interface NoteSharedPayload {
   recipientEmail: string;
   permission: string;
   noteTitle: string;
+  /** Forwarded from DomainEvent.eventId — enables idempotent notification creation. */
+  eventId?: string;
 }
 
 @Controller()
@@ -36,6 +38,7 @@ export class NoteSharedKafkaController {
           shareId: message.shareId,
           permission: message.permission,
         },
+        message.eventId, // propagate for idempotent deduplication
       ),
     );
   }
