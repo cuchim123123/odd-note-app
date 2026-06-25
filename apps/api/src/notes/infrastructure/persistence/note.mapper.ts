@@ -20,6 +20,8 @@ export interface PrismaNoteFull {
     recipientEmail: string;
     permission: string; // 'READ' | 'EDIT' from Prisma enum
   }>;
+  /** Presence of this record means the note is password-protected. */
+  protection?: { id: string } | null;
 }
 
 export class NoteMapper {
@@ -39,7 +41,7 @@ export class NoteMapper {
       title: NoteTitle.create(record.title),
       isShared: record.isShared,
       shares,
-      isProtected: false, // isProtected is derived from NoteProtection records, not a Note column
+      isProtected: !!record.protection, // derived from NoteProtection record existence
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };

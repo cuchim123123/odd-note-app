@@ -42,6 +42,9 @@ export class PrismaNoteRepository implements INoteRepository {
             permission: true,
           },
         },
+        protection: {
+          select: { id: true },
+        },
       },
     });
 

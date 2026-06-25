@@ -24,6 +24,12 @@ const validPayload = {
   noteTitle: 'My Secret Project',
 };
 
+// Helper: gets the command dispatched on a given call (default first call)
+function getCmd(commandBus: { execute: ReturnType<typeof vi.fn> }, callIndex = 0): CreateNotificationCommand {
+   
+  return commandBus.execute.mock.calls[callIndex]![0] as CreateNotificationCommand;
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('NoteSharedKafkaController', () => {
@@ -37,7 +43,7 @@ describe('NoteSharedKafkaController', () => {
     await controller.handleNoteSharedEvent(validPayload);
 
     expect(commandBus.execute).toHaveBeenCalledTimes(1);
-    const cmd: CreateNotificationCommand = commandBus.execute.mock.calls[0][0];
+    const cmd = getCmd(commandBus);
     expect(cmd).toBeInstanceOf(CreateNotificationCommand);
     expect(cmd.userId).toBe('recipient-1');
   });
@@ -47,8 +53,7 @@ describe('NoteSharedKafkaController', () => {
 
     await controller.handleNoteSharedEvent(validPayload);
 
-    const cmd: CreateNotificationCommand = commandBus.execute.mock.calls[0][0];
-    expect(cmd.type).toBe('note_shared');
+    expect(getCmd(commandBus).type).toBe('note_shared');
   });
 
   it('sets notification title to "Note Shared"', async () => {
@@ -56,8 +61,7 @@ describe('NoteSharedKafkaController', () => {
 
     await controller.handleNoteSharedEvent(validPayload);
 
-    const cmd: CreateNotificationCommand = commandBus.execute.mock.calls[0][0];
-    expect(cmd.title).toBe('Note Shared');
+    expect(getCmd(commandBus).title).toBe('Note Shared');
   });
 
   it('builds a human-readable message containing the note title and permission', async () => {
@@ -65,7 +69,7 @@ describe('NoteSharedKafkaController', () => {
 
     await controller.handleNoteSharedEvent(validPayload);
 
-    const cmd: CreateNotificationCommand = commandBus.execute.mock.calls[0][0];
+    const cmd = getCmd(commandBus);
     expect(cmd.message).toContain('My Secret Project');
     expect(cmd.message).toContain('READ');
   });
@@ -75,8 +79,7 @@ describe('NoteSharedKafkaController', () => {
 
     await controller.handleNoteSharedEvent(validPayload);
 
-    const cmd: CreateNotificationCommand = commandBus.execute.mock.calls[0][0];
-    expect(cmd.data).toMatchObject({
+    expect(getCmd(commandBus).data).toMatchObject({
       noteId: 'note-1',
       shareId: 'share-abc',
       permission: 'READ',
@@ -88,7 +91,7 @@ describe('NoteSharedKafkaController', () => {
 
     await controller.handleNoteSharedEvent({ ...validPayload, permission: 'EDIT' });
 
-    const cmd: CreateNotificationCommand = commandBus.execute.mock.calls[0][0];
+    const cmd = getCmd(commandBus);
     expect(cmd.message).toContain('EDIT');
     expect(cmd.data).toMatchObject({ permission: 'EDIT' });
   });

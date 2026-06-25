@@ -118,7 +118,8 @@ describe('ShareNoteHandler', () => {
     await handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'recipient@example.com', 'READ'));
 
     expect(noteRepository.save).toHaveBeenCalledTimes(1);
-    const savedNote: NoteEntity = noteRepository.save.mock.calls[0][0];
+     
+    const savedNote: NoteEntity = noteRepository.save.mock.calls[0]![0];
     expect(savedNote.isShared).toBe(true);
     expect(savedNote.shares).toHaveLength(1);
   });
@@ -129,7 +130,8 @@ describe('ShareNoteHandler', () => {
     await handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'recipient@example.com', 'EDIT'));
 
     expect(outbox.scheduleIntegrationEvent).toHaveBeenCalledTimes(1);
-    const [topic, payload] = outbox.scheduleIntegrationEvent.mock.calls[0];
+     
+    const [topic, payload] = outbox.scheduleIntegrationEvent.mock.calls[0]!;
     expect(topic).toBe('NoteShared');
     expect(payload).toMatchObject({
       shareId: 'share-abc',
@@ -147,7 +149,8 @@ describe('ShareNoteHandler', () => {
     await handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'recipient@example.com', 'READ'));
 
     expect(mailer.sendNoteSharedEmail).toHaveBeenCalledTimes(1);
-    expect(mailer.sendNoteSharedEmail.mock.calls[0][0]).toMatchObject({
+     
+    expect(mailer.sendNoteSharedEmail.mock.calls[0]![0]).toMatchObject({
       to: 'recipient@example.com',
       senderName: 'Owner One',
     });

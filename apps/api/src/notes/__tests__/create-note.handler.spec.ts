@@ -56,7 +56,8 @@ describe('CreateNoteHandler', () => {
 
     expect(noteRepository.save).toHaveBeenCalledTimes(1);
 
-    const savedNote: NoteEntity = noteRepository.save.mock.calls[0][0];
+     
+    const savedNote: NoteEntity = noteRepository.save.mock.calls[0]![0];
     expect(savedNote).toBeInstanceOf(NoteEntity);
     expect(savedNote.title).toBe('My Note');
     expect(savedNote.ownerId).toBe('user-1');
@@ -78,7 +79,8 @@ describe('CreateNoteHandler', () => {
     await handler.execute(new CreateNoteCommand('user-1', 'Rich Note', '<p>Hello</p>'));
 
     expect(documentSyncPort.persistSnapshot).toHaveBeenCalledTimes(1);
-    const [, title, content] = documentSyncPort.persistSnapshot.mock.calls[0];
+     
+    const [, title, content] = documentSyncPort.persistSnapshot.mock.calls[0]!;
     expect(title).toBe('Rich Note');
     expect(content).toBe('<p>Hello</p>');
   });
@@ -89,7 +91,8 @@ describe('CreateNoteHandler', () => {
     await handler.execute(new CreateNoteCommand('user-1', 'Labeled', undefined, ['work', 'urgent']));
 
     expect(userPreferencesRepository.createLabel).toHaveBeenCalledTimes(1);
-    const [userId, , labels] = userPreferencesRepository.createLabel.mock.calls[0];
+     
+    const [userId, , labels] = userPreferencesRepository.createLabel.mock.calls[0]!;
     expect(userId).toBe('user-1');
     expect(labels).toEqual(['work', 'urgent']);
   });

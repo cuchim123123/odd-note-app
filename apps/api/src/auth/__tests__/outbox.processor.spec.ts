@@ -78,7 +78,8 @@ describe('OutboxProcessor', () => {
       await processor.processOutboxMessages();
 
       expect(kafkaClient.emit).toHaveBeenCalledTimes(1);
-      const [topic, payload] = kafkaClient.emit.mock.calls[0];
+       
+      const [topic, payload] = kafkaClient.emit.mock.calls[0]!;
       expect(topic).toBe('NoteShared');
       expect(payload).toMatchObject({ noteId: 'note-1', recipientId: 'user-2' });
     });
