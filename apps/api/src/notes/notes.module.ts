@@ -5,7 +5,7 @@ import { ConfigModule } from '../config/config.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RedisModule } from '../redis/redis.module';
 import { MailerService } from '../common/mailer/mailer.service';
-import { NotesCrdtService } from './notes-crdt.service';
+import { NotesCrdtService } from './infrastructure/crdt/notes-crdt.service';
 
 // ─── Commands ──────────────────────────────────────────────────────────────
 import { CreateNoteHttpController } from './commands/create-note/create-note.http.controller';
