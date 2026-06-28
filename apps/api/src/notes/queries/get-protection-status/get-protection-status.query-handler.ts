@@ -1,6 +1,6 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
-import { NotFoundException } from '@nestjs/common';
+import { NoteNotFoundError } from '../../domain/errors/note.errors';
 import { GetProtectionStatusQuery } from './get-protection-status.query';
 import type { ProtectionStatusResponseDto } from '../../presentation/dto/note.response.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -20,7 +20,7 @@ export class GetProtectionStatusQueryHandler implements IQueryHandler<GetProtect
       select: { userId: true },
     });
 
-    if (!note) throw new NotFoundException('Note not found');
+    if (!note) throw new NoteNotFoundError(noteId);
 
     const protection = await this.prisma.noteProtection.findUnique({
       where: { userId_noteId: { userId: note.userId, noteId } },

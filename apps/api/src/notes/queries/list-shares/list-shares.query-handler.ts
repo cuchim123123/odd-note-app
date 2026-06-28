@@ -1,6 +1,6 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
-import { NotFoundException } from '@nestjs/common';
+import { NotePermissionDeniedError } from '../../domain/errors/note.errors';
 import { ListSharesQuery } from './list-shares.query';
 import type { NoteShareResponseDto } from '../../presentation/dto/note.response.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -16,7 +16,7 @@ export class ListSharesQueryHandler implements IQueryHandler<ListSharesQuery> {
       where: { id: noteId, userId }, // Only the owner can list shares
     });
 
-    if (!note) throw new NotFoundException('Note not found or you do not have permission to view its shares');
+    if (!note) throw new NotePermissionDeniedError('Note not found or you do not have permission to view its shares');
 
     const shares = await this.prisma.noteShare.findMany({
       where: { noteId },

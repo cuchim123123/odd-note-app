@@ -1,6 +1,7 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { NoteNotFoundError } from '../../domain/errors/note.errors';
 import { GetNoteByIdQuery } from './get-note-by-id.query';
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../application/ports/document-sync.port';
 import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '../../application/ports/note-protection.port';
@@ -31,7 +32,7 @@ export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> 
       },
     });
 
-    if (!note) throw new NotFoundException('Note not found');
+    if (!note) throw new NoteNotFoundError(noteId);
 
     // Check if this is a shared access (not owner)
     const sharedAccess = note.userId !== userId

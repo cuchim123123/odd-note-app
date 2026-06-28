@@ -1,6 +1,7 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { NotePermissionDeniedError, IncorrectPasswordError } from '../../domain/errors/note.errors';
 import { GetDraftQuery } from './get-draft.query';
 import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../application/ports/draft-cache.port';
 import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '../../application/ports/note-protection.port';
@@ -30,7 +31,7 @@ export class GetDraftQueryHandler implements IQueryHandler<GetDraftQuery> {
         select: { id: true },
       });
 
-      if (!note) throw new NotFoundException('Note not found or you do not have edit permission');
+      if (!note) throw new NotePermissionDeniedError('Note not found or you do not have edit permission');
 
       // Check protection
       const protection = await this.prisma.noteProtection.findFirst({
@@ -40,7 +41,7 @@ export class GetDraftQueryHandler implements IQueryHandler<GetDraftQuery> {
 
       if (protection) {
         const isUnlocked = await this.protectionPort.verifyUnlockToken(userId, noteId, unlockToken);
-        if (!isUnlocked) throw new UnauthorizedException('Note is protected — provide a valid unlock token');
+        if (!isUnlocked) throw new IncorrectPasswordError();
       }
     }
 
