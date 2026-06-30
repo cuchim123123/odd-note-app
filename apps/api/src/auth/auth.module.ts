@@ -5,13 +5,11 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { TOKEN_PROVIDER } from './application/ports/token-provider.port';
 import { JwtTokenProvider } from './infrastructure/security/jwt-token-provider';
 import { AuthConfigModule, JwtConfigModule } from '../config';
-import { KafkaConfigModule } from '../config/kafka-config.module';
 import { MAIL_SENDER } from './application/ports/mail-sender.port';
 import { NodemailerMailSender } from './infrastructure/messaging/nodemailer-mail-sender';
 import { UserProfileMapper } from './presentation/mappers/user-profile.mapper';
 import { AccessTokenGuard } from '../common/guards/access-token.guard';
 import { TokenCleanupCron } from './infrastructure/scheduling/token-cleanup.cron';
-import { OutboxProcessor } from './infrastructure/scheduling/outbox.processor';
 import { USER_REPOSITORY } from './application/ports/user.repository.port';
 import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository';
 import { TOKEN_REPOSITORY } from './application/ports/token.repository.port';
@@ -22,6 +20,8 @@ import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { BcryptPasswordHasher } from './infrastructure/security/bcrypt-password-hasher';
 import { INTEGRATION_EVENT_MAPPER } from './application/ports/integration-event-mapper.port';
 import { DefaultIntegrationEventMapper } from './application/mappers/integration-event.mapper';
+import { INTERNAL_COMMAND_HANDLERS } from '../common/infrastructure/outbox/internal-command-handler.port';
+import { AuthInternalCommandHandler } from './infrastructure/messaging/auth-internal-command.handler';
 
 // Commands
 import { RegisterHandler } from './application/commands/register/register.handler';
@@ -62,7 +62,7 @@ import { GetCurrentUserHandler } from './application/queries/get-current-user/ge
 import { GetCurrentUserHttpController } from './application/queries/get-current-user/get-current-user.http.controller';
 
 @Module({
-  imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule, KafkaConfigModule],
+  imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [
     RegisterHttpController,
     LoginHttpController,
@@ -103,7 +103,15 @@ import { GetCurrentUserHttpController } from './application/queries/get-current-
     { provide: TOKEN_PROVIDER, useClass: JwtTokenProvider },
     { provide: MAIL_SENDER, useClass: NodemailerMailSender },
     { provide: INTEGRATION_EVENT_MAPPER, useClass: DefaultIntegrationEventMapper },
-    OutboxProcessor,
+    // Register auth's internal command handler with the shared OutboxProcessor.
+    // useFactory + multi is the TS-safe way to register a multi-provider in NestJS.
+    AuthInternalCommandHandler,
+    {
+      provide: INTERNAL_COMMAND_HANDLERS,
+      useFactory: (h: AuthInternalCommandHandler) => h,
+      inject: [AuthInternalCommandHandler],
+      multi: true,
+    } as never,
   ],
   exports: [
     // Port tokens exported for modules that may need to resolve user/token data

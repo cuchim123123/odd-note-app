@@ -9,8 +9,9 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { OutboxModule } from './common/infrastructure/outbox/outbox.module';
 
 @Module({
-  imports: [ConfigModule, JwtConfigModule, HealthModule, PrismaModule, RedisModule, AuthModule, UploadsModule, NotesModule, NotificationsModule, CollaborationModule],
+  imports: [ConfigModule, JwtConfigModule, HealthModule, PrismaModule, RedisModule, AuthModule, UploadsModule, NotesModule, NotificationsModule, CollaborationModule, OutboxModule],
 })
 export class AppModule {}

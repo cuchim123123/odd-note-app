@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { OutboxProcessor } from '../infrastructure/scheduling/outbox.processor';
+import { OutboxProcessor } from '../../common/infrastructure/outbox/outbox.processor';
+import { AuthInternalCommandHandler } from '../infrastructure/messaging/auth-internal-command.handler';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -43,16 +44,18 @@ function createMocks() {
     emit: vi.fn(),
   };
 
+  const authCommandHandler = new AuthInternalCommandHandler(mailSender as never);
+
   const processor = new OutboxProcessor(
     prisma,
-    mailSender as never,
     kafkaClient as never,
+    [authCommandHandler],
   );
 
-  return { processor, prisma, mailSender, kafkaClient };
+  return { processor, prisma, mailSender, kafkaClient, authCommandHandler };
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
+// ─── OutboxProcessor Tests ────────────────────────────────────────────────────
 
 describe('OutboxProcessor', () => {
   beforeEach(() => {
@@ -78,7 +81,6 @@ describe('OutboxProcessor', () => {
       await processor.processOutboxMessages();
 
       expect(kafkaClient.emit).toHaveBeenCalledTimes(1);
-       
       const [topic, payload] = kafkaClient.emit.mock.calls[0]!;
       expect(topic).toBe('NoteShared');
       expect(payload).toMatchObject({ noteId: 'note-1', recipientId: 'user-2' });
@@ -112,7 +114,7 @@ describe('OutboxProcessor', () => {
       });
     });
 
-    it('processes INTERNAL_COMMAND — SendVerificationEmail calls mailSender', async () => {
+    it('delegates INTERNAL_COMMAND — SendVerificationEmail to AuthInternalCommandHandler', async () => {
       const { processor, prisma, mailSender } = createMocks();
       const msg = buildOutboxMessage({
         type: 'INTERNAL_COMMAND',
@@ -134,7 +136,7 @@ describe('OutboxProcessor', () => {
       );
     });
 
-    it('processes INTERNAL_COMMAND — SendPasswordResetEmail calls mailSender', async () => {
+    it('delegates INTERNAL_COMMAND — SendPasswordResetEmail to AuthInternalCommandHandler', async () => {
       const { processor, prisma, mailSender } = createMocks();
       const msg = buildOutboxMessage({
         type: 'INTERNAL_COMMAND',
@@ -148,7 +150,7 @@ describe('OutboxProcessor', () => {
       expect(mailSender.sendPasswordResetEmail).toHaveBeenCalledWith('user@test.com', 'reset-tok');
     });
 
-    it('marks message as PROCESSED even for INTERNAL_COMMAND on success', async () => {
+    it('marks INTERNAL_COMMAND as PROCESSED on success', async () => {
       const { processor, prisma } = createMocks();
       const msg = buildOutboxMessage({
         type: 'INTERNAL_COMMAND',
@@ -199,7 +201,6 @@ describe('OutboxProcessor', () => {
 
       await processor.processOutboxMessages();
 
-      // First fails, second succeeds
       expect(prisma.outboxMessage.update).toHaveBeenCalledWith({
         where: { id: 'msg-fail' },
         data: { status: 'FAILED' },
