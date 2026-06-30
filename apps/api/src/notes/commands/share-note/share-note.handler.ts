@@ -1,4 +1,4 @@
-import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, type ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { ShareNoteCommand } from './share-note.command';
 import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
@@ -9,6 +9,7 @@ import { SharePermission } from '../../domain/value-objects/share-permission.vo'
 import { NoteNotFoundError, NoteAlreadySharedError } from '../../domain/errors/note.errors';
 import { RecipientNotFoundError, SelfShareError } from '../../domain/errors/share.errors';
 import { MailerService } from '../../../common/mailer/mailer.service';
+import { dispatchDomainEvents } from '../../../common/ddd';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -22,6 +23,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     @Inject(USER_READ_PORT)
     private readonly userReadPort: IUserReadPort,
     private readonly mailer: MailerService,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
@@ -43,6 +45,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     }
 
     await this.noteRepository.save(note);
+    await dispatchDomainEvents(note, this.eventBus);
 
     const share = await this.noteShareRepository.create({
       noteId,

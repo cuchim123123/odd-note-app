@@ -1,4 +1,4 @@
-import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, type ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { CreateNoteCommand } from './create-note.command';
 import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
@@ -7,6 +7,7 @@ import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../application/ports/
 import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
 import { NoteEntity } from '../../domain/entities/note.entity';
 import { NoteTitle } from '../../domain/value-objects/note-title.vo';
+import { dispatchDomainEvents } from '../../../common/ddd';
 
 @CommandHandler(CreateNoteCommand)
 export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
@@ -19,6 +20,7 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
     private readonly draftCachePort: IDraftCachePort,
     @Inject(USER_PREFERENCES_REPOSITORY)
     private readonly userPreferencesRepository: IUserPreferencesRepository,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(command: CreateNoteCommand): Promise<{ id: string }> {
@@ -29,6 +31,7 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
 
     // Save aggregate
     await this.noteRepository.save(note);
+    await dispatchDomainEvents(note, this.eventBus);
 
     // Save initial content to document sync port (Yjs) if provided
     if (command.content) {

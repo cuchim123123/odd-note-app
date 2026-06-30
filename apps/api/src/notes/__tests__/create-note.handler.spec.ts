@@ -32,11 +32,14 @@ function createMocks() {
     deleteLabel: vi.fn(),
   };
 
+  const eventBus = { publish: vi.fn() };
+
   const handler = new CreateNoteHandler(
     noteRepository as never,
     documentSyncPort as never,
     draftCachePort as never,
     userPreferencesRepository as never,
+    eventBus as never,
   );
 
   return { handler, noteRepository, documentSyncPort, draftCachePort, userPreferencesRepository };

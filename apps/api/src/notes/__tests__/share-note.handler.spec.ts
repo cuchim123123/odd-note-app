@@ -41,12 +41,15 @@ function createMocks(overrides: { noteToReturn?: NoteEntity | null } = {}) {
     sendNoteSharedEmail: vi.fn().mockResolvedValue(undefined),
   };
 
+  const eventBus = { publish: vi.fn() };
+
   const handler = new ShareNoteHandler(
     noteRepository as never,
     noteShareRepository as never,
     outbox as never,
     userReadPort as never,
     mailer as never,
+    eventBus as never,
   );
 
   return { handler, noteRepository, noteShareRepository, outbox, userReadPort, mailer, note };
