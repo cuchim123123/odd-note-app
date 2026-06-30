@@ -34,6 +34,9 @@ import { RenameLabelHttpController } from './commands/rename-label/rename-label.
 import { RenameLabelHandler } from './commands/rename-label/rename-label.handler';
 import { DeleteLabelHttpController } from './commands/delete-label/delete-label.http.controller';
 import { DeleteLabelHandler } from './commands/delete-label/delete-label.handler';
+import { CreateRevisionHandler } from './commands/create-revision/create-revision.handler';
+import { RestoreRevisionHttpController } from './commands/restore-revision/restore-revision.http.controller';
+import { RestoreRevisionHandler } from './commands/restore-revision/restore-revision.handler';
 
 // ─── Queries ────────────────────────────────────────────────────────────────
 import { ListNotesHttpController } from './queries/list-notes/list-notes.http.controller';
@@ -48,6 +51,8 @@ import { GetProtectionStatusHttpController } from './queries/get-protection-stat
 import { GetProtectionStatusQueryHandler } from './queries/get-protection-status/get-protection-status.query-handler';
 import { GetDraftHttpController } from './queries/get-draft/get-draft.http.controller';
 import { GetDraftQueryHandler } from './queries/get-draft/get-draft.query-handler';
+import { GetNoteHistoryHttpController } from './queries/get-note-history/get-note-history.http.controller';
+import { GetNoteHistoryQueryHandler } from './queries/get-note-history/get-note-history.query-handler';
 
 // ─── Ports & Adapters ────────────────────────────────────────────────────────
 import { NOTE_REPOSITORY } from './application/ports/note.repository.port';
@@ -66,6 +71,8 @@ import { USER_PREFERENCES_REPOSITORY } from './application/ports/user-preference
 import { PrismaUserPreferencesRepository } from './infrastructure/persistence/prisma-user-preferences.repository';
 import { USER_READ_PORT } from './application/ports/user-read.port';
 import { PrismaUserReadAdapter } from './infrastructure/persistence/prisma-user-read.adapter';
+import { NOTE_REVISION_REPOSITORY } from './application/ports/note-revision.repository.port';
+import { PrismaNoteRevisionRepository } from './infrastructure/persistence/prisma-note-revision.repository';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
@@ -84,15 +91,17 @@ import { PrismaUserReadAdapter } from './infrastructure/persistence/prisma-user-
     ClearDraftHttpController,
     RenameLabelHttpController,
     DeleteLabelHttpController,
+    RestoreRevisionHttpController,
     // Queries
     // IMPORTANT: Registration order dictates route evaluation.
-    // Specific routes (shared-with-me) MUST precede wildcard routes (:noteId)
+    // Specific routes MUST precede wildcard routes (:noteId)
     ListNotesHttpController,
     ListSharedWithMeHttpController,
     GetNoteByIdHttpController,
     ListSharesHttpController,
     GetProtectionStatusHttpController,
     GetDraftHttpController,
+    GetNoteHistoryHttpController,
   ],
   providers: [
     // Infrastructure services needed by adapters
@@ -112,6 +121,8 @@ import { PrismaUserReadAdapter } from './infrastructure/persistence/prisma-user-
     ClearDraftHandler,
     RenameLabelHandler,
     DeleteLabelHandler,
+    CreateRevisionHandler,
+    RestoreRevisionHandler,
     // Query Handlers
     ListNotesQueryHandler,
     ListSharedWithMeQueryHandler,
@@ -119,6 +130,7 @@ import { PrismaUserReadAdapter } from './infrastructure/persistence/prisma-user-
     ListSharesQueryHandler,
     GetProtectionStatusQueryHandler,
     GetDraftQueryHandler,
+    GetNoteHistoryQueryHandler,
     // Port → Adapter bindings
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
@@ -128,6 +140,7 @@ import { PrismaUserReadAdapter } from './infrastructure/persistence/prisma-user-
     { provide: NOTE_SHARE_REPOSITORY, useClass: PrismaNoteShareRepository },
     { provide: USER_PREFERENCES_REPOSITORY, useClass: PrismaUserPreferencesRepository },
     { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },
+    { provide: NOTE_REVISION_REPOSITORY, useClass: PrismaNoteRevisionRepository },
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it

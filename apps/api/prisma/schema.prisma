@@ -59,6 +59,7 @@ model Note {
   protection  NoteProtection?
   userLabels  UserNoteLabel[]
   userPins    UserNotePin[]
+  revisions   NoteRevision[]
 
   @@index([userId])
   @@index([updatedAt])
@@ -186,4 +187,19 @@ model OutboxMessage {
   processedAt DateTime?
 
   @@index([status, createdAt])
+}
+
+model NoteRevision {
+  id             String   @id @default(cuid())
+  noteId         String
+  revisionNumber Int      // monotonically increasing per note
+  title          String
+  content        String   @default("")
+  createdAt      DateTime @default(now())
+  createdBy      String   // userId who triggered the save
+  label          String?  // optional human description, e.g. "Auto-save" or custom
+  note           Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, revisionNumber])
+  @@index([noteId, createdAt(sort: Desc)])
 }

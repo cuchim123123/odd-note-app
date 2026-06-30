@@ -1,4 +1,4 @@
-import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, type ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { UpdateNoteCommand } from './update-note.command';
 import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
@@ -6,6 +6,7 @@ import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../application/po
 import { NoteTitle } from '../../domain/value-objects/note-title.vo';
 import { NoteNotFoundError, NotePermissionDeniedError } from '../../domain/errors/note.errors';
 import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
+import { CreateRevisionCommand } from '../create-revision/create-revision.command';
 
 @CommandHandler(UpdateNoteCommand)
 export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
@@ -16,6 +17,7 @@ export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
     private readonly documentSyncPort: IDocumentSyncPort,
     @Inject(USER_PREFERENCES_REPOSITORY)
     private readonly userPreferencesRepository: IUserPreferencesRepository,
+    private readonly commandBus: CommandBus,
   ) {}
 
   async execute(command: UpdateNoteCommand): Promise<{ id: string }> {
@@ -51,6 +53,10 @@ export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
         content,
         personalIsPinned,
         note.updatedAt,
+      );
+      // Snapshot this version in the revision history
+      await this.commandBus.execute(
+        new CreateRevisionCommand(noteId, note.title, content, userId),
       );
     }
 
