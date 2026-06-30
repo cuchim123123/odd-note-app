@@ -15,7 +15,10 @@ import type { INoteAccessPort } from '../application/ports/note-access.port';
 import { CollaborationSessionEntity } from '../domain/entities/collaboration-session.entity';
 
 @WebSocketGateway({
-  cors: { origin: '*', credentials: true },
+  cors: {
+    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    credentials: true,
+  },
   namespace: COLLABORATION_NAMESPACE,
 })
 export class CollaborationPresenceGateway {

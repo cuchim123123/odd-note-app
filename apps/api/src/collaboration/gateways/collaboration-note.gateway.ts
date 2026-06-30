@@ -12,10 +12,15 @@ import { COLLABORATION_STATE_PORT } from '../application/ports/collaboration-sta
 import type { ICollaborationStatePort } from '../application/ports/collaboration-state.port';
 import { YJS_DOCUMENT_PORT } from '../application/ports/yjs-document.port';
 import type { IYjsDocumentPort } from '../application/ports/yjs-document.port';
+import { NOTE_ACCESS_PORT } from '../application/ports/note-access.port';
+import type { INoteAccessPort } from '../application/ports/note-access.port';
 import { RedisService } from '../../redis/redis.service';
 
 @WebSocketGateway({
-  cors: { origin: '*', credentials: true },
+  cors: {
+    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    credentials: true,
+  },
   namespace: COLLABORATION_NAMESPACE,
 })
 export class CollaborationNoteGateway {
@@ -29,6 +34,8 @@ export class CollaborationNoteGateway {
     private readonly statePort: ICollaborationStatePort,
     @Inject(YJS_DOCUMENT_PORT)
     private readonly yjsPort: IYjsDocumentPort,
+    @Inject(NOTE_ACCESS_PORT)
+    private readonly accessPort: INoteAccessPort,
     private readonly redis: RedisService,
   ) {}
 
@@ -40,11 +47,21 @@ export class CollaborationNoteGateway {
     const entry = await this.statePort.getSocketRoom(client.id);
     if (!entry || entry.noteId !== data.noteId) return;
 
+    // ─── Authorization: only EDIT-permission users may update note content ───
+    const permissions = await this.accessPort.getAccessPermissions(client.data.userId, data.noteId);
+    if (!permissions?.canEdit) {
+      this.logger.warn(
+        `User ${client.data.userId} attempted note:update on ${data.noteId} without EDIT permission — rejected`,
+      );
+      client.emit('error', { message: 'You do not have permission to edit this note' });
+      return;
+    }
+
     // Fallback Redis snapshot for non-Yjs fields
     const key = `collab:note:${data.noteId}:snapshot`;
     const prevRaw = await this.redis.getClient().get(key);
     const prev = prevRaw ? JSON.parse(prevRaw) : null;
-    
+
     const nextContent = data.content ?? prev?.content ?? '';
     const snapshot = {
       title: data.title ?? prev?.title ?? '',
@@ -52,7 +69,7 @@ export class CollaborationNoteGateway {
       isPinned: data.isPinned ?? prev?.isPinned ?? false,
       updatedAt: new Date().toISOString(),
     };
-    
+
     await this.redis.getClient().set(key, JSON.stringify(snapshot));
 
     client.to(data.noteId).emit('note:updated', {
@@ -73,6 +90,16 @@ export class CollaborationNoteGateway {
     const entry = await this.statePort.getSocketRoom(client.id);
     if (!entry || entry.noteId !== data.noteId) return;
 
+    // ─── Authorization: only the note OWNER may delete ───
+    const permissions = await this.accessPort.getAccessPermissions(client.data.userId, data.noteId);
+    if (!permissions?.isOwner) {
+      this.logger.warn(
+        `User ${client.data.userId} attempted note:delete on ${data.noteId} without ownership — rejected`,
+      );
+      client.emit('error', { message: 'Only the note owner can delete this note' });
+      return;
+    }
+
     this.logger.log(`User ${client.data.userId} deleted note ${data.noteId} - broadcasting globally`);
     this.server.emit('note:deleted', { noteId: data.noteId });
 
@@ -81,7 +108,7 @@ export class CollaborationNoteGateway {
       this.redis.getClient().del(`collab:note:${data.noteId}:participants`),
       this.redis.getClient().del(`collab:note:${data.noteId}:typing`),
       this.redis.getClient().del(`collab:note:${data.noteId}:snapshot`),
-      this.yjsPort.destroyDocument(data.noteId)
+      this.yjsPort.destroyDocument(data.noteId),
     ]);
   }
 
