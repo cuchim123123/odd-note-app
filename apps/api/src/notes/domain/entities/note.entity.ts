@@ -9,17 +9,18 @@ import { NoteShareUpdatedDomainEvent } from '../events/note-share-updated.domain
 import { NoteShareRevokedDomainEvent } from '../events/note-share-revoked.domain-event';
 import { NotePasswordSetDomainEvent } from '../events/note-password-set.domain-event';
 import { NotePasswordRemovedDomainEvent } from '../events/note-password-removed.domain-event';
+import { NoteId, UserId, ShareId } from '../../../common/ddd/id-types';
 import * as crypto from 'crypto';
 
 export interface NoteShare {
-  id: string;
-  recipientId: string;
+  id: ShareId;
+  recipientId: UserId;
   recipientEmail: string;
   permission: SharePermission;
 }
 
 export interface NoteProps {
-  ownerId: string;
+  ownerId: UserId;
   title: NoteTitle;
   isShared: boolean;
   shares: NoteShare[];
@@ -29,14 +30,16 @@ export interface NoteProps {
 }
 
 export class NoteEntity extends AggregateRoot {
-  private readonly _id: string;
+  private readonly _id: NoteId;
   private readonly props: NoteProps;
 
-  private constructor(props: NoteProps, id?: string) {
+  private constructor(props: NoteProps, id?: NoteId) {
     super();
-    this._id = id ?? crypto.randomUUID();
+    this._id = id ?? NoteId.from(crypto.randomUUID());
     this.props = props;
   }
+
+  // ─── Getters return plain string to keep infrastructure layer clean ───────
 
   get id(): string { return this._id; }
   get ownerId(): string { return this.props.ownerId; }
@@ -47,9 +50,12 @@ export class NoteEntity extends AggregateRoot {
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
 
+  // ─── Factory methods ───────────────────────────────────────────────────────
+
   public static create(ownerId: string, title: NoteTitle): NoteEntity {
+    const typedOwnerId = UserId.from(ownerId);
     const note = new NoteEntity({
-      ownerId,
+      ownerId: typedOwnerId,
       title,
       isShared: false,
       shares: [],
@@ -62,9 +68,14 @@ export class NoteEntity extends AggregateRoot {
     return note;
   }
 
-  public static load(id: string, props: NoteProps): NoteEntity {
-    return new NoteEntity(props, id);
+  public static load(id: string, props: Omit<NoteProps, 'ownerId'> & { ownerId: string }): NoteEntity {
+    return new NoteEntity(
+      { ...props, ownerId: UserId.from(props.ownerId) },
+      NoteId.from(id),
+    );
   }
+
+  // ─── Domain behaviours ────────────────────────────────────────────────────
 
   public rename(newTitle: NoteTitle, requestedBy: string): void {
     this.verifyEditPermission(requestedBy);
@@ -75,15 +86,16 @@ export class NoteEntity extends AggregateRoot {
   public shareWith(recipientId: string, recipientEmail: string, permission: SharePermission, requestedBy: string): void {
     this.verifyOwner(requestedBy);
 
-    const existingShare = this.props.shares.find(s => s.recipientId === recipientId);
+    const typedRecipientId = UserId.from(recipientId);
+    const existingShare = this.props.shares.find(s => s.recipientId === typedRecipientId);
     if (existingShare) {
       throw new NoteAlreadySharedError(recipientEmail);
     }
 
-    const shareId = crypto.randomUUID();
+    const shareId = ShareId.from(crypto.randomUUID());
     this.props.shares.push({
       id: shareId,
-      recipientId,
+      recipientId: typedRecipientId,
       recipientEmail,
       permission,
     });
@@ -130,13 +142,12 @@ export class NoteEntity extends AggregateRoot {
       throw new Error(`Share ${shareId} not found`);
     }
 
-
     this.props.shares.splice(shareIndex, 1);
-    
+
     if (this.props.shares.length === 0) {
       this.props.isShared = false;
     }
-    
+
     this.updateModifiedTime();
 
     this.addDomainEvent(new NoteShareRevokedDomainEvent(
@@ -176,6 +187,8 @@ export class NoteEntity extends AggregateRoot {
     if (this.ownerId === userId) return true;
     return this.props.shares.some(s => s.recipientId === userId && s.permission.value === 'EDIT');
   }
+
+  // ─── Private invariants ───────────────────────────────────────────────────
 
   private verifyOwner(userId: string): void {
     if (this.ownerId !== userId) {

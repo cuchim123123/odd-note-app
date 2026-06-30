@@ -1,7 +1,8 @@
 import { NoteEntity } from '../../domain/entities/note.entity';
-import type { NoteProps, NoteShare } from '../../domain/entities/note.entity';
+import type { NoteShare } from '../../domain/entities/note.entity';
 import { NoteTitle } from '../../domain/value-objects/note-title.vo';
 import { SharePermission } from '../../domain/value-objects/share-permission.vo';
+import { ShareId, UserId } from '../../../common/ddd/id-types';
 
 /**
  * Prisma record shape we expect when loading a Note with its shares.
@@ -29,19 +30,19 @@ export class NoteMapper {
     const shares: NoteShare[] = record.shares
       .filter((s) => s.recipientId !== null)
       .map((s) => ({
-        id: s.id,
-        recipientId: s.recipientId as string,
+        id: ShareId.from(s.id),
+        recipientId: UserId.from(s.recipientId as string),
         recipientEmail: s.recipientEmail,
         permission: SharePermission.create(s.permission),
       }));
 
 
-    const props: NoteProps = {
+    const props = {
       ownerId: record.userId,
       title: NoteTitle.create(record.title),
       isShared: record.isShared,
       shares,
-      isProtected: !!record.protection, // derived from NoteProtection record existence
+      isProtected: !!record.protection,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
