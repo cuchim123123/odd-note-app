@@ -10,6 +10,8 @@ import { NoteNotFoundError, NoteAlreadySharedError } from '../../domain/errors/n
 import { RecipientNotFoundError, SelfShareError } from '../../domain/errors/share.errors';
 import { MailerService } from '../../../common/mailer/mailer.service';
 import { dispatchDomainEvents } from '../../../common/ddd';
+import type { NoteSharedIntegrationEvent } from '../../application/integration-events/note-shared.integration-event';
+import { NoteSharedDomainEvent } from '../../domain/events/note-shared.domain-event';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -45,6 +47,12 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     }
 
     await this.noteRepository.save(note);
+
+    // Capture eventId BEFORE dispatch clears the domain events array
+    const domainEvent = note.domainEvents.find(
+      (e): e is NoteSharedDomainEvent => e instanceof NoteSharedDomainEvent,
+    );
+
     await dispatchDomainEvents(note, this.eventBus);
 
     const share = await this.noteShareRepository.create({
@@ -66,7 +74,12 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       appUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     });
 
-    await this.outbox.scheduleIntegrationEvent('NoteShared', {
+    // Publish the typed integration event to the Outbox → Kafka pipeline.
+    // Using the domain event's eventId as the idempotency key so both the
+    // in-process and cross-process paths share the same correlation ID.
+    const integrationEvent: NoteSharedIntegrationEvent = {
+      eventId: domainEvent?.eventId ?? share.id,
+      occurredOn: new Date().toISOString(),
       noteId,
       shareId: share.id,
       ownerId: userId,
@@ -74,7 +87,12 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       recipientEmail: recipient.email,
       permission,
       noteTitle: note.title,
-    });
+    };
+
+    await this.outbox.scheduleIntegrationEvent(
+      'NoteShared',
+      integrationEvent as unknown as Record<string, unknown>,
+    );
 
     return { id: share.id };
   }
