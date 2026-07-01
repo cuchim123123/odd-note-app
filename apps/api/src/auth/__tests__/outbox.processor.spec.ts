@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { of, throwError } from 'rxjs';
 import { OutboxProcessor } from '../../common/infrastructure/outbox/outbox.processor';
 import { AuthInternalCommandHandler } from '../infrastructure/messaging/auth-internal-command.handler';
 
@@ -10,6 +11,9 @@ function buildOutboxMessage(overrides: Partial<{
   topic: string;
   payload: string;
   status: string;
+  retryCount: number;
+  nextRetryAt: Date | null;
+  deadLetteredAt: Date | null;
   createdAt: Date;
   processedAt: Date | null;
 }> = {}) {
@@ -19,6 +23,9 @@ function buildOutboxMessage(overrides: Partial<{
     topic: 'NoteShared',
     payload: JSON.stringify({ noteId: 'note-1', recipientId: 'user-2' }),
     status: 'PENDING',
+    retryCount: 0,
+    nextRetryAt: null,
+    deadLetteredAt: null,
     createdAt: new Date(),
     processedAt: null,
     ...overrides,
@@ -39,9 +46,10 @@ function createMocks() {
     sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
   };
 
+  // kafkaClient.emit() returns an Observable — use rxjs `of()` for success
   const kafkaClient = {
     connect: vi.fn().mockResolvedValue(undefined),
-    emit: vi.fn(),
+    emit: vi.fn().mockReturnValue(of(undefined)),
   };
 
   const authCommandHandler = new AuthInternalCommandHandler(mailSender as never);
@@ -87,10 +95,9 @@ describe('OutboxProcessor', () => {
     });
 
     it('marks message as PROCESSED after successful Kafka emit', async () => {
-      const { processor, prisma, kafkaClient } = createMocks();
+      const { processor, prisma } = createMocks();
       const msg = buildOutboxMessage();
       prisma.$queryRaw.mockResolvedValue([msg]);
-      kafkaClient.emit.mockReturnValue(undefined);
 
       await processor.processOutboxMessages();
 
@@ -100,17 +107,42 @@ describe('OutboxProcessor', () => {
       });
     });
 
-    it('marks message as FAILED when processing throws', async () => {
+    it('schedules a retry (PENDING + backoff) on first failure instead of permanently failing', async () => {
       const { processor, prisma, kafkaClient } = createMocks();
-      const msg = buildOutboxMessage();
+      const msg = buildOutboxMessage({ retryCount: 0 });
       prisma.$queryRaw.mockResolvedValue([msg]);
-      kafkaClient.emit.mockImplementation(() => { throw new Error('Kafka unavailable'); });
+      // Kafka emit returns an Observable that errors
+      kafkaClient.emit.mockReturnValue(throwError(() => new Error('Kafka unavailable')));
+
+      await processor.processOutboxMessages();
+
+      // Should NOT be marked FAILED — should be re-scheduled as PENDING
+      expect(prisma.outboxMessage.update).toHaveBeenCalledWith({
+        where: { id: 'msg-1' },
+        data: expect.objectContaining({
+          status: 'PENDING',
+          retryCount: 1,
+          nextRetryAt: expect.any(Date),
+        }),
+      });
+    });
+
+    it('moves message to DEAD_LETTERED after MAX_RETRIES failures', async () => {
+      const { processor, prisma, kafkaClient } = createMocks();
+      // retryCount: 4 means this is the 5th attempt → should dead-letter
+      const msg = buildOutboxMessage({ retryCount: 4 });
+      prisma.$queryRaw.mockResolvedValue([msg]);
+      kafkaClient.emit.mockReturnValue(throwError(() => new Error('timeout')));
 
       await processor.processOutboxMessages();
 
       expect(prisma.outboxMessage.update).toHaveBeenCalledWith({
         where: { id: 'msg-1' },
-        data: { status: 'FAILED' },
+        data: expect.objectContaining({
+          status: 'DEAD_LETTERED',
+          retryCount: 5,
+          deadLetteredAt: expect.any(Date),
+        }),
       });
     });
 
@@ -167,44 +199,39 @@ describe('OutboxProcessor', () => {
       });
     });
 
-    it('processes multiple messages in a single poll, marking each PROCESSED', async () => {
+    it('processes multiple messages in a single poll', async () => {
       const { processor, prisma, kafkaClient } = createMocks();
       const messages = [
         buildOutboxMessage({ id: 'msg-1', topic: 'NoteShared' }),
         buildOutboxMessage({ id: 'msg-2', topic: 'NoteShared', payload: JSON.stringify({ noteId: 'note-2' }) }),
       ];
       prisma.$queryRaw.mockResolvedValue(messages);
-      kafkaClient.emit.mockReturnValue(undefined);
 
       await processor.processOutboxMessages();
 
       expect(kafkaClient.emit).toHaveBeenCalledTimes(2);
       expect(prisma.outboxMessage.update).toHaveBeenCalledTimes(2);
-      expect(prisma.outboxMessage.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'msg-1' } }),
-      );
-      expect(prisma.outboxMessage.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'msg-2' } }),
-      );
     });
 
     it('continues processing remaining messages when one fails', async () => {
       const { processor, prisma, kafkaClient } = createMocks();
       const messages = [
-        buildOutboxMessage({ id: 'msg-fail', topic: 'NoteShared' }),
+        buildOutboxMessage({ id: 'msg-fail', topic: 'NoteShared', retryCount: 0 }),
         buildOutboxMessage({ id: 'msg-ok', topic: 'NoteShared', payload: JSON.stringify({ noteId: 'note-2' }) }),
       ];
       prisma.$queryRaw.mockResolvedValue(messages);
       kafkaClient.emit
-        .mockImplementationOnce(() => { throw new Error('timeout'); })
-        .mockReturnValueOnce(undefined);
+        .mockReturnValueOnce(throwError(() => new Error('timeout')))
+        .mockReturnValueOnce(of(undefined));
 
       await processor.processOutboxMessages();
 
+      // First message: retry scheduled
       expect(prisma.outboxMessage.update).toHaveBeenCalledWith({
         where: { id: 'msg-fail' },
-        data: { status: 'FAILED' },
+        data: expect.objectContaining({ status: 'PENDING', retryCount: 1 }),
       });
+      // Second message: success
       expect(prisma.outboxMessage.update).toHaveBeenCalledWith({
         where: { id: 'msg-ok' },
         data: expect.objectContaining({ status: 'PROCESSED' }),

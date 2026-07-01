@@ -178,15 +178,18 @@ model UserNotePin {
 }
 
 model OutboxMessage {
-  id        String   @id @default(cuid())
-  type      String   // 'INTEGRATION_EVENT' or 'INTERNAL_COMMAND'
-  topic     String   // e.g. 'UserRegistered', 'SendVerificationEmail'
-  payload   String   // JSON payload
-  status    String   @default("PENDING") // 'PENDING', 'PROCESSED', 'FAILED'
-  createdAt DateTime @default(now())
-  processedAt DateTime?
+  id           String    @id @default(cuid())
+  type         String    // 'INTEGRATION_EVENT' or 'INTERNAL_COMMAND'
+  topic        String    // e.g. 'UserRegistered', 'SendVerificationEmail'
+  payload      String    // JSON payload
+  status       String    @default("PENDING") // 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED' | 'DEAD_LETTERED'
+  retryCount   Int       @default(0)         // number of failed attempts so far
+  nextRetryAt  DateTime? // null until first failure; set with exponential backoff
+  deadLetteredAt DateTime?                   // timestamp when moved to dead-letter state
+  createdAt    DateTime  @default(now())
+  processedAt  DateTime?
 
-  @@index([status, createdAt])
+  @@index([status, nextRetryAt, createdAt]) // covers PENDING polls and retry scheduling
 }
 
 model NoteRevision {
