@@ -11,6 +11,8 @@ import { COLLABORATION_STATE_PORT } from '../application/ports/collaboration-sta
 import type { ICollaborationStatePort } from '../application/ports/collaboration-state.port';
 import { YJS_DOCUMENT_PORT } from '../application/ports/yjs-document.port';
 import type { IYjsDocumentPort } from '../application/ports/yjs-document.port';
+import { NOTE_ACCESS_PORT } from '../application/ports/note-access.port';
+import type { INoteAccessPort } from '../application/ports/note-access.port';
 
 @WebSocketGateway({
   cors: {
@@ -27,6 +29,8 @@ export class CollaborationYjsGateway {
     private readonly statePort: ICollaborationStatePort,
     @Inject(YJS_DOCUMENT_PORT)
     private readonly yjsPort: IYjsDocumentPort,
+    @Inject(NOTE_ACCESS_PORT)
+    private readonly accessPort: INoteAccessPort,
   ) {}
 
   @SubscribeMessage('yjs:sync-step-1')
@@ -41,7 +45,7 @@ export class CollaborationYjsGateway {
 
       const update = await this.yjsPort.encodeStateAsUpdate(data.noteId, new Uint8Array(data.stateVector));
       const stateVector = await this.yjsPort.getStateVector(data.noteId);
-      
+
       if (update && stateVector) {
         client.emit('yjs:sync-step-2', {
           noteId: data.noteId,
@@ -54,6 +58,13 @@ export class CollaborationYjsGateway {
     }
   }
 
+  /**
+   * yjs:sync-step-3 — client pushes its full document state to the server.
+   * ─── Authorization: requires EDIT permission ─────────────────────────────
+   * READ-only collaborators may receive Yjs updates but must NOT be able to
+   * write document state. Without this check a READ user can silently corrupt
+   * the document by sending a stale or malicious state vector.
+   */
   @SubscribeMessage('yjs:sync-step-3')
   async handleYjsSyncStep3(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
@@ -61,6 +72,16 @@ export class CollaborationYjsGateway {
   ): Promise<void> {
     const entry = await this.statePort.getSocketRoom(client.id);
     if (!entry || entry.noteId !== data.noteId) return;
+
+    // ─── S-3 fix: enforce EDIT permission on all CRDT write events ───────────
+    const permissions = await this.accessPort.getAccessPermissions(client.data.userId, data.noteId);
+    if (!permissions?.canEdit) {
+      this.logger.warn(
+        `User ${client.data.userId} attempted yjs:sync-step-3 on ${data.noteId} without EDIT permission — rejected`,
+      );
+      client.emit('error', { message: 'You do not have permission to edit this note' });
+      return;
+    }
 
     this.logger.log(`[Yjs] recv yjs:sync-step-3 note=${data.noteId} from=${client.data.userId} bytes=${data.update?.length ?? 0}`);
 
@@ -72,6 +93,10 @@ export class CollaborationYjsGateway {
     });
   }
 
+  /**
+   * yjs:update — incremental CRDT delta broadcast.
+   * ─── Authorization: requires EDIT permission ─────────────────────────────
+   */
   @SubscribeMessage('yjs:update')
   async handleYjsUpdate(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
@@ -79,6 +104,16 @@ export class CollaborationYjsGateway {
   ): Promise<void> {
     const entry = await this.statePort.getSocketRoom(client.id);
     if (!entry || entry.noteId !== data.noteId) return;
+
+    // ─── S-3 fix: enforce EDIT permission on all CRDT write events ───────────
+    const permissions = await this.accessPort.getAccessPermissions(client.data.userId, data.noteId);
+    if (!permissions?.canEdit) {
+      this.logger.warn(
+        `User ${client.data.userId} attempted yjs:update on ${data.noteId} without EDIT permission — rejected`,
+      );
+      client.emit('error', { message: 'You do not have permission to edit this note' });
+      return;
+    }
 
     await this.yjsPort.applyUpdate(data.noteId, new Uint8Array(data.update));
 

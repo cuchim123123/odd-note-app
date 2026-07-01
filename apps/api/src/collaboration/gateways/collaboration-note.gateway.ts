@@ -120,6 +120,16 @@ export class CollaborationNoteGateway {
     const entry = await this.statePort.getSocketRoom(client.id);
     if (!entry || entry.noteId !== data.noteId) return;
 
+    // ─── S-2 fix: re-validate access each event — catches post-revoke stale sessions ─
+    const permissions = await this.accessPort.getAccessPermissions(client.data.userId, data.noteId);
+    if (!permissions) {
+      this.logger.warn(
+        `User ${client.data.userId} typing event rejected — access revoked for note ${data.noteId}`,
+      );
+      client.disconnect();
+      return;
+    }
+
     if (data.isTyping) {
       await this.statePort.setTyping(data.noteId, entry.user);
     } else {

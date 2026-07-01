@@ -36,7 +36,7 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
     // Load and authorize against the note aggregate
     const note = await this.noteRepository.findById(noteId);
     if (!note) throw new NoteNotFoundError(noteId);
-    if (!note.canEdit(userId)) throw new NotePermissionDeniedError('Only the note owner can restore a revision');
+    if (!note.isOwner(userId)) throw new NotePermissionDeniedError('Only the note owner can restore a revision');
 
     // Load the target revision (full content needed)
     const revision = await this.revisionRepository.findById(revisionId);

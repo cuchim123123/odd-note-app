@@ -57,9 +57,10 @@ export class PrismaNoteProtectionAdapter implements INoteProtectionPort {
   async verifyUnlockToken(userId: string, noteId: string, token?: string): Promise<boolean> {
     if (!token) return false;
     try {
-      const payload = this.jwtService.verify<{ sub: string; noteId: string; type: string }>(token, {
-        secret: this.jwtConfig.getAccessTokenSecret(),
-      });
+      const payload = this.jwtService.verify<{ sub: string; noteId: string; type: string }>(
+        token,
+        { secret: this.jwtConfig.getNoteUnlockTokenSecret() },
+      );
       return payload.sub === userId && payload.noteId === noteId && payload.type === 'note-unlock';
     } catch {
       return false;
@@ -73,7 +74,7 @@ export class PrismaNoteProtectionAdapter implements INoteProtectionPort {
   async issueUnlockToken(userId: string, noteId: string): Promise<string> {
     return this.jwtService.sign(
       { sub: userId, noteId, type: 'note-unlock' },
-      { secret: this.jwtConfig.getAccessTokenSecret(), expiresIn: '24h' },
+      this.jwtConfig.getNoteUnlockTokenSignOptions(),
     );
   }
 }

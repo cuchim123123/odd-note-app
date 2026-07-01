@@ -1,9 +1,11 @@
-import { Controller, Post, UploadedFile, UseInterceptors, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseInterceptors, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { UploadsService } from './uploads.service';
+import { AccessTokenGuard } from '../common/guards/access-token.guard';
 
 @Controller('uploads')
+@UseGuards(AccessTokenGuard)
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 

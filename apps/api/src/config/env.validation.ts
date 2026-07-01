@@ -16,6 +16,9 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES_IN: durationSchema.default('15m'),
   JWT_REFRESH_EXPIRES_IN: durationSchema.default('7d'),
+  /** Dedicated secret for note-unlock tokens — MUST differ from access/refresh secrets */
+  JWT_NOTE_UNLOCK_SECRET: z.string().min(32),
+  JWT_NOTE_UNLOCK_EXPIRES_IN: durationSchema.default('1h'),
   SMTP_HOST: z.string(),
   SMTP_PORT: z.coerce.number(),
   SMTP_USER: z.string().default(''),

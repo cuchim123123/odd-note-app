@@ -183,6 +183,10 @@ export class NoteEntity extends AggregateRoot {
     return this.props.shares.some(s => s.recipientId === userId);
   }
 
+  public isOwner(userId: string): boolean {
+    return this.ownerId === userId;
+  }
+
   public canEdit(userId: string): boolean {
     if (this.ownerId === userId) return true;
     return this.props.shares.some(s => s.recipientId === userId && s.permission.value === 'EDIT');
