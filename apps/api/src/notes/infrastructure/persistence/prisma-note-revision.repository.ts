@@ -56,4 +56,37 @@ export class PrismaNoteRevisionRepository implements INoteRevisionRepository {
     if (!row) return null;
     return NoteRevisionEntity.create(row);
   }
+
+  async findLatest(noteId: string): Promise<NoteRevisionEntity | null> {
+    const row = await this.prisma.noteRevision.findFirst({
+      where: { noteId },
+      orderBy: { revisionNumber: 'desc' },
+    });
+    if (!row) return null;
+    return NoteRevisionEntity.create(row);
+  }
+
+  /**
+   * Keeps the newest `keepCount` revisions and deletes anything older.
+   * Uses a sub-select to identify the IDs to delete without loading them
+   * into memory — efficient even for large revision histories.
+   */
+  async pruneOldest(noteId: string, keepCount: number): Promise<void> {
+    // Find the revision numbers to keep (newest N)
+    const toKeep = await this.prisma.noteRevision.findMany({
+      where: { noteId },
+      orderBy: { revisionNumber: 'desc' },
+      take: keepCount,
+      select: { id: true },
+    });
+
+    if (toKeep.length < keepCount) return; // not yet at cap
+
+    await this.prisma.noteRevision.deleteMany({
+      where: {
+        noteId,
+        id: { notIn: toKeep.map((r) => r.id) },
+      },
+    });
+  }
 }

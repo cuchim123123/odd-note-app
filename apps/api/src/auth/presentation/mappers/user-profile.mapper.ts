@@ -6,7 +6,6 @@ export type AuthUserProfile = {
   id: string;
   email: string;
   displayName: string;
-  role: 'USER' | 'ADMIN';
   isEmailVerified: boolean;
   avatarUrl: string | null;
 };
@@ -45,7 +44,6 @@ export class UserProfileMapper {
       id: user.id,
       email: user.email.value,
       displayName: user.displayName,
-      role: user.role,
       isEmailVerified: user.isEmailVerified,
       avatarUrl,
     };

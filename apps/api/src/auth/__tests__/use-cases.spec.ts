@@ -63,12 +63,12 @@ function createMocks() {
     findById: vi.fn(async (id: string) => {
       const raw = await prisma.user.findUnique({ where: { id } });
       if (!raw) return null;
-      return new User(raw.id, EmailAddress.create(raw.email), raw.displayName, raw.passwordHash, raw.role, raw.isEmailVerified, raw.avatarUrl, raw.createdAt, raw.updatedAt);
+      return new User(raw.id, EmailAddress.create(raw.email), raw.displayName, raw.passwordHash, raw.isEmailVerified, raw.avatarUrl, raw.createdAt, raw.updatedAt);
     }),
     findByEmail: vi.fn(async (email: string) => {
       const raw = await prisma.user.findUnique({ where: { email } });
       if (!raw) return null;
-      return new User(raw.id, EmailAddress.create(raw.email), raw.displayName, raw.passwordHash, raw.role, raw.isEmailVerified, raw.avatarUrl, raw.createdAt, raw.updatedAt);
+      return new User(raw.id, EmailAddress.create(raw.email), raw.displayName, raw.passwordHash, raw.isEmailVerified, raw.avatarUrl, raw.createdAt, raw.updatedAt);
     }),
     save: vi.fn(async () => {
       // Mocking save implementation is basically a no-op in tests unless needed
@@ -149,7 +149,6 @@ describe('Auth Use Cases', () => {
         email: 'user@example.com',
         displayName: 'User Example',
         passwordHash: 'hashed-password',
-        role: 'USER',
         isEmailVerified: false,
         avatarUrl: null,
         createdAt: new Date('2026-05-12T00:00:00.000Z'),
@@ -213,7 +212,6 @@ describe('Auth Use Cases', () => {
         email: 'user@example.com',
         displayName: 'User Example',
         passwordHash: 'hashed-password',
-        role: 'USER',
         isEmailVerified: true,
         avatarUrl: null,
         createdAt: new Date(),
@@ -254,7 +252,6 @@ describe('Auth Use Cases', () => {
         email: 'user@example.com',
         displayName: 'User Example',
         passwordHash: 'hashed-password',
-        role: 'USER',
         isEmailVerified: true,
         avatarUrl: null,
         createdAt: new Date(),

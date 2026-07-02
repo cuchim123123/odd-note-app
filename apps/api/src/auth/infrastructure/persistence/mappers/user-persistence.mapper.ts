@@ -13,7 +13,6 @@ export class UserPersistenceMapper {
       EmailAddress.create(prismaUser.email),
       prismaUser.displayName,
       prismaUser.passwordHash,
-      prismaUser.role,
       prismaUser.isEmailVerified,
       prismaUser.avatarUrl,
       prismaUser.createdAt,

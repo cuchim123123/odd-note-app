@@ -4,15 +4,9 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { GetNoteHistoryQuery } from './get-note-history.query';
 import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '../../application/ports/note-revision.repository.port';
 import { NotePermissionDeniedError, NoteNotFoundError } from '../../domain/errors/note.errors';
+import type { NoteRevisionSummaryDto } from '../../presentation/dto/note-revision-summary.dto';
 
-export interface NoteRevisionSummaryDto {
-  id: string;
-  revisionNumber: number;
-  title: string;
-  createdAt: string;
-  createdBy: string;
-  label: string | null;
-}
+export type { NoteRevisionSummaryDto };
 
 @QueryHandler(GetNoteHistoryQuery)
 export class GetNoteHistoryQueryHandler implements IQueryHandler<GetNoteHistoryQuery> {
@@ -25,24 +19,25 @@ export class GetNoteHistoryQueryHandler implements IQueryHandler<GetNoteHistoryQ
   async execute(query: GetNoteHistoryQuery): Promise<NoteRevisionSummaryDto[]> {
     const { userId, noteId } = query;
 
-    // Verify the note exists and the user has access (owner or shared)
+    /**
+     * P-4 fix: single query that selects userId for the ownership check.
+     * Previous implementation made two separate findFirst() calls:
+     *  1) existence + access (OR[owner, shared])
+     *  2) ownership re-check (where: { userId })
+     * Both can be collapsed by projecting userId and comparing in-memory.
+     */
     const note = await this.prisma.note.findFirst({
       where: {
         id: noteId,
         OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
       },
-      select: { id: true },
+      select: { userId: true },
     });
 
     if (!note) throw new NoteNotFoundError(noteId);
-
-    // Only the owner can view version history (shared editors cannot)
-    const isOwner = await this.prisma.note.findFirst({
-      where: { id: noteId, userId },
-      select: { id: true },
-    });
-
-    if (!isOwner) throw new NotePermissionDeniedError('Only the note owner can view version history');
+    if (note.userId !== userId) {
+      throw new NotePermissionDeniedError('Only the note owner can view version history');
+    }
 
     const revisions = await this.revisionRepository.findByNoteId(noteId);
 
