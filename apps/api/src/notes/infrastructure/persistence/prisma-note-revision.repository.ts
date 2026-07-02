@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type { INoteRevisionRepository } from '../../application/ports/note-revision.repository.port';
 import { NoteRevisionEntity } from '../../domain/entities/note-revision.entity';
 import { PrismaService } from '../../../prisma/prisma.service';
+import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
+import type { PrismaTransactionClient } from './prisma-client.type';
 
 @Injectable()
 export class PrismaNoteRevisionRepository implements INoteRevisionRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
   async nextRevisionNumber(noteId: string): Promise<number> {
     const result = await this.prisma.noteRevision.aggregate({
@@ -90,3 +92,5 @@ export class PrismaNoteRevisionRepository implements INoteRevisionRepository {
     });
   }
 }
+
+

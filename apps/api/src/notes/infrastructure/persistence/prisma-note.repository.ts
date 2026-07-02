@@ -1,12 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type { INoteRepository } from '../../application/ports/note.repository.port';
 import { PrismaService } from '../../../prisma/prisma.service';
+import type { PrismaTransactionClient } from './prisma-client.type';
 import { NoteEntity } from '../../domain/entities/note.entity';
 import { NoteMapper } from './note.mapper';
 
 @Injectable()
 export class PrismaNoteRepository implements INoteRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
   async save(note: NoteEntity): Promise<void> {
     const data = NoteMapper.toPersistence(note);
@@ -54,13 +55,10 @@ export class PrismaNoteRepository implements INoteRepository {
   }
 
   async delete(id: string): Promise<void> {
-    // Cascade: delete related records first in a transaction
-    await this.prisma.$transaction([
-      this.prisma.noteProtection.deleteMany({ where: { noteId: id } }),
-      this.prisma.userNoteLabel.deleteMany({ where: { noteId: id } }),
-      this.prisma.userNotePin.deleteMany({ where: { noteId: id } }),
-      this.prisma.noteShare.deleteMany({ where: { noteId: id } }),
-      this.prisma.note.delete({ where: { id } }),
-    ]);
+    await this.prisma.noteProtection.deleteMany({ where: { noteId: id } });
+    await this.prisma.userNoteLabel.deleteMany({ where: { noteId: id } });
+    await this.prisma.userNotePin.deleteMany({ where: { noteId: id } });
+    await this.prisma.noteShare.deleteMany({ where: { noteId: id } });
+    await this.prisma.note.delete({ where: { id } });
   }
 }

@@ -11,6 +11,21 @@ function createMocks() {
     save: vi.fn(),
     delete: vi.fn(),
   };
+  
+  const userPreferencesRepository = {
+    upsertPin: vi.fn(),
+    getPin: vi.fn(),
+    upsertLabel: vi.fn(),
+    createLabel: vi.fn(),
+    renameLabel: vi.fn(),
+    deleteLabel: vi.fn(),
+  };
+
+  const unitOfWork = {
+    execute: vi.fn(async (work) => {
+      return work({ noteRepository, userPreferencesRepository });
+    }),
+  };
 
   const documentSyncPort = {
     persistSnapshot: vi.fn(),
@@ -23,26 +38,16 @@ function createMocks() {
     clearDraft: vi.fn(),
   };
 
-  const userPreferencesRepository = {
-    upsertPin: vi.fn(),
-    getPin: vi.fn(),
-    upsertLabel: vi.fn(),
-    createLabel: vi.fn(),
-    renameLabel: vi.fn(),
-    deleteLabel: vi.fn(),
-  };
-
   const eventBus = { publish: vi.fn() };
 
   const handler = new CreateNoteHandler(
-    noteRepository as never,
+    unitOfWork as never,
     documentSyncPort as never,
     draftCachePort as never,
-    userPreferencesRepository as never,
     eventBus as never,
   );
 
-  return { handler, noteRepository, documentSyncPort, draftCachePort, userPreferencesRepository };
+  return { handler, noteRepository, documentSyncPort, draftCachePort, userPreferencesRepository, unitOfWork };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

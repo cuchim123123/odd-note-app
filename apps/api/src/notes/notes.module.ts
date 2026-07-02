@@ -55,6 +55,8 @@ import { GetNoteHistoryHttpController } from './queries/get-note-history/get-not
 import { GetNoteHistoryQueryHandler } from './queries/get-note-history/get-note-history.query-handler';
 
 // ─── Ports & Adapters ────────────────────────────────────────────────────────
+import { NOTE_UNIT_OF_WORK } from './application/ports/unit-of-work.port';
+import { PrismaNoteUnitOfWork } from './infrastructure/persistence/prisma-note-unit-of-work';
 import { NOTE_REPOSITORY } from './application/ports/note.repository.port';
 import { PrismaNoteRepository } from './infrastructure/persistence/prisma-note.repository';
 import { DRAFT_CACHE_PORT } from './application/ports/draft-cache.port';
@@ -132,6 +134,7 @@ import { PrismaNoteRevisionRepository } from './infrastructure/persistence/prism
     GetDraftQueryHandler,
     GetNoteHistoryQueryHandler,
     // Port → Adapter bindings
+    { provide: NOTE_UNIT_OF_WORK, useClass: PrismaNoteUnitOfWork },
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },

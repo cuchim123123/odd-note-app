@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type { IUserReadPort, UserBasicInfo, UserDisplayInfo } from '../../application/ports/user-read.port';
 import { PrismaService } from '../../../prisma/prisma.service';
+import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
+import type { PrismaTransactionClient } from './prisma-client.type';
 
 /**
  * Infrastructure adapter: provides read-only user lookups for the Notes module.
@@ -9,7 +11,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
  */
 @Injectable()
 export class PrismaUserReadAdapter implements IUserReadPort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
   async findByEmail(email: string): Promise<UserBasicInfo | null> {
     return this.prisma.user.findUnique({
@@ -25,3 +27,5 @@ export class PrismaUserReadAdapter implements IUserReadPort {
     });
   }
 }
+
+

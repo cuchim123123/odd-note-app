@@ -43,16 +43,20 @@ function createMocks(overrides: { noteToReturn?: NoteEntity | null } = {}) {
 
   const eventBus = { publish: vi.fn() };
 
+  const unitOfWork = {
+    execute: vi.fn(async (work) => {
+      return work({ noteRepository, noteShareRepository, outbox });
+    }),
+  };
+
   const handler = new ShareNoteHandler(
-    noteRepository as never,
-    noteShareRepository as never,
-    outbox as never,
+    unitOfWork as never,
     userReadPort as never,
     mailer as never,
     eventBus as never,
   );
 
-  return { handler, noteRepository, noteShareRepository, outbox, userReadPort, mailer, note };
+  return { handler, noteRepository, noteShareRepository, outbox, userReadPort, mailer, note, unitOfWork };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

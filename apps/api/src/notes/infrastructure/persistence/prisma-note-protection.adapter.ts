@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../../prisma/prisma.service';
+import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
+import type { PrismaTransactionClient } from './prisma-client.type';
 import { JwtConfigService } from '../../../config/jwt-config.service';
 import type { INoteProtectionPort } from '../../application/ports/note-protection.port';
 
@@ -13,7 +15,7 @@ import type { INoteProtectionPort } from '../../application/ports/note-protectio
 @Injectable()
 export class PrismaNoteProtectionAdapter implements INoteProtectionPort {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaTransactionClient,
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
   ) {}
@@ -78,3 +80,5 @@ export class PrismaNoteProtectionAdapter implements INoteProtectionPort {
     );
   }
 }
+
+

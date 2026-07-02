@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type {
   INoteShareRepository,
   NoteShareCreateData,
   NoteShareRecord,
 } from '../../application/ports/note-share.repository.port';
 import { PrismaService } from '../../../prisma/prisma.service';
+import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
+import type { PrismaTransactionClient } from './prisma-client.type';
 import { SharePermission } from '@prisma/client';
 
 /**
@@ -14,7 +16,7 @@ import { SharePermission } from '@prisma/client';
  */
 @Injectable()
 export class PrismaNoteShareRepository implements INoteShareRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
   async create(data: NoteShareCreateData): Promise<NoteShareRecord> {
     return this.prisma.noteShare.create({
@@ -41,3 +43,5 @@ export class PrismaNoteShareRepository implements INoteShareRepository {
     await this.prisma.noteShare.delete({ where: { id: shareId } });
   }
 }
+
+

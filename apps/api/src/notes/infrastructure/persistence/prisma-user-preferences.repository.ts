@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type { IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
 import { PrismaService } from '../../../prisma/prisma.service';
+import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
+import type { PrismaTransactionClient } from './prisma-client.type';
 
 /**
  * Infrastructure adapter: manages per-user note preferences (pins and labels).
@@ -8,7 +10,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
  */
 @Injectable()
 export class PrismaUserPreferencesRepository implements IUserPreferencesRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
   async upsertPin(userId: string, noteId: string, isPinned: boolean): Promise<{ isPinned: boolean }> {
     const record = await this.prisma.userNotePin.upsert({
@@ -58,3 +60,5 @@ export class PrismaUserPreferencesRepository implements IUserPreferencesReposito
     return Number(result);
   }
 }
+
+

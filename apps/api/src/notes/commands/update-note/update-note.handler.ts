@@ -1,50 +1,51 @@
 import { CommandHandler, type ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { UpdateNoteCommand } from './update-note.command';
-import { NOTE_REPOSITORY, type INoteRepository } from '../../application/ports/note.repository.port';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../application/ports/unit-of-work.port';
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../application/ports/document-sync.port';
 import { NoteTitle } from '../../domain/value-objects/note-title.vo';
 import { NoteNotFoundError, NotePermissionDeniedError } from '../../domain/errors/note.errors';
-import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
 import { CreateRevisionCommand } from '../create-revision/create-revision.command';
 
 @CommandHandler(UpdateNoteCommand)
 export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
   constructor(
-    @Inject(NOTE_REPOSITORY)
-    private readonly noteRepository: INoteRepository,
+    @Inject(NOTE_UNIT_OF_WORK)
+    private readonly unitOfWork: INoteUnitOfWork,
     @Inject(DOCUMENT_SYNC_PORT)
     private readonly documentSyncPort: IDocumentSyncPort,
-    @Inject(USER_PREFERENCES_REPOSITORY)
-    private readonly userPreferencesRepository: IUserPreferencesRepository,
     private readonly commandBus: CommandBus,
   ) {}
 
   async execute(command: UpdateNoteCommand): Promise<{ id: string }> {
     const { userId, noteId, title, content, isPinned, labels } = command;
 
-    const note = await this.noteRepository.findById(noteId);
-    if (!note) throw new NoteNotFoundError(noteId);
+    const { note, personalIsPinned } = await this.unitOfWork.execute(async (ctx) => {
+      const note = await ctx.noteRepository.findById(noteId);
+      if (!note) throw new NoteNotFoundError(noteId);
 
-    if (!note.canEdit(userId)) throw new NotePermissionDeniedError();
+      if (!note.canEdit(userId)) throw new NotePermissionDeniedError();
 
-    if (title !== undefined) {
-      note.rename(NoteTitle.create(title), userId);
-    }
+      if (title !== undefined) {
+        note.rename(NoteTitle.create(title), userId);
+      }
 
-    await this.noteRepository.save(note);
+      await ctx.noteRepository.save(note);
 
-    let personalIsPinned = false;
-    if (isPinned !== undefined) {
-      const result = await this.userPreferencesRepository.upsertPin(userId, noteId, isPinned);
-      personalIsPinned = result.isPinned;
-    } else {
-      personalIsPinned = await this.userPreferencesRepository.getPin(userId, noteId);
-    }
+      let personalIsPinnedResult = false;
+      if (isPinned !== undefined) {
+        const result = await ctx.userPreferencesRepository.upsertPin(userId, noteId, isPinned);
+        personalIsPinnedResult = result.isPinned;
+      } else {
+        personalIsPinnedResult = await ctx.userPreferencesRepository.getPin(userId, noteId);
+      }
 
-    if (labels !== undefined) {
-      await this.userPreferencesRepository.upsertLabel(userId, noteId, labels);
-    }
+      if (labels !== undefined) {
+        await ctx.userPreferencesRepository.upsertLabel(userId, noteId, labels);
+      }
+      
+      return { note, personalIsPinned: personalIsPinnedResult };
+    });
 
     if (content !== undefined) {
       await this.documentSyncPort.persistSnapshot(
