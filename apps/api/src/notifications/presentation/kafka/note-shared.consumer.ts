@@ -1,7 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { CommandBus } from '@nestjs/cqrs';
-import { CreateNotificationCommand } from '../../commands/create-notification/create-notification.command';
+import { CreateNotificationCommand } from '../../application/commands/create-notification/create-notification.command';
 
 interface NoteSharedPayload {
   noteId: string;
@@ -16,8 +16,8 @@ interface NoteSharedPayload {
 }
 
 @Controller()
-export class NoteSharedKafkaController {
-  private readonly logger = new Logger(NoteSharedKafkaController.name);
+export class NoteSharedConsumer {
+  private readonly logger = new Logger(NoteSharedConsumer.name);
 
   constructor(private readonly commandBus: CommandBus) {}
 

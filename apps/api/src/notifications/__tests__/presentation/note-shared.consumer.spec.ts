@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NoteSharedKafkaController } from '../application/events/handlers/note-shared.kafka.controller';
-import { CreateNotificationCommand } from '../application/commands/create-notification/create-notification.command';
+import { NoteSharedConsumer } from '../../presentation/kafka/note-shared.consumer';
+import { CreateNotificationCommand } from '../../application/commands/create-notification/create-notification.command';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -9,7 +9,7 @@ function createMocks() {
     execute: vi.fn().mockResolvedValue(undefined),
   };
 
-  const controller = new NoteSharedKafkaController(commandBus as never);
+  const controller = new NoteSharedConsumer(commandBus as never);
 
   return { controller, commandBus };
 }
@@ -32,7 +32,7 @@ function getCmd(commandBus: { execute: ReturnType<typeof vi.fn> }, callIndex = 0
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe('NoteSharedKafkaController', () => {
+describe('NoteSharedConsumer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -96,3 +96,4 @@ describe('NoteSharedKafkaController', () => {
     expect(cmd.data).toMatchObject({ permission: 'EDIT' });
   });
 });
+

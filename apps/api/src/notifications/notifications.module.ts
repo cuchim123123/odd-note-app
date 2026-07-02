@@ -25,7 +25,7 @@ import { GetNotificationsHandler } from './application/queries/get-notifications
 import { GetUnreadCountHandler } from './application/queries/get-unread-count/get-unread-count.handler';
 
 // Event Handlers (Kafka Consumers)
-import { NoteSharedKafkaController } from './application/events/handlers/note-shared.kafka.controller';
+import { NoteSharedConsumer } from './presentation/kafka/note-shared.consumer';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule],
@@ -45,8 +45,9 @@ import { NoteSharedKafkaController } from './application/events/handlers/note-sh
     MarkAsReadHttpController,
     MarkAllAsReadHttpController,
     DeleteNotificationHttpController,
-    NoteSharedKafkaController,
+    NoteSharedConsumer,
   ],
   exports: [],
 })
 export class NotificationsModule {}
+
