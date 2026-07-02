@@ -1,7 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { IUserReadPort, UserBasicInfo, UserDisplayInfo } from '../../application/ports/user-read.port';
 import { PrismaService } from '../../../prisma/prisma.service';
-import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
 import type { PrismaTransactionClient } from './prisma-client.type';
 
 /**
@@ -27,5 +26,6 @@ export class PrismaUserReadAdapter implements IUserReadPort {
     });
   }
 }
+
 
 

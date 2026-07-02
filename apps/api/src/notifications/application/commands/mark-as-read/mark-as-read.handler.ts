@@ -1,5 +1,6 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { NotificationNotFoundError, NotificationPermissionDeniedError } from '../../../domain/errors/notification.errors';
 import { MarkAsReadCommand } from './mark-as-read.command';
 import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '../../ports/notification.repository.port';
 
@@ -15,10 +16,10 @@ export class MarkAsReadHandler implements ICommandHandler<MarkAsReadCommand> {
     const notification = await this.notificationRepository.findById(notificationId);
     
     if (!notification) {
-      throw new NotFoundException('Notification not found');
+      throw new NotificationNotFoundError(notificationId);
     }
     if (notification.userId !== userId) {
-      throw new UnauthorizedException('You do not own this notification');
+      throw new NotificationPermissionDeniedError();
     }
 
     notification.markAsRead();

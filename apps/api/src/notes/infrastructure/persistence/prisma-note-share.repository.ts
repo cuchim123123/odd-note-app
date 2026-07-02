@@ -5,7 +5,6 @@ import type {
   NoteShareRecord,
 } from '../../application/ports/note-share.repository.port';
 import { PrismaService } from '../../../prisma/prisma.service';
-import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
 import type { PrismaTransactionClient } from './prisma-client.type';
 import { SharePermission } from '@prisma/client';
 
@@ -43,5 +42,6 @@ export class PrismaNoteShareRepository implements INoteShareRepository {
     await this.prisma.noteShare.delete({ where: { id: shareId } });
   }
 }
+
 
 

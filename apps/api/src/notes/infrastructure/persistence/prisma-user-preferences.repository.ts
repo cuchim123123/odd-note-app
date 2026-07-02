@@ -1,7 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
 import { PrismaService } from '../../../prisma/prisma.service';
-import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
 import type { PrismaTransactionClient } from './prisma-client.type';
 
 /**
@@ -60,5 +59,6 @@ export class PrismaUserPreferencesRepository implements IUserPreferencesReposito
     return Number(result);
   }
 }
+
 
 
