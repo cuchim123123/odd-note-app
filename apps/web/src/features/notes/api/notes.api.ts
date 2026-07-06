@@ -6,6 +6,45 @@ import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
 import { useNoteProtectionStore } from '../stores/note-protection.store';
 import type { Note, CreateNoteInput, UpdateNoteInput, CreateNoteShareInput, UpdateNoteShareInput } from '@odd-note-app/validation';
 
+import { openNotesDb, readAllNotesFromDb, readNoteFromDb, upsertNoteInDb, upsertNotesInDb, deleteNoteFromDb } from './notes.storage';
+import {
+  fetchNotesFromApi,
+  fetchNoteFromApi,
+  createNoteInApi,
+  updateNoteInApi,
+  deleteNoteInApi,
+  fetchSharedNotesFromApi,
+  fetchNoteSharesFromApi,
+  createNoteShareInApi,
+  updateNoteShareInApi,
+  deleteNoteShareInApi,
+  renameLabelInApi,
+  deleteLabelInApi,
+} from './notes.client';
+import {
+  mockNotes,
+  mockNoteShares,
+  mockNoteDrafts,
+  getSortedNotes,
+  getNoteById,
+  createNote,
+  updateNote,
+  deleteNote,
+  renameLabelInNotes,
+  deleteLabelInNotes,
+  resetMockNotes,
+  syncNoteShareFlag,
+  toSharedNoteItem,
+  upsertShare,
+  updateSharePermission,
+  removeShare,
+  getMockDraft,
+  setMockDraft,
+  clearMockDraft,
+  getAllMockShares,
+  type MockShareRecord,
+} from './notes.mock';
+
 export type SharePermission = 'READ' | 'EDIT';
 
 export type SharedByProfile = {
@@ -51,8 +90,6 @@ const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (
 
 const now = () => new Date().toISOString();
 
-import { openNotesDb, readAllNotesFromDb, readNoteFromDb, upsertNoteInDb, upsertNotesInDb, deleteNoteFromDb } from './notes.storage';
-
 const queueOfflineMutation = (item: { type: 'create' | 'update' | 'delete' | 'share' | 'rename-label' | 'delete-label'; noteId?: string; payload: Record<string, unknown> }) => {
   useOfflineSyncStore.getState().addToSyncQueue({
     id: createId(),
@@ -86,46 +123,7 @@ const getOfflineNote = async (id: string): Promise<Note> => {
   }
 
   return getNoteById(id);
-};
-
-import {
-  fetchNotesFromApi,
-  fetchNoteFromApi,
-  createNoteInApi,
-  updateNoteInApi,
-  deleteNoteInApi,
-  fetchSharedNotesFromApi,
-  fetchNoteSharesFromApi,
-  createNoteShareInApi,
-  updateNoteShareInApi,
-  deleteNoteShareInApi,
-  renameLabelInApi,
-  deleteLabelInApi,
-} from './notes.client';
-
-import {
-  mockNotes,
-  mockNoteShares,
-  mockNoteDrafts,
-  getSortedNotes,
-  getNoteById,
-  createNote,
-  updateNote,
-  deleteNote,
-  renameLabelInNotes,
-  deleteLabelInNotes,
-  resetMockNotes,
-  syncNoteShareFlag,
-  toSharedNoteItem,
-  upsertShare,
-  updateSharePermission,
-  removeShare,
-  getMockDraft,
-  setMockDraft,
-  clearMockDraft,
-  getAllMockShares,
-  type MockShareRecord,
-} from './notes.mock';
+}
 
 export {
   mockNotes,

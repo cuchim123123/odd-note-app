@@ -28,8 +28,6 @@ export function useOfflineSync() {
       return;
     }
 
-    syncingRef.current = true;
-
     const syncOfflineChanges = async () => {
       setSyncing(true);
       setSyncError(null);
@@ -108,6 +106,8 @@ export function useOfflineSync() {
     };
 
     const timeoutId = setTimeout(() => {
+      if (syncingRef.current) return;
+      syncingRef.current = true;
       void syncOfflineChanges();
     }, 500);
 
