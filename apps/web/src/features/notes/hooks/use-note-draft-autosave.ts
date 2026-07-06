@@ -93,7 +93,7 @@ export function useNoteDraftAndAutoSave({
 
   // Load draft - only if we have permission to edit
   useEffect(() => {
-    if (!note || !canEditContent) {
+    if (!note || !canEditContent || isCollaborativeNote) {
       isInitializingRef.current = false;
       return;
     }
@@ -163,7 +163,7 @@ export function useNoteDraftAndAutoSave({
 
     void loadDraft();
     return () => { canceled = true; };
-  }, [note?.id, canEditContent, unlockToken]);
+  }, [note?.id, canEditContent, unlockToken, isCollaborativeNote]);
 
   // HIGH-PERFORMANCE DEBOUNCED AUTOSAVE: Debounce IndexedDB to 150ms and API/Server to 1000ms
   useEffect(() => {
@@ -175,6 +175,16 @@ export function useNoteDraftAndAutoSave({
     if (!changed) {
       setIsDirty(false);
       return;
+    }
+
+    // For collaborative notes (Yjs), we do NOT track dirty state, nor do we save to IndexedDB.
+    // Yjs handles persistence and offline sync natively.
+    if (isCollaborativeNote) {
+      if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
+      serverTimeoutRef.current = setTimeout(() => {
+        setLastSavedAt(new Date().toISOString());
+      }, 300);
+      return; // Exit early! No dirty tracking or manual drafting.
     }
 
     setIsDirty(true);
@@ -198,40 +208,34 @@ export function useNoteDraftAndAutoSave({
     // 3. Debounce full note server save
     if (serverTimeoutRef.current) clearTimeout(serverTimeoutRef.current);
 
-    if (isCollaborativeNote) {
-      serverTimeoutRef.current = setTimeout(() => {
-        setLastSavedAt(new Date().toISOString());
-      }, 300);
-    } else {
-      serverTimeoutRef.current = setTimeout(async () => {
-        const optTime = new Date().toISOString();
-        setLastSavedAt(optTime);
-        setSaveError(null);
-        setIsSavingLocal(true);
+    serverTimeoutRef.current = setTimeout(async () => {
+      const optTime = new Date().toISOString();
+      setLastSavedAt(optTime);
+      setSaveError(null);
+      setIsSavingLocal(true);
+      try {
+        const upd = (await updateNote({ content: normalized })) as { updatedAt?: string } | null | undefined;
+        setLastSavedAt(upd?.updatedAt || optTime);
+        setIsDirty(false);
+        await clearNoteDraft(note.id!, unlockToken).catch(() => {
+          console.warn('Failed to clear remote draft');
+        });
+        await clearLocalDraft(note.id!);
         try {
-          const upd = (await updateNote({ content: normalized })) as { updatedAt?: string } | null | undefined;
-          setLastSavedAt(upd?.updatedAt || optTime);
-          setIsDirty(false);
-          await clearNoteDraft(note.id!, unlockToken).catch(() => {
-            console.warn('Failed to clear remote draft');
-          });
-          await clearLocalDraft(note.id!);
-          try {
-            localStorage.removeItem(`note-draft-backup:${note.id}`);
-          } catch {
-            // Ignore storage cleanup errors
-          }
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : 'Failed';
-          if (!msg.toLowerCase().includes('offline') && !msg.toLowerCase().includes('network') && !msg.toLowerCase().includes('connect')) {
-            setSaveError(msg);
-          }
-          console.warn('Server save failed, draft preserved:', msg);
-        } finally {
-          setIsSavingLocal(false);
+          localStorage.removeItem(`note-draft-backup:${note.id}`);
+        } catch {
+          // Ignore storage cleanup errors
         }
-      }, 1000); // 1000ms server save debounce
-    }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed';
+        if (!msg.toLowerCase().includes('offline') && !msg.toLowerCase().includes('network') && !msg.toLowerCase().includes('connect')) {
+          setSaveError(msg);
+        }
+        console.warn('Server save failed, draft preserved:', msg);
+      } finally {
+        setIsSavingLocal(false);
+      }
+    }, 1000); // 1000ms server save debounce
 
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
@@ -259,7 +263,7 @@ export function useNoteDraftAndAutoSave({
 
   // Page Exit Sync: guaranteed synchronous localStorage dump & async IndexedDB flush on exit
   useEffect(() => {
-    if (!note || !canEditContent) return;
+    if (!note || !canEditContent || isCollaborativeNote) return;
 
     const flushLocalDraft = () => {
       // Best effort async IndexedDB flush
@@ -284,7 +288,7 @@ export function useNoteDraftAndAutoSave({
       window.removeEventListener('beforeunload', flushLocalDraft);
       window.removeEventListener('pagehide', flushLocalDraft);
     };
-  }, [note?.id, canEditContent, title, content]);
+  }, [note?.id, canEditContent, title, content, isCollaborativeNote]);
 
   const handleRemoteContentUpdate = useCallback((d: { userId: string; content: string; title?: string | undefined; isPinned?: boolean | undefined; isProtected?: boolean | undefined; labels?: string[] | undefined; timestamp?: string | number }) => {
     isRemoteUpdateRef.current = true;
@@ -317,9 +321,14 @@ export function useNoteDraftAndAutoSave({
         n ? ({ ...n, isPinned: (d.isPinned ?? n.isPinned) as boolean, updatedAt: ut } as Note) : n,
       );
     }
-    if (!isCollaborativeNote) {
+    
+    // Always update React state to ensure it doesn't go stale when Yjs syncs.
+    // NoteEditor's useEffect correctly ignores prop changes when collaborative=true, 
+    // so this will not destroy cursor position.
+    if (d.content !== undefined) {
       setContent(d.content);
     }
+    
     const ts = d.timestamp ? new Date(d.timestamp).toISOString() : new Date().toISOString();
     setLastSavedAt(ts);
     setIsDirty(false);
