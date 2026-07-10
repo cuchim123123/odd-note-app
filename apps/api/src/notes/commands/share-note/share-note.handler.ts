@@ -10,6 +10,8 @@ import { MailerService } from '../../../common/mailer/mailer.service';
 import { dispatchDomainEvents } from '../../../common/ddd';
 import type { NoteSharedIntegrationEvent } from '../../application/integration-events/note-shared.integration-event';
 import { NoteSharedDomainEvent } from '../../domain/events/note-shared.domain-event';
+import { ConfigService } from '@nestjs/config';
+import type { EnvConfig } from '../../../config/env.validation';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -20,6 +22,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     private readonly userReadPort: IUserReadPort,
     private readonly mailer: MailerService,
     private readonly eventBus: EventBus,
+    private readonly config: ConfigService<EnvConfig, true>,
   ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
@@ -87,7 +90,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       noteTitle: 'Note', // Cannot access note.title easily outside transaction unless returned
       noteId: noteId,
       permission,
-      appUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+      appUrl: this.config.get('APP_URL'),
     });
 
     return { id: shareId };

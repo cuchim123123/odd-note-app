@@ -12,6 +12,7 @@ const envSchema = z.object({
   API_BASE_PATH: z.string().default('/api'),
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
+  KAFKA_BROKER: z.string().default('localhost:9092'),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES_IN: durationSchema.default('15m'),
@@ -33,6 +34,7 @@ const envSchema = z.object({
   S3_USE_SSL: z.coerce.boolean().default(false),
   S3_PUBLIC_ENDPOINT: z.string().optional(),
   PASSWORD_SALT_ROUNDS: z.coerce.number().int().positive().default(12),
+  ALLOW_TEST_ENDPOINTS: z.coerce.boolean().default(false),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

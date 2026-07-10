@@ -15,10 +15,6 @@ import { COLLABORATION_STATE_PORT } from '../application/ports/collaboration-sta
 import type { ICollaborationStatePort } from '../application/ports/collaboration-state.port';
 
 @WebSocketGateway({
-  cors: {
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
-    credentials: true,
-  },
   namespace: COLLABORATION_NAMESPACE,
 })
 export class CollaborationConnectionGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {

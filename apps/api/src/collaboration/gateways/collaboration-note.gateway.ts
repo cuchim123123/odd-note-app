@@ -17,10 +17,6 @@ import type { INoteAccessPort } from '../application/ports/note-access.port';
 import { RedisService } from '../../redis/redis.service';
 
 @WebSocketGateway({
-  cors: {
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
-    credentials: true,
-  },
   namespace: COLLABORATION_NAMESPACE,
 })
 export class CollaborationNoteGateway {

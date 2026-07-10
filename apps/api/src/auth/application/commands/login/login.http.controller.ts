@@ -4,6 +4,8 @@ import { LoginDto } from './login.dto';
 import { LoginCommand } from './login.command';
 import { AuthErrorFilter } from '../../../presentation/filters/auth-error.filter';
 import { UserProfileMapper } from '../../../presentation/mappers/user-profile.mapper';
+import { ConfigService } from '@nestjs/config';
+import type { EnvConfig } from '../../../../config/env.validation';
 import type { AuthResult } from '../../shared/auth.types';
 
 @UseFilters(AuthErrorFilter)
@@ -12,6 +14,7 @@ export class LoginHttpController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly userProfileMapper: UserProfileMapper,
+    private readonly config: ConfigService<EnvConfig, true>,
   ) {}
 
   @Post('login')
@@ -24,7 +27,7 @@ export class LoginHttpController {
   // Bypasses email verification requirement for test convenience.
   @Post('test/login')
   async testLogin(@Body() input: LoginDto) {
-    const allow = process.env.ALLOW_TEST_ENDPOINTS === '1' || process.env.NODE_ENV === 'test';
+    const allow = this.config.get('ALLOW_TEST_ENDPOINTS') || this.config.get('NODE_ENV') === 'test';
     if (!allow) {
       return { message: 'Not available' };
     }

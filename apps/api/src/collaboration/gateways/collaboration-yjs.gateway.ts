@@ -15,10 +15,6 @@ import { NOTE_ACCESS_PORT } from '../application/ports/note-access.port';
 import type { INoteAccessPort } from '../application/ports/note-access.port';
 
 @WebSocketGateway({
-  cors: {
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
-    credentials: true,
-  },
   namespace: COLLABORATION_NAMESPACE,
 })
 export class CollaborationYjsGateway {

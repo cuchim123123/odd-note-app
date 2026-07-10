@@ -16,6 +16,9 @@ async function bootstrap(): Promise<void> {
 
   const env = app.get<EnvConfig>('ENV_CONFIG');
 
+  const { CustomIoAdapter } = await import('./common/adapters/custom-io.adapter');
+  app.useWebSocketAdapter(new CustomIoAdapter(app, env));
+
   // Enable CORS for the web frontend (development origin)
   // Uses configured APP_URL when available, falls back to default dev port.
   app.enableCors({
@@ -32,7 +35,7 @@ async function bootstrap(): Promise<void> {
     transport: Transport.KAFKA,
     options: {
       client: {
-        brokers: [process.env.KAFKA_BROKER ?? 'localhost:9092'],
+        brokers: [env.KAFKA_BROKER],
         clientId: 'odd-note-api-client',
       },
       consumer: {
