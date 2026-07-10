@@ -243,7 +243,7 @@ export function useYjsCollaboration({
 
     const socket = io(`${getWsUrl()}${NOTE_COLLABORATION_NAMESPACE}`, {
       auth: { token: accessToken },
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'],
       autoConnect: false,
       reconnection: true,
       reconnectionDelay: NOTE_COLLABORATION_RECONNECT_DELAY_MS,
