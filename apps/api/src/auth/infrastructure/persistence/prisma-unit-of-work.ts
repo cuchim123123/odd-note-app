@@ -5,7 +5,7 @@ import { PrismaUserRepository } from './prisma-user.repository';
 import { PrismaTokenRepository } from './prisma-token.repository';
 import { PrismaOutboxRepository } from './prisma-outbox.repository';
 import type { AggregateRoot } from '../../../common/ddd/aggregate-root';
-import type { AggregateTracker } from './aggregate-tracker';
+import type { AggregateTracker } from '../../../common/ddd/aggregate-tracker';
 import { INTEGRATION_EVENT_MAPPER } from '../../application/ports/integration-event-mapper.port';
 import type { IntegrationEventMapper } from '../../application/ports/integration-event-mapper.port';
 

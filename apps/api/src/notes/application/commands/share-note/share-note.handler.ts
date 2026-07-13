@@ -1,4 +1,4 @@
-import { CommandHandler, type ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { ShareNoteCommand } from './share-note.command';
 import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../ports/unit-of-work.port';
@@ -7,7 +7,6 @@ import { SharePermission } from '../../../domain/value-objects/share-permission.
 import { NoteNotFoundError, NoteAlreadySharedError } from '../../../domain/errors/note.errors';
 import { RecipientNotFoundError, SelfShareError } from '../../../domain/errors/share.errors';
 import { NOTE_MAIL_SENDER, type INoteMailSender } from '../../ports/note-mail-sender.port';
-import { dispatchDomainEvents } from '../../../../common/ddd';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -18,8 +17,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     private readonly userReadPort: IUserReadPort,
     @Inject(NOTE_MAIL_SENDER)
     private readonly mailSender: INoteMailSender,
-    private readonly eventBus: EventBus,
-  ) {}
+      ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
     const { userId, noteId, recipientEmail, permission } = command;
@@ -53,7 +51,6 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
 
       // Domain events are dispatched here; NoteSharedEventHandler will
       // reactively pick up NoteSharedDomainEvent and schedule the Outbox message.
-      await dispatchDomainEvents(note, this.eventBus);
 
       return share.id;
     });

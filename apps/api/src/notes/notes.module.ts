@@ -26,7 +26,6 @@ import { CreateRevisionHandler } from './application/commands/create-revision/cr
 import { RestoreRevisionHandler } from './application/commands/restore-revision/restore-revision.handler';
 
 // ─── Application Domain Event Handlers ──────────────────────────────────────
-import { NoteSharedEventHandler } from './application/event-handlers/note-shared.event-handler';
 
 // ─── Application Query Handlers ──────────────────────────────────────────────
 import { ListNotesQueryHandler } from './application/queries/list-notes/list-notes.query-handler';
@@ -72,6 +71,8 @@ import { RedisDocumentSyncAdapter } from './infrastructure/cache/redis-document-
 import { NOTE_PROTECTION_PORT } from './application/ports/note-protection.port';
 import { PrismaNoteProtectionAdapter } from './infrastructure/persistence/prisma-note-protection.adapter';
 import { NOTE_OUTBOX_PORT } from './application/ports/note-outbox.port';
+import { NOTE_INTEGRATION_EVENT_MAPPER } from './application/ports/integration-event-mapper.port';
+import { DefaultNoteIntegrationEventMapper } from './application/mappers/integration-event.mapper';
 import { PrismaOutboxAdapter } from './infrastructure/outbox/prisma-outbox.adapter';
 import { NOTE_SHARE_REPOSITORY } from './application/ports/note-share.repository.port';
 import { PrismaNoteShareRepository } from './infrastructure/persistence/prisma-note-share.repository';
@@ -134,7 +135,6 @@ import { NOTE_MAIL_SENDER } from './application/ports/note-mail-sender.port';
     CreateRevisionHandler,
     RestoreRevisionHandler,
     // ── Application: Domain Event Handlers ────────────────────────────────
-    NoteSharedEventHandler,
     // ── Application: Query Handlers ───────────────────────────────────────
     ListNotesQueryHandler,
     ListSharedWithMeQueryHandler,
@@ -150,6 +150,7 @@ import { NOTE_MAIL_SENDER } from './application/ports/note-mail-sender.port';
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },
     { provide: NOTE_PROTECTION_PORT, useClass: PrismaNoteProtectionAdapter },
     { provide: NOTE_OUTBOX_PORT, useClass: PrismaOutboxAdapter },
+    { provide: NOTE_INTEGRATION_EVENT_MAPPER, useClass: DefaultNoteIntegrationEventMapper },
     { provide: NOTE_SHARE_REPOSITORY, useClass: PrismaNoteShareRepository },
     { provide: USER_PREFERENCES_REPOSITORY, useClass: PrismaUserPreferencesRepository },
     { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },

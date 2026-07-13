@@ -4,12 +4,16 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import type { PrismaTransactionClient } from './prisma-client.type';
 import { NoteEntity } from '../../domain/entities/note.entity';
 import { NoteMapper } from './note.mapper';
+import type { AggregateTracker } from '../../../common/ddd/aggregate-tracker';
 
 @Injectable()
 export class PrismaNoteRepository implements INoteRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient, private readonly tracker?: AggregateTracker) {}
 
   async save(note: NoteEntity): Promise<void> {
+    if (this.tracker) {
+      this.tracker.track(note);
+    }
     const data = NoteMapper.toPersistence(note);
 
     await this.prisma.note.upsert({

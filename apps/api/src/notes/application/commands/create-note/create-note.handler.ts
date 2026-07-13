@@ -1,4 +1,4 @@
-import { CommandHandler, type ICommandHandler, EventBus } from '@nestjs/cqrs';
+import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { CreateNoteCommand } from './create-note.command';
 import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../ports/unit-of-work.port';
@@ -6,7 +6,6 @@ import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document
 import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../ports/draft-cache.port';
 import { NoteEntity } from '../../../domain/entities/note.entity';
 import { NoteTitle } from '../../../domain/value-objects/note-title.vo';
-import { dispatchDomainEvents } from '../../../../common/ddd';
 
 @CommandHandler(CreateNoteCommand)
 export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
@@ -17,8 +16,7 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
     private readonly documentSyncPort: IDocumentSyncPort,
     @Inject(DRAFT_CACHE_PORT)
     private readonly draftCachePort: IDraftCachePort,
-    private readonly eventBus: EventBus,
-  ) {}
+      ) {}
 
   async execute(command: CreateNoteCommand): Promise<{ id: string }> {
     const title = NoteTitle.create(command.title);
@@ -31,7 +29,6 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
       await ctx.noteRepository.save(note);
       
       // Dispatch domain events while inside the UOW
-      await dispatchDomainEvents(note, this.eventBus);
 
       // Labels are user-scoped personal data — persisted via preferences port
       if (command.labels && command.labels.length > 0) {

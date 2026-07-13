@@ -38,13 +38,10 @@ function createMocks() {
     clearDraft: vi.fn(),
   };
 
-  const eventBus = { publish: vi.fn() };
-
   const handler = new CreateNoteHandler(
     unitOfWork as never,
     documentSyncPort as never,
     draftCachePort as never,
-    eventBus as never,
   );
 
   return { handler, noteRepository, documentSyncPort, draftCachePort, userPreferencesRepository, unitOfWork };

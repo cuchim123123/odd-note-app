@@ -4,7 +4,7 @@ import type { UserRepository } from '../../application/ports/user.repository.por
 import type { User } from '../../domain/entities/user.entity';
 import { UserPersistenceMapper } from './mappers/user-persistence.mapper';
 import { UserAlreadyExistsError } from '../../domain/errors/auth-error';
-import type { AggregateTracker } from './aggregate-tracker';
+import type { AggregateTracker } from '../../../common/ddd/aggregate-tracker';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepository {
