@@ -23,52 +23,44 @@ import { DefaultIntegrationEventMapper } from './application/mappers/integration
 import { INTERNAL_COMMAND_HANDLERS } from '../common/infrastructure/outbox/internal-command-handler.port';
 import { AuthInternalCommandHandler } from './infrastructure/messaging/auth-internal-command.handler';
 
-// Commands
+// ─── Application: Command Handlers ──────────────────────────────────────────
 import { RegisterHandler } from './application/commands/register/register.handler';
-import { RegisterHttpController } from './application/commands/register/register.http.controller';
-
 import { LoginHandler } from './application/commands/login/login.handler';
-import { LoginHttpController } from './application/commands/login/login.http.controller';
-
 import { ChangePasswordHandler } from './application/commands/change-password/change-password.handler';
-import { ChangePasswordHttpController } from './application/commands/change-password/change-password.http.controller';
-
 import { RefreshTokensHandler } from './application/commands/refresh-tokens/refresh-tokens.handler';
-import { RefreshTokensHttpController } from './application/commands/refresh-tokens/refresh-tokens.http.controller';
-
 import { ForgotPasswordHandler } from './application/commands/forgot-password/forgot-password.handler';
-import { ForgotPasswordHttpController } from './application/commands/forgot-password/forgot-password.http.controller';
-
 import { ResetPasswordHandler } from './application/commands/reset-password/reset-password.handler';
-import { ResetPasswordHttpController } from './application/commands/reset-password/reset-password.http.controller';
-
 import { UpdateProfileHandler } from './application/commands/update-profile/update-profile.handler';
-import { UpdateProfileHttpController } from './application/commands/update-profile/update-profile.http.controller';
-
 import { LogoutHandler } from './application/commands/logout/logout.handler';
-import { LogoutHttpController } from './application/commands/logout/logout.http.controller';
-
 import { VerifyEmailHandler } from './application/commands/verify-email/verify-email.handler';
-import { VerifyEmailHttpController } from './application/commands/verify-email/verify-email.http.controller';
-
 import { ResendVerificationHandler } from './application/commands/resend-verification/resend-verification.handler';
-import { ResendVerificationHttpController } from './application/commands/resend-verification/resend-verification.http.controller';
-
 import { GenerateTestResetTokenHandler } from './application/commands/generate-test-reset-token/generate-test-reset-token.handler';
-import { GenerateTestResetTokenHttpController } from './application/commands/generate-test-reset-token/generate-test-reset-token.http.controller';
 
-// Queries
+// ─── Application: Query Handlers ─────────────────────────────────────────────
 import { GetCurrentUserHandler } from './application/queries/get-current-user/get-current-user.handler';
-import { GetCurrentUserHttpController } from './application/queries/get-current-user/get-current-user.http.controller';
+
+// ─── Presentation (HTTP Controllers) ─────────────────────────────────────────
+import { RegisterHttpController } from './presentation/http/commands/register.http.controller';
+import { LoginHttpController } from './presentation/http/commands/login.http.controller';
+import { VerifyEmailHttpController } from './presentation/http/commands/verify-email.http.controller';
+import { ResendVerificationHttpController } from './presentation/http/commands/resend-verification.http.controller';
+import { UpdateProfileHttpController } from './presentation/http/commands/update-profile.http.controller';
+import { ChangePasswordHttpController } from './presentation/http/commands/change-password.http.controller';
+import { RefreshTokensHttpController } from './presentation/http/commands/refresh-tokens.http.controller';
+import { LogoutHttpController } from './presentation/http/commands/logout.http.controller';
+import { ForgotPasswordHttpController } from './presentation/http/commands/forgot-password.http.controller';
+import { ResetPasswordHttpController } from './presentation/http/commands/reset-password.http.controller';
+import { GenerateTestResetTokenHttpController } from './presentation/http/commands/generate-test-reset-token.http.controller';
+import { GetCurrentUserHttpController } from './presentation/http/queries/get-current-user.http.controller';
 
 @Module({
   imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],
   controllers: [
+    // ── Presentation: Commands ────────────────────────────────────────────
     RegisterHttpController,
     LoginHttpController,
     VerifyEmailHttpController,
     ResendVerificationHttpController,
-    GetCurrentUserHttpController,
     UpdateProfileHttpController,
     ChangePasswordHttpController,
     RefreshTokensHttpController,
@@ -76,12 +68,14 @@ import { GetCurrentUserHttpController } from './application/queries/get-current-
     ForgotPasswordHttpController,
     ResetPasswordHttpController,
     GenerateTestResetTokenHttpController,
+    // ── Presentation: Queries ─────────────────────────────────────────────
+    GetCurrentUserHttpController,
   ],
   providers: [
     UserProfileMapper,
     TokenCleanupCron,
     AccessTokenGuard,
-    // Commands
+    // ── Application: Command Handlers ─────────────────────────────────────
     RegisterHandler,
     LoginHandler,
     ChangePasswordHandler,
@@ -93,9 +87,9 @@ import { GetCurrentUserHttpController } from './application/queries/get-current-
     VerifyEmailHandler,
     ResendVerificationHandler,
     GenerateTestResetTokenHandler,
-    // Queries
+    // ── Application: Query Handlers ───────────────────────────────────────
     GetCurrentUserHandler,
-    // Port bindings
+    // ── Port → Adapter Bindings ───────────────────────────────────────────
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: TOKEN_REPOSITORY, useClass: PrismaTokenRepository },
     { provide: UNIT_OF_WORK, useClass: PrismaUnitOfWork },
@@ -104,7 +98,6 @@ import { GetCurrentUserHttpController } from './application/queries/get-current-
     { provide: MAIL_SENDER, useClass: NodemailerMailSender },
     { provide: INTEGRATION_EVENT_MAPPER, useClass: DefaultIntegrationEventMapper },
     // Register auth's internal command handler with the shared OutboxProcessor.
-    // useFactory + multi is the TS-safe way to register a multi-provider in NestJS.
     AuthInternalCommandHandler,
     {
       provide: INTERNAL_COMMAND_HANDLERS,
@@ -114,8 +107,6 @@ import { GetCurrentUserHttpController } from './application/queries/get-current-
     } as never,
   ],
   exports: [
-    // Port tokens exported for modules that may need to resolve user/token data
-    // (e.g., a future UserModule). All cross-module communication must use CommandBus/QueryBus.
     USER_REPOSITORY,
     TOKEN_REPOSITORY,
     UNIT_OF_WORK,
@@ -123,4 +114,3 @@ import { GetCurrentUserHttpController } from './application/queries/get-current-
   ],
 })
 export class AuthModule {}
-

@@ -1,5 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import type { EnvConfig } from '../config/env.validation';
 import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand, GetObjectCommand, PutBucketPolicyCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -17,23 +16,23 @@ export class UploadsService {
   private readonly endpoint: string;
   private readonly publicEndpoint: string;
 
-  constructor(private readonly config: ConfigService<EnvConfig, true>) {
-    const useSsl = this.config.get('S3_USE_SSL');
+  constructor(@Inject('ENV_CONFIG') private readonly env: EnvConfig) {
+    const useSsl = this.env.S3_USE_SSL;
     const protocol = useSsl ? 'https' : 'http';
 
-    const s3Host = this.config.get('S3_ENDPOINT');
-    const s3Port = this.config.get('S3_PORT');
+    const s3Host = this.env.S3_ENDPOINT;
+    const s3Port = this.env.S3_PORT;
 
     this.endpoint = s3Host.startsWith('http://') || s3Host.startsWith('https://') 
       ? `${s3Host}:${s3Port}` 
       : `${protocol}://${s3Host}:${s3Port}`;
 
-    this.publicEndpoint = this.config.get('S3_PUBLIC_ENDPOINT') || this.endpoint;
+    this.publicEndpoint = this.env.S3_PUBLIC_ENDPOINT || this.endpoint;
 
     const region = 'us-east-1'; // MinIO default
-    const accessKey = this.config.get('S3_ACCESS_KEY');
-    const secretKey = this.config.get('S3_SECRET_KEY');
-    this.bucket = this.config.get('S3_BUCKET');
+    const accessKey = this.env.S3_ACCESS_KEY;
+    const secretKey = this.env.S3_SECRET_KEY;
+    this.bucket = this.env.S3_BUCKET;
 
     this.client = new S3Client({
       endpoint: this.endpoint,

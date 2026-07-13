@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ConfigService } from '@nestjs/config';
 import type { EnvConfig } from './env.validation';
 
 export const KAFKA_CLIENT_TOKEN = 'KAFKA_CLIENT';
@@ -10,13 +9,13 @@ export const KAFKA_CLIENT_TOKEN = 'KAFKA_CLIENT';
     ClientsModule.registerAsync([
       {
         name: KAFKA_CLIENT_TOKEN,
-        inject: [ConfigService],
-        useFactory: (configService: ConfigService<EnvConfig, true>) => ({
+        inject: ['ENV_CONFIG'],
+        useFactory: (env: EnvConfig) => ({
           transport: Transport.KAFKA,
           options: {
             client: {
               clientId: 'odd-note-api-client',
-              brokers: [configService.get('KAFKA_BROKER')],
+              brokers: [env.KAFKA_BROKER],
             },
             consumer: {
               groupId: 'odd-note-consumer-group',

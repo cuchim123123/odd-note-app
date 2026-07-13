@@ -14,11 +14,11 @@ import { RedisCollaborationStateAdapter } from './infrastructure/adapters/redis-
 import { NOTE_ACCESS_PORT } from './application/ports/note-access.port';
 import { PrismaNoteAccessAdapter } from './infrastructure/adapters/prisma-note-access.adapter';
 
-// Gateways
-import { CollaborationConnectionGateway } from './gateways/collaboration-connection.gateway';
-import { CollaborationPresenceGateway } from './gateways/collaboration-presence.gateway';
-import { CollaborationYjsGateway } from './gateways/collaboration-yjs.gateway';
-import { CollaborationNoteGateway } from './gateways/collaboration-note.gateway';
+// Gateways (Presentation Layer)
+import { CollaborationConnectionGateway } from './presentation/gateways/collaboration-connection.gateway';
+import { CollaborationPresenceGateway } from './presentation/gateways/collaboration-presence.gateway';
+import { CollaborationYjsGateway } from './presentation/gateways/collaboration-yjs.gateway';
+import { CollaborationNoteGateway } from './presentation/gateways/collaboration-note.gateway';
 
 @Module({
   imports: [

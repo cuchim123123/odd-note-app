@@ -3,9 +3,10 @@ import type { OnModuleInit } from '@nestjs/common';
 import { UploadsController } from './uploads.controller';
 import { UploadsService } from './uploads.service';
 import { JwtConfigModule } from '../config/jwt-config.module';
+import { ConfigModule } from '../config/config.module';
 
 @Module({
-  imports: [JwtConfigModule],
+  imports: [JwtConfigModule, ConfigModule],
   controllers: [UploadsController],
   providers: [UploadsService],
   exports: [UploadsService],

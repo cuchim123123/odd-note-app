@@ -6,53 +6,59 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { RedisModule } from '../redis/redis.module';
 import { MailerService } from '../common/mailer/mailer.service';
 import { NotesCrdtService } from './infrastructure/crdt/notes-crdt.service';
+import { NoteMailerAdapter } from './infrastructure/messaging/note-mailer.adapter';
 
-// ─── Commands ──────────────────────────────────────────────────────────────
-import { CreateNoteHttpController } from './commands/create-note/create-note.http.controller';
+// ─── Application Command Handlers ───────────────────────────────────────────
 import { CreateNoteHandler } from './commands/create-note/create-note.handler';
-import { UpdateNoteHttpController } from './commands/update-note/update-note.http.controller';
 import { UpdateNoteHandler } from './commands/update-note/update-note.handler';
-import { DeleteNoteHttpController } from './commands/delete-note/delete-note.http.controller';
 import { DeleteNoteHandler } from './commands/delete-note/delete-note.handler';
-import { ShareNoteHttpController } from './commands/share-note/share-note.http.controller';
 import { ShareNoteHandler } from './commands/share-note/share-note.handler';
-import { UpdateShareHttpController } from './commands/update-share/update-share.http.controller';
 import { UpdateShareHandler } from './commands/update-share/update-share.handler';
-import { RevokeShareHttpController } from './commands/revoke-share/revoke-share.http.controller';
 import { RevokeShareHandler } from './commands/revoke-share/revoke-share.handler';
-import { SetPasswordHttpController } from './commands/set-password/set-password.http.controller';
 import { SetPasswordHandler } from './commands/set-password/set-password.handler';
-import { RemovePasswordHttpController } from './commands/remove-password/remove-password.http.controller';
 import { RemovePasswordHandler } from './commands/remove-password/remove-password.handler';
-import { VerifyPasswordHttpController } from './commands/verify-password/verify-password.http.controller';
 import { VerifyPasswordHandler } from './commands/verify-password/verify-password.handler';
-import { SaveDraftHttpController } from './commands/save-draft/save-draft.http.controller';
 import { SaveDraftHandler } from './commands/save-draft/save-draft.handler';
-import { ClearDraftHttpController } from './commands/clear-draft/clear-draft.http.controller';
 import { ClearDraftHandler } from './commands/clear-draft/clear-draft.handler';
-import { RenameLabelHttpController } from './commands/rename-label/rename-label.http.controller';
 import { RenameLabelHandler } from './commands/rename-label/rename-label.handler';
-import { DeleteLabelHttpController } from './commands/delete-label/delete-label.http.controller';
 import { DeleteLabelHandler } from './commands/delete-label/delete-label.handler';
 import { CreateRevisionHandler } from './commands/create-revision/create-revision.handler';
-import { RestoreRevisionHttpController } from './commands/restore-revision/restore-revision.http.controller';
 import { RestoreRevisionHandler } from './commands/restore-revision/restore-revision.handler';
 
-// ─── Queries ────────────────────────────────────────────────────────────────
-import { ListNotesHttpController } from './queries/list-notes/list-notes.http.controller';
+// ─── Application Domain Event Handlers ──────────────────────────────────────
+import { NoteSharedEventHandler } from './application/event-handlers/note-shared.event-handler';
+
+// ─── Application Query Handlers ──────────────────────────────────────────────
 import { ListNotesQueryHandler } from './queries/list-notes/list-notes.query-handler';
-import { ListSharedWithMeHttpController } from './queries/list-shared-with-me/list-shared-with-me.http.controller';
 import { ListSharedWithMeQueryHandler } from './queries/list-shared-with-me/list-shared-with-me.query-handler';
-import { GetNoteByIdHttpController } from './queries/get-note-by-id/get-note-by-id.http.controller';
 import { GetNoteByIdQueryHandler } from './queries/get-note-by-id/get-note-by-id.query-handler';
-import { ListSharesHttpController } from './queries/list-shares/list-shares.http.controller';
 import { ListSharesQueryHandler } from './queries/list-shares/list-shares.query-handler';
-import { GetProtectionStatusHttpController } from './queries/get-protection-status/get-protection-status.http.controller';
 import { GetProtectionStatusQueryHandler } from './queries/get-protection-status/get-protection-status.query-handler';
-import { GetDraftHttpController } from './queries/get-draft/get-draft.http.controller';
 import { GetDraftQueryHandler } from './queries/get-draft/get-draft.query-handler';
-import { GetNoteHistoryHttpController } from './queries/get-note-history/get-note-history.http.controller';
 import { GetNoteHistoryQueryHandler } from './queries/get-note-history/get-note-history.query-handler';
+
+// ─── Presentation (HTTP Controllers) ────────────────────────────────────────
+import { CreateNoteHttpController } from './presentation/http/commands/create-note.http.controller';
+import { UpdateNoteHttpController } from './presentation/http/commands/update-note.http.controller';
+import { DeleteNoteHttpController } from './presentation/http/commands/delete-note.http.controller';
+import { ShareNoteHttpController } from './presentation/http/commands/share-note.http.controller';
+import { UpdateShareHttpController } from './presentation/http/commands/update-share.http.controller';
+import { RevokeShareHttpController } from './presentation/http/commands/revoke-share.http.controller';
+import { SetPasswordHttpController } from './presentation/http/commands/set-password.http.controller';
+import { RemovePasswordHttpController } from './presentation/http/commands/remove-password.http.controller';
+import { VerifyPasswordHttpController } from './presentation/http/commands/verify-password.http.controller';
+import { SaveDraftHttpController } from './presentation/http/commands/save-draft.http.controller';
+import { ClearDraftHttpController } from './presentation/http/commands/clear-draft.http.controller';
+import { RenameLabelHttpController } from './presentation/http/commands/rename-label.http.controller';
+import { DeleteLabelHttpController } from './presentation/http/commands/delete-label.http.controller';
+import { RestoreRevisionHttpController } from './presentation/http/commands/restore-revision.http.controller';
+import { ListNotesHttpController } from './presentation/http/queries/list-notes.http.controller';
+import { ListSharedWithMeHttpController } from './presentation/http/queries/list-shared-with-me.http.controller';
+import { GetNoteByIdHttpController } from './presentation/http/queries/get-note-by-id.http.controller';
+import { ListSharesHttpController } from './presentation/http/queries/list-shares.http.controller';
+import { GetProtectionStatusHttpController } from './presentation/http/queries/get-protection-status.http.controller';
+import { GetDraftHttpController } from './presentation/http/queries/get-draft.http.controller';
+import { GetNoteHistoryHttpController } from './presentation/http/queries/get-note-history.http.controller';
 
 // ─── Ports & Adapters ────────────────────────────────────────────────────────
 import { NOTE_UNIT_OF_WORK } from './application/ports/unit-of-work.port';
@@ -75,11 +81,12 @@ import { USER_READ_PORT } from './application/ports/user-read.port';
 import { PrismaUserReadAdapter } from './infrastructure/persistence/prisma-user-read.adapter';
 import { NOTE_REVISION_REPOSITORY } from './application/ports/note-revision.repository.port';
 import { PrismaNoteRevisionRepository } from './infrastructure/persistence/prisma-note-revision.repository';
+import { NOTE_MAIL_SENDER } from './application/ports/note-mail-sender.port';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
   controllers: [
-    // Commands
+    // ── Presentation: Commands ────────────────────────────────────────────
     CreateNoteHttpController,
     UpdateNoteHttpController,
     DeleteNoteHttpController,
@@ -94,7 +101,7 @@ import { PrismaNoteRevisionRepository } from './infrastructure/persistence/prism
     RenameLabelHttpController,
     DeleteLabelHttpController,
     RestoreRevisionHttpController,
-    // Queries
+    // ── Presentation: Queries ─────────────────────────────────────────────
     // IMPORTANT: Registration order dictates route evaluation.
     // Specific routes MUST precede wildcard routes (:noteId)
     ListNotesHttpController,
@@ -106,10 +113,11 @@ import { PrismaNoteRevisionRepository } from './infrastructure/persistence/prism
     GetNoteHistoryHttpController,
   ],
   providers: [
-    // Infrastructure services needed by adapters
+    // ── Infrastructure Services ───────────────────────────────────────────
     NotesCrdtService,
     MailerService,
-    // Command Handlers
+    NoteMailerAdapter,
+    // ── Application: Command Handlers ─────────────────────────────────────
     CreateNoteHandler,
     UpdateNoteHandler,
     DeleteNoteHandler,
@@ -125,7 +133,9 @@ import { PrismaNoteRevisionRepository } from './infrastructure/persistence/prism
     DeleteLabelHandler,
     CreateRevisionHandler,
     RestoreRevisionHandler,
-    // Query Handlers
+    // ── Application: Domain Event Handlers ────────────────────────────────
+    NoteSharedEventHandler,
+    // ── Application: Query Handlers ───────────────────────────────────────
     ListNotesQueryHandler,
     ListSharedWithMeQueryHandler,
     GetNoteByIdQueryHandler,
@@ -133,7 +143,7 @@ import { PrismaNoteRevisionRepository } from './infrastructure/persistence/prism
     GetProtectionStatusQueryHandler,
     GetDraftQueryHandler,
     GetNoteHistoryQueryHandler,
-    // Port → Adapter bindings
+    // ── Port → Adapter Bindings ───────────────────────────────────────────
     { provide: NOTE_UNIT_OF_WORK, useClass: PrismaNoteUnitOfWork },
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
     { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
@@ -144,6 +154,7 @@ import { PrismaNoteRevisionRepository } from './infrastructure/persistence/prism
     { provide: USER_PREFERENCES_REPOSITORY, useClass: PrismaUserPreferencesRepository },
     { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },
     { provide: NOTE_REVISION_REPOSITORY, useClass: PrismaNoteRevisionRepository },
+    { provide: NOTE_MAIL_SENDER, useClass: NoteMailerAdapter },
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it

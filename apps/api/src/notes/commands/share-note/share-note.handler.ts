@@ -6,12 +6,8 @@ import { USER_READ_PORT, type IUserReadPort } from '../../application/ports/user
 import { SharePermission } from '../../domain/value-objects/share-permission.vo';
 import { NoteNotFoundError, NoteAlreadySharedError } from '../../domain/errors/note.errors';
 import { RecipientNotFoundError, SelfShareError } from '../../domain/errors/share.errors';
-import { MailerService } from '../../../common/mailer/mailer.service';
+import { NOTE_MAIL_SENDER, type INoteMailSender } from '../../application/ports/note-mail-sender.port';
 import { dispatchDomainEvents } from '../../../common/ddd';
-import type { NoteSharedIntegrationEvent } from '../../application/integration-events/note-shared.integration-event';
-import { NoteSharedDomainEvent } from '../../domain/events/note-shared.domain-event';
-import { ConfigService } from '@nestjs/config';
-import type { EnvConfig } from '../../../config/env.validation';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -20,9 +16,9 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     private readonly unitOfWork: INoteUnitOfWork,
     @Inject(USER_READ_PORT)
     private readonly userReadPort: IUserReadPort,
-    private readonly mailer: MailerService,
+    @Inject(NOTE_MAIL_SENDER)
+    private readonly mailSender: INoteMailSender,
     private readonly eventBus: EventBus,
-    private readonly config: ConfigService<EnvConfig, true>,
   ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
@@ -47,13 +43,6 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
 
       await ctx.noteRepository.save(note);
 
-      // Capture eventId BEFORE dispatch clears the domain events array
-      const domainEvent = note.domainEvents.find(
-        (e): e is NoteSharedDomainEvent => e instanceof NoteSharedDomainEvent,
-      );
-
-      await dispatchDomainEvents(note, this.eventBus);
-
       const share = await ctx.noteShareRepository.create({
         noteId,
         ownerId: userId,
@@ -62,35 +51,21 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
         permission,
       });
 
-      const integrationEvent: NoteSharedIntegrationEvent = {
-        eventId: domainEvent?.eventId ?? share.id,
-        occurredOn: new Date().toISOString(),
-        noteId,
-        shareId: share.id,
-        ownerId: userId,
-        recipientId: recipient.id,
-        recipientEmail: recipient.email,
-        permission,
-        noteTitle: note.title,
-      };
-
-      await ctx.outbox.scheduleIntegrationEvent(
-        'NoteShared',
-        integrationEvent as unknown as Record<string, unknown>,
-      );
+      // Domain events are dispatched here; NoteSharedEventHandler will
+      // reactively pick up NoteSharedDomainEvent and schedule the Outbox message.
+      await dispatchDomainEvents(note, this.eventBus);
 
       return share.id;
     });
 
     // Send email AFTER transaction commits successfully
-    await this.mailer.sendNoteSharedEmail({
+    await this.mailSender.sendNoteSharedEmail({
       to: recipient.email,
       recipientName: recipient.email.split('@')[0] ?? 'User',
       senderName: owner?.displayName ?? 'A user',
-      noteTitle: 'Note', // Cannot access note.title easily outside transaction unless returned
+      noteTitle: 'Note',
       noteId: noteId,
       permission,
-      appUrl: this.config.get('APP_URL'),
     });
 
     return { id: shareId };
