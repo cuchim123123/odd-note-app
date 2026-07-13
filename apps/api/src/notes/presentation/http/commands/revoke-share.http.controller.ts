@@ -2,7 +2,7 @@ import { Controller, Delete, Param, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '../../../../common/guards/access-token.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { RevokeShareCommand } from '../../../commands/revoke-share/revoke-share.command';
+import { RevokeShareCommand } from '../../../application/commands/revoke-share/revoke-share.command';
 
 @Controller('notes')
 @UseGuards(AccessTokenGuard)

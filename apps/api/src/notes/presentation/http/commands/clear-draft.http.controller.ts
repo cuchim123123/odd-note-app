@@ -2,7 +2,7 @@ import { Controller, Delete, Param, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '../../../../common/guards/access-token.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { ClearDraftCommand } from '../../../commands/clear-draft/clear-draft.command';
+import { ClearDraftCommand } from '../../../application/commands/clear-draft/clear-draft.command';
 
 @Controller('notes')
 @UseGuards(AccessTokenGuard)

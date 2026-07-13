@@ -2,7 +2,7 @@ import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '../../../../common/guards/access-token.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { GetProtectionStatusQuery } from '../../../queries/get-protection-status/get-protection-status.query';
+import { GetProtectionStatusQuery } from '../../../application/queries/get-protection-status/get-protection-status.query';
 
 @Controller('notes')
 @UseGuards(AccessTokenGuard)

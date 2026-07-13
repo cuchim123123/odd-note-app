@@ -2,7 +2,7 @@ import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '../../../../common/guards/access-token.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { VerifyPasswordCommand } from '../../../commands/verify-password/verify-password.command';
+import { VerifyPasswordCommand } from '../../../application/commands/verify-password/verify-password.command';
 import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 import { z } from 'zod';
 

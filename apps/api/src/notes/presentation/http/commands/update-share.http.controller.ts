@@ -2,7 +2,7 @@ import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '../../../../common/guards/access-token.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { UpdateShareCommand } from '../../../commands/update-share/update-share.command';
+import { UpdateShareCommand } from '../../../application/commands/update-share/update-share.command';
 import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 import { updateNoteShareSchema } from '@odd-note-app/validation';
 

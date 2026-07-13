@@ -4,38 +4,38 @@ import { AuthConfigModule, JwtConfigModule } from '../config';
 import { ConfigModule } from '../config/config.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RedisModule } from '../redis/redis.module';
-import { MailerService } from '../common/mailer/mailer.service';
+import { MailerService } from '../common/infrastructure/messaging/mailer/mailer.service';
 import { NotesCrdtService } from './infrastructure/crdt/notes-crdt.service';
 import { NoteMailerAdapter } from './infrastructure/messaging/note-mailer.adapter';
 
 // ─── Application Command Handlers ───────────────────────────────────────────
-import { CreateNoteHandler } from './commands/create-note/create-note.handler';
-import { UpdateNoteHandler } from './commands/update-note/update-note.handler';
-import { DeleteNoteHandler } from './commands/delete-note/delete-note.handler';
-import { ShareNoteHandler } from './commands/share-note/share-note.handler';
-import { UpdateShareHandler } from './commands/update-share/update-share.handler';
-import { RevokeShareHandler } from './commands/revoke-share/revoke-share.handler';
-import { SetPasswordHandler } from './commands/set-password/set-password.handler';
-import { RemovePasswordHandler } from './commands/remove-password/remove-password.handler';
-import { VerifyPasswordHandler } from './commands/verify-password/verify-password.handler';
-import { SaveDraftHandler } from './commands/save-draft/save-draft.handler';
-import { ClearDraftHandler } from './commands/clear-draft/clear-draft.handler';
-import { RenameLabelHandler } from './commands/rename-label/rename-label.handler';
-import { DeleteLabelHandler } from './commands/delete-label/delete-label.handler';
-import { CreateRevisionHandler } from './commands/create-revision/create-revision.handler';
-import { RestoreRevisionHandler } from './commands/restore-revision/restore-revision.handler';
+import { CreateNoteHandler } from './application/commands/create-note/create-note.handler';
+import { UpdateNoteHandler } from './application/commands/update-note/update-note.handler';
+import { DeleteNoteHandler } from './application/commands/delete-note/delete-note.handler';
+import { ShareNoteHandler } from './application/commands/share-note/share-note.handler';
+import { UpdateShareHandler } from './application/commands/update-share/update-share.handler';
+import { RevokeShareHandler } from './application/commands/revoke-share/revoke-share.handler';
+import { SetPasswordHandler } from './application/commands/set-password/set-password.handler';
+import { RemovePasswordHandler } from './application/commands/remove-password/remove-password.handler';
+import { VerifyPasswordHandler } from './application/commands/verify-password/verify-password.handler';
+import { SaveDraftHandler } from './application/commands/save-draft/save-draft.handler';
+import { ClearDraftHandler } from './application/commands/clear-draft/clear-draft.handler';
+import { RenameLabelHandler } from './application/commands/rename-label/rename-label.handler';
+import { DeleteLabelHandler } from './application/commands/delete-label/delete-label.handler';
+import { CreateRevisionHandler } from './application/commands/create-revision/create-revision.handler';
+import { RestoreRevisionHandler } from './application/commands/restore-revision/restore-revision.handler';
 
 // ─── Application Domain Event Handlers ──────────────────────────────────────
 import { NoteSharedEventHandler } from './application/event-handlers/note-shared.event-handler';
 
 // ─── Application Query Handlers ──────────────────────────────────────────────
-import { ListNotesQueryHandler } from './queries/list-notes/list-notes.query-handler';
-import { ListSharedWithMeQueryHandler } from './queries/list-shared-with-me/list-shared-with-me.query-handler';
-import { GetNoteByIdQueryHandler } from './queries/get-note-by-id/get-note-by-id.query-handler';
-import { ListSharesQueryHandler } from './queries/list-shares/list-shares.query-handler';
-import { GetProtectionStatusQueryHandler } from './queries/get-protection-status/get-protection-status.query-handler';
-import { GetDraftQueryHandler } from './queries/get-draft/get-draft.query-handler';
-import { GetNoteHistoryQueryHandler } from './queries/get-note-history/get-note-history.query-handler';
+import { ListNotesQueryHandler } from './application/queries/list-notes/list-notes.query-handler';
+import { ListSharedWithMeQueryHandler } from './application/queries/list-shared-with-me/list-shared-with-me.query-handler';
+import { GetNoteByIdQueryHandler } from './application/queries/get-note-by-id/get-note-by-id.query-handler';
+import { ListSharesQueryHandler } from './application/queries/list-shares/list-shares.query-handler';
+import { GetProtectionStatusQueryHandler } from './application/queries/get-protection-status/get-protection-status.query-handler';
+import { GetDraftQueryHandler } from './application/queries/get-draft/get-draft.query-handler';
+import { GetNoteHistoryQueryHandler } from './application/queries/get-note-history/get-note-history.query-handler';
 
 // ─── Presentation (HTTP Controllers) ────────────────────────────────────────
 import { CreateNoteHttpController } from './presentation/http/commands/create-note.http.controller';

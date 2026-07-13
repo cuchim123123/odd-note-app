@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ShareNoteHandler } from '../commands/share-note/share-note.handler';
-import { ShareNoteCommand } from '../commands/share-note/share-note.command';
+import { ShareNoteHandler } from '../application/commands/share-note/share-note.handler';
+import { ShareNoteCommand } from '../application/commands/share-note/share-note.command';
 import { NoteEntity } from '../domain/entities/note.entity';
 import { NoteTitle } from '../domain/value-objects/note-title.vo';
 import { NoteNotFoundError } from '../domain/errors/note.errors';

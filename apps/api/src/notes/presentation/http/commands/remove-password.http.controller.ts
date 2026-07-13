@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Param, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '../../../../common/guards/access-token.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { RemovePasswordCommand } from '../../../commands/remove-password/remove-password.command';
+import { RemovePasswordCommand } from '../../../application/commands/remove-password/remove-password.command';
 import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 import { z } from 'zod';
 

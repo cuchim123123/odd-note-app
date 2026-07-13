@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { EnvConfig } from '../../../config/env.validation';
 import type { INoteMailSender } from '../../application/ports/note-mail-sender.port';
-import { MailerService } from '../../../common/mailer/mailer.service';
+import { MailerService } from '../../../common/infrastructure/messaging/mailer/mailer.service';
 
 @Injectable()
 export class NoteMailerAdapter implements INoteMailSender {

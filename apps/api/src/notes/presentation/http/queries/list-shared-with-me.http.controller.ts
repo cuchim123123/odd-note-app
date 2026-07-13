@@ -2,7 +2,7 @@ import { Controller, Get, UseGuards } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '../../../../common/guards/access-token.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { ListSharedWithMeQuery } from '../../../queries/list-shared-with-me/list-shared-with-me.query';
+import { ListSharedWithMeQuery } from '../../../application/queries/list-shared-with-me/list-shared-with-me.query';
 
 @Controller('notes')
 @UseGuards(AccessTokenGuard)

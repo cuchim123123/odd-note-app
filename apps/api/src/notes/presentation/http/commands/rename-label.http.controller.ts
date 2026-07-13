@@ -2,7 +2,7 @@ import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '../../../../common/guards/access-token.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { RenameLabelCommand } from '../../../commands/rename-label/rename-label.command';
+import { RenameLabelCommand } from '../../../application/commands/rename-label/rename-label.command';
 import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 import { z } from 'zod';
 
