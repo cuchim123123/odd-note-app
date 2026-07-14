@@ -1,9 +1,9 @@
 import { Body, Controller, Headers, Param, Patch, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { AccessTokenGuard } from '../../../../../common/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../common/presentation/http/decorators/current-user.decorator';
+import { AccessTokenGuard } from '../../../../../shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '../../../../../shared/presentation/http/decorators/current-user.decorator';
 import { UpdateNoteCommand } from '../../../application/commands/update-note/update-note.command';
-import { ZodValidationPipe } from '../../../../../common/presentation/http/pipes/zod-validation.pipe';
+import { ZodValidationPipe } from '../../../../../shared/presentation/http/pipes/zod-validation.pipe';
 import { updateNoteSchema, type UpdateNoteInput } from '@odd-note-app/validation';
 
 @Controller('notes')

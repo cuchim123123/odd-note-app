@@ -8,7 +8,7 @@ import { AuthConfigModule, JwtConfigModule } from '../../config';
 import { MAIL_SENDER } from './application/ports/mail-sender.port';
 import { NodemailerMailSender } from './infrastructure/messaging/nodemailer-mail-sender';
 import { UserProfileMapper } from './presentation/mappers/user-profile.mapper';
-import { AccessTokenGuard } from '../../common/presentation/http/guards/access-token.guard';
+import { AccessTokenGuard } from '../../shared/presentation/http/guards/access-token.guard';
 import { TokenCleanupCron } from './infrastructure/scheduling/token-cleanup.cron';
 import { USER_REPOSITORY } from './application/ports/user.repository.port';
 import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository';
@@ -20,7 +20,7 @@ import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { BcryptPasswordHasher } from './infrastructure/security/bcrypt-password-hasher';
 import { INTEGRATION_EVENT_MAPPER } from './application/ports/integration-event-mapper.port';
 import { DefaultIntegrationEventMapper } from './application/mappers/integration-event.mapper';
-import { INTERNAL_COMMAND_HANDLERS } from '../../common/infrastructure/outbox/internal-command-handler.port';
+import { INTERNAL_COMMAND_HANDLERS } from '../../shared/infrastructure/outbox/internal-command-handler.port';
 import { AuthInternalCommandHandler } from './infrastructure/messaging/auth-internal-command.handler';
 
 // ─── Application: Command Handlers ──────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { ValueObject } from '../../../../common/domain/value-object';
+import { ValueObject } from '../../../../shared/domain/ddd/value-object';
 import { InvalidNoteTitleError } from '../errors/note.errors';
 
 export interface NoteTitleProps {

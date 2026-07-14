@@ -3,8 +3,8 @@ import { CommandBus } from '@nestjs/cqrs';
 import { ChangePasswordDto } from './change-password.dto';
 import { ChangePasswordCommand } from '../../../application/commands/change-password/change-password.command';
 import { AuthErrorFilter } from '../../../presentation/filters/auth-error.filter';
-import { AccessTokenGuard } from '../../../../../common/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../common/presentation/http/decorators/current-user.decorator';
+import { AccessTokenGuard } from '../../../../../shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '../../../../../shared/presentation/http/decorators/current-user.decorator';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')

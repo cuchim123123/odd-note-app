@@ -1,4 +1,4 @@
-import { DomainError } from '../../../../common/domain/domain-error';
+import { DomainError } from '../../../../shared/domain/errors/domain-error';
 
 /**
  * Raised when the intended recipient of a note share does not exist.

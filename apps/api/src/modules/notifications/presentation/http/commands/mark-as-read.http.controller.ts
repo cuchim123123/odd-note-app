@@ -1,7 +1,7 @@
 import { Controller, Post, Param, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { AccessTokenGuard } from '../../../../../common/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../common/presentation/http/decorators/current-user.decorator';
+import { AccessTokenGuard } from '../../../../../shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '../../../../../shared/presentation/http/decorators/current-user.decorator';
 import { MarkAsReadCommand } from '../../../application/commands/mark-as-read/mark-as-read.command';
 
 @Controller('notifications')

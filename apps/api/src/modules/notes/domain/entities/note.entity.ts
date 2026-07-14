@@ -1,4 +1,4 @@
-import { AggregateRoot } from '../../../../common/domain/aggregate-root';
+import { AggregateRoot } from '../../../../shared/domain/ddd/aggregate-root';
 import { NoteTitle } from '../value-objects/note-title.vo';
 import { NotePermissionDeniedError, NoteAlreadySharedError } from '../errors/note.errors';
 import { SharePermission } from '../value-objects/share-permission.vo';
@@ -9,7 +9,7 @@ import { NoteShareUpdatedDomainEvent } from '../events/note-share-updated.domain
 import { NoteShareRevokedDomainEvent } from '../events/note-share-revoked.domain-event';
 import { NotePasswordSetDomainEvent } from '../events/note-password-set.domain-event';
 import { NotePasswordRemovedDomainEvent } from '../events/note-password-removed.domain-event';
-import { NoteId, UserId, ShareId } from '../../../../common/domain/id-types';
+import { NoteId, UserId, ShareId } from '../../../../shared/domain/ddd/id-types';
 import * as crypto from 'crypto';
 
 export interface NoteShare {

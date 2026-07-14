@@ -4,8 +4,8 @@ import type { UnitOfWork, TransactionContext } from '../../application/ports/uni
 import { PrismaUserRepository } from './prisma-user.repository';
 import { PrismaTokenRepository } from './prisma-token.repository';
 import { PrismaOutboxRepository } from './prisma-outbox.repository';
-import type { AggregateRoot } from '../../../../common/domain/aggregate-root';
-import type { AggregateTracker } from '../../../../common/domain/aggregate-tracker';
+import type { AggregateRoot } from '../../../../shared/domain/ddd/aggregate-root';
+import type { AggregateTracker } from '../../../../shared/domain/ddd/aggregate-tracker';
 import { INTEGRATION_EVENT_MAPPER } from '../../application/ports/integration-event-mapper.port';
 import type { IntegrationEventMapper } from '../../application/ports/integration-event-mapper.port';
 

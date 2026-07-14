@@ -4,7 +4,7 @@ import { PrismaService } from '../../../../prisma/prisma.service';
 import type { PrismaTransactionClient } from './prisma-client.type';
 import { NoteEntity } from '../../domain/entities/note.entity';
 import { NoteMapper } from './note.mapper';
-import type { AggregateTracker } from '../../../../common/domain/aggregate-tracker';
+import type { AggregateTracker } from '../../../../shared/domain/ddd/aggregate-tracker';
 
 @Injectable()
 export class PrismaNoteRepository implements INoteRepository {

@@ -9,7 +9,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
-import { OutboxModule } from './common/infrastructure/outbox/outbox.module';
+import { OutboxModule } from './shared/infrastructure/outbox/outbox.module';
 
 @Module({
   imports: [ConfigModule, JwtConfigModule, HealthModule, PrismaModule, RedisModule, AuthModule, UploadsModule, NotesModule, NotificationsModule, CollaborationModule, OutboxModule],

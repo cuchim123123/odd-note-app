@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { JwtConfigModule } from '../../config';
-import { AccessTokenGuard } from '../../common/presentation/http/guards/access-token.guard';
+import { AccessTokenGuard } from '../../shared/presentation/http/guards/access-token.guard';
 
 import { NOTIFICATION_REPOSITORY } from './application/ports/notification.repository.port';
 import { PrismaNotificationRepository } from './infrastructure/persistence/prisma-notification.repository';

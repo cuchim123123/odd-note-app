@@ -10,8 +10,8 @@ import { PrismaNoteRevisionRepository } from './prisma-note-revision.repository'
 import { JwtConfigService } from '../../../../config/jwt-config.service';
 import { JwtService } from '@nestjs/jwt';
 import type { PrismaTransactionClient } from './prisma-client.type';
-import type { AggregateRoot } from '../../../../common/domain/aggregate-root';
-import type { AggregateTracker } from '../../../../common/domain/aggregate-tracker';
+import type { AggregateRoot } from '../../../../shared/domain/ddd/aggregate-root';
+import type { AggregateTracker } from '../../../../shared/domain/ddd/aggregate-tracker';
 import { NOTE_INTEGRATION_EVENT_MAPPER, type INoteIntegrationEventMapper } from '../../application/ports/integration-event-mapper.port';
 
 @Injectable()

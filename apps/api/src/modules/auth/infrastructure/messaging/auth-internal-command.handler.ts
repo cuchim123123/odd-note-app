@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import type { IInternalCommandHandler } from '../../../../common/infrastructure/outbox/internal-command-handler.port';
+import type { IInternalCommandHandler } from '../../../../shared/infrastructure/outbox/internal-command-handler.port';
 import { MAIL_SENDER, type MailSender } from '../../application/ports/mail-sender.port';
 
 /**

@@ -1,6 +1,6 @@
 import { InvalidCredentialsError, IncorrectPasswordError } from '../errors/auth-error';
 import * as crypto from 'crypto';
-import { AggregateRoot } from '../../../../common/domain/aggregate-root';
+import { AggregateRoot } from '../../../../shared/domain/ddd/aggregate-root';
 import { EmailAddress } from '../value-objects/email-address';
 import { UserRegisteredDomainEvent } from '../events/user-registered.domain-event';
 

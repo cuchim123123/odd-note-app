@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { MailSender } from '../../application/ports/mail-sender.port';
-import { MailerService } from '../../../../common/infrastructure/messaging/mailer/mailer.service';
+import { MailerService } from '../../../../shared/infrastructure/messaging/mailer/mailer.service';
 import { AuthUrlService } from '../auth-url.service';
 
 @Injectable()

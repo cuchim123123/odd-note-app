@@ -2,7 +2,7 @@ import { Controller, Post, UploadedFile, UseInterceptors, UseGuards, HttpExcepti
 import { CommandBus } from '@nestjs/cqrs';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { AccessTokenGuard } from '../../../../../common/presentation/http/guards/access-token.guard';
+import { AccessTokenGuard } from '../../../../../shared/presentation/http/guards/access-token.guard';
 import { UploadFileCommand } from '../../../application/commands/upload-file/upload-file.command';
 
 @Controller('uploads')

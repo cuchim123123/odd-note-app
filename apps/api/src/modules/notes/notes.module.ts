@@ -4,7 +4,7 @@ import { AuthConfigModule, JwtConfigModule } from '../../config';
 import { ConfigModule } from '../../config/config.module';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { RedisModule } from '../../redis/redis.module';
-import { MailerService } from '../../common/infrastructure/messaging/mailer/mailer.service';
+import { MailerService } from '../../shared/infrastructure/messaging/mailer/mailer.service';
 import { NotesCrdtService } from './infrastructure/crdt/notes-crdt.service';
 import { NoteMailerAdapter } from './infrastructure/messaging/note-mailer.adapter';
 

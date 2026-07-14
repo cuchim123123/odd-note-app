@@ -4,8 +4,8 @@ import { UpdateProfileDto } from './update-profile.dto';
 import { UpdateProfileCommand } from '../../../application/commands/update-profile/update-profile.command';
 import { AuthErrorFilter } from '../../../presentation/filters/auth-error.filter';
 import { UserProfileMapper } from '../../../presentation/mappers/user-profile.mapper';
-import { AccessTokenGuard } from '../../../../../common/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../common/presentation/http/decorators/current-user.decorator';
+import { AccessTokenGuard } from '../../../../../shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '../../../../../shared/presentation/http/decorators/current-user.decorator';
 import type { User } from '../../../domain/entities/user.entity';
 
 @UseFilters(AuthErrorFilter)
