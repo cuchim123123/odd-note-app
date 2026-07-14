@@ -4,7 +4,7 @@ import { Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
 import { ZodValidationPipe } from 'nestjs-zod';
 import type { EnvConfig } from './config/config.module';
-import { DomainExceptionFilter } from './common/filters/domain-exception.filter';
+import { DomainExceptionFilter } from './common/presentation/http/filters/domain-exception.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -16,7 +16,7 @@ async function bootstrap(): Promise<void> {
 
   const env = app.get<EnvConfig>('ENV_CONFIG');
 
-  const { CustomIoAdapter } = await import('./common/adapters/custom-io.adapter');
+  const { CustomIoAdapter } = await import('./common/infrastructure/adapters/custom-io.adapter');
   app.useWebSocketAdapter(new CustomIoAdapter(app, env));
 
   // Enable CORS for the web frontend (development origin)

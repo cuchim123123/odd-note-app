@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from './auth/auth.module';
-import { CollaborationModule } from './collaboration/collaboration.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CollaborationModule } from './modules/collaboration/collaboration.module';
 import { ConfigModule } from './config/config.module';
 import { JwtConfigModule } from './config/jwt-config.module';
 import { HealthModule } from './health/health.module';
-import { NotesModule } from './notes/notes.module';
-import { NotificationsModule } from './notifications/notifications.module';
+import { NotesModule } from './modules/notes/notes.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
-import { UploadsModule } from './uploads/uploads.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { OutboxModule } from './common/infrastructure/outbox/outbox.module';
 
 @Module({

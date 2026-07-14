@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 import { OutboxProcessor } from './outbox.processor';
-import { AuthInternalCommandHandler } from '../../../auth/infrastructure/messaging/auth-internal-command.handler';
+import { AuthInternalCommandHandler } from '../../../modules/auth/infrastructure/messaging/auth-internal-command.handler';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
