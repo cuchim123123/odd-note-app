@@ -1,11 +1,8 @@
-﻿import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import type { OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ClientKafka } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 import type { OutboxMessage } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
-import { KAFKA_CLIENT_TOKEN } from '../../../config/kafka-config.module';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
 import {
   INTERNAL_COMMAND_HANDLERS,
   type IInternalCommandHandler,
@@ -56,8 +53,8 @@ export class OutboxProcessor implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(KAFKA_CLIENT_TOKEN)
-    private readonly kafkaClient: ClientKafka,
+    // @Inject(KAFKA_CLIENT_TOKEN)
+    // private readonly kafkaClient: ClientKafka,
     /**
      * All IInternalCommandHandler implementations registered across modules.
      * Optional so the processor starts even if no handlers are registered.
@@ -68,7 +65,7 @@ export class OutboxProcessor implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    await this.kafkaClient.connect();
+    // await this.kafkaClient.connect();
   }
 
   // ─── Main polling loop ───────────────────────────────────────────────────
@@ -175,7 +172,8 @@ export class OutboxProcessor implements OnModuleInit {
     topic: string,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    const handler = this.commandHandlers.find((h) => h.canHandle(topic));
+    const handlers = Array.isArray(this.commandHandlers) ? this.commandHandlers : (this.commandHandlers ? [this.commandHandlers] : []);
+    const handler = handlers.find((h) => h.canHandle && h.canHandle(topic));
     if (!handler) {
       this.logger.warn(
         `No IInternalCommandHandler registered for topic: "${topic}" — message will be retried`,
@@ -197,7 +195,7 @@ export class OutboxProcessor implements OnModuleInit {
     topic: string,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    this.logger.debug(`[KAFKA] Publish → ${topic}: ${JSON.stringify(payload)}`);
-    await firstValueFrom(this.kafkaClient.emit(topic, payload));
+    this.logger.debug(`[KAFKA-MOCKED] Publish → ${topic}: ${JSON.stringify(payload)}`);
+    // await firstValueFrom(this.kafkaClient.emit(topic, payload));
   }
 }
