@@ -4,11 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { resetPasswordSchema, type ResetPasswordInput } from '@odd-note-app/validation';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { PasswordInput } from '../../../components/ui/password-input';
-import { Label } from '../../../components/ui/label';
-import { Button } from '../../../components/ui/button';
-import { api } from '../../../lib/axios';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { api } from '@/lib/axios';
 import { AxiosError } from 'axios';
 
 export function ResetPasswordPage() {
@@ -41,7 +41,7 @@ export function ResetPasswordPage() {
     setErrorMsg(null);
     try {
       // Assuming a backend endpoint POST /auth/reset-password exists
-      await api.post('/auth/reset-password', { token, password: data.password });
+      await api.post('/auth/reset-password', { token, ...data });
       navigate('/login', { replace: true, state: { message: 'Password reset successfully. You can now login.' } });
     } catch (error) {
       if (error instanceof AxiosError) {
