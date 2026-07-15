@@ -7,7 +7,18 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "incremental": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": "./",
+    "paths": {
+      "@infrastructure/*": ["src/infrastructure/*"],
+      "@infrastructure": ["src/infrastructure/index"],
+      "@modules/*": ["src/modules/*"],
+      "@modules": ["src/modules/index"],
+      "@shared/*": ["src/shared/*"],
+      "@shared": ["src/shared/index"],
+      "@config/*": ["src/config/*"],
+      "@config": ["src/config/index"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
