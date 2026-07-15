@@ -1,5 +1,5 @@
-import { ValueObject } from '../../../../shared/domain/ddd/value-object';
-import { DomainError } from '../../../../shared/domain/errors/domain-error';
+import { ValueObject } from '@shared/domain/ddd/value-object';
+import { DomainError } from '@shared/domain/errors/domain-error';
 
 export interface SharePermissionProps {
   value: 'READ' | 'EDIT';

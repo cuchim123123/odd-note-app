@@ -1,7 +1,7 @@
 ﻿import { Inject, Injectable } from '@nestjs/common';
 import { createTransport } from 'nodemailer';
 import type { Transporter } from 'nodemailer';
-import type { EnvConfig } from '../../../../config/env.validation';
+import type { EnvConfig } from '@config/env.validation';
 
 @Injectable()
 export class MailerService {

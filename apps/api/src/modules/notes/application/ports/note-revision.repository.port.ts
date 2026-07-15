@@ -1,4 +1,4 @@
-import type { NoteRevisionEntity } from '../../domain/entities/note-revision.entity';
+import type { NoteRevisionEntity } from '@modules/notes/domain/entities/note-revision.entity';
 
 export const NOTE_REVISION_REPOSITORY = Symbol('NOTE_REVISION_REPOSITORY');
 

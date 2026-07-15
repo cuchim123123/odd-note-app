@@ -1,11 +1,11 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
-import type { TokenProvider } from '../../ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
-import type { TokenRepository } from '../../ports/token.repository.port';
-import { LogoutCommand } from './logout.command';
+import { TOKEN_PROVIDER } from '@modules/auth/application/ports/token-provider.port';
+import type { TokenProvider } from '@modules/auth/application/ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '@modules/auth/application/ports/token.repository.port';
+import type { TokenRepository } from '@modules/auth/application/ports/token.repository.port';
+import { LogoutCommand } from '@modules/auth/application/commands/logout/logout.command';
 
 @CommandHandler(LogoutCommand)
 export class LogoutHandler implements ICommandHandler<LogoutCommand> {

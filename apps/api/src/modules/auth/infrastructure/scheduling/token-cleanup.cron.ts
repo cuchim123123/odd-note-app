@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import type { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { TOKEN_REPOSITORY } from '../../application/ports/token.repository.port';
-import type { TokenRepository } from '../../application/ports/token.repository.port';
+import { TOKEN_REPOSITORY } from '@modules/auth/application/ports/token.repository.port';
+import type { TokenRepository } from '@modules/auth/application/ports/token.repository.port';
 
 @Injectable()
 export class TokenCleanupCron implements OnModuleInit, OnModuleDestroy {

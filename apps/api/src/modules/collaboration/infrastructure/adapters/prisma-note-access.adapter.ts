@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { INoteAccessPort } from '../../application/ports/note-access.port';
-import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
-import { NOTE_PROTECTION_PORT } from '../../../notes/application/ports/note-protection.port';
-import type { INoteProtectionPort } from '../../../notes/application/ports/note-protection.port';
+import type { INoteAccessPort } from '@modules/collaboration/application/ports/note-access.port';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { NOTE_PROTECTION_PORT } from '@modules/notes/application/ports/note-protection.port';
+import type { INoteProtectionPort } from '@modules/notes/application/ports/note-protection.port';
 
 @Injectable()
 export class PrismaNoteAccessAdapter implements INoteAccessPort {

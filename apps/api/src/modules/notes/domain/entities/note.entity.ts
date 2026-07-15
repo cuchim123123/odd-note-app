@@ -1,15 +1,15 @@
-import { AggregateRoot } from '../../../../shared/domain/ddd/aggregate-root';
-import { NoteTitle } from '../value-objects/note-title.vo';
-import { NotePermissionDeniedError, NoteAlreadySharedError } from '../errors/note.errors';
-import { SharePermission } from '../value-objects/share-permission.vo';
-import { NoteCreatedDomainEvent } from '../events/note-created.domain-event';
-import { NoteDeletedDomainEvent } from '../events/note-deleted.domain-event';
-import { NoteSharedDomainEvent } from '../events/note-shared.domain-event';
-import { NoteShareUpdatedDomainEvent } from '../events/note-share-updated.domain-event';
-import { NoteShareRevokedDomainEvent } from '../events/note-share-revoked.domain-event';
-import { NotePasswordSetDomainEvent } from '../events/note-password-set.domain-event';
-import { NotePasswordRemovedDomainEvent } from '../events/note-password-removed.domain-event';
-import { NoteId, UserId, ShareId } from '../../../../shared/domain/ddd/id-types';
+import { AggregateRoot } from '@shared/domain/ddd/aggregate-root';
+import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
+import { NotePermissionDeniedError, NoteAlreadySharedError } from '@modules/notes/domain/errors/note.errors';
+import { SharePermission } from '@modules/notes/domain/value-objects/share-permission.vo';
+import { NoteCreatedDomainEvent } from '@modules/notes/domain/events/note-created.domain-event';
+import { NoteDeletedDomainEvent } from '@modules/notes/domain/events/note-deleted.domain-event';
+import { NoteSharedDomainEvent } from '@modules/notes/domain/events/note-shared.domain-event';
+import { NoteShareUpdatedDomainEvent } from '@modules/notes/domain/events/note-share-updated.domain-event';
+import { NoteShareRevokedDomainEvent } from '@modules/notes/domain/events/note-share-revoked.domain-event';
+import { NotePasswordSetDomainEvent } from '@modules/notes/domain/events/note-password-set.domain-event';
+import { NotePasswordRemovedDomainEvent } from '@modules/notes/domain/events/note-password-removed.domain-event';
+import { NoteId, UserId, ShareId } from '@shared/domain/ddd/id-types';
 import * as crypto from 'crypto';
 
 export interface NoteShare {

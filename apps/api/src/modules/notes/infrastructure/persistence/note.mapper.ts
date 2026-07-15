@@ -1,8 +1,8 @@
-import { NoteEntity } from '../../domain/entities/note.entity';
-import type { NoteShare } from '../../domain/entities/note.entity';
-import { NoteTitle } from '../../domain/value-objects/note-title.vo';
-import { SharePermission } from '../../domain/value-objects/share-permission.vo';
-import { ShareId, UserId } from '../../../../shared/domain/ddd/id-types';
+import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
+import type { NoteShare } from '@modules/notes/domain/entities/note.entity';
+import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
+import { SharePermission } from '@modules/notes/domain/value-objects/share-permission.vo';
+import { ShareId, UserId } from '@shared/domain/ddd/id-types';
 
 /**
  * Prisma record shape we expect when loading a Note with its shares.

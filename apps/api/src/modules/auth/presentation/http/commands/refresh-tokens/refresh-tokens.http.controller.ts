@@ -1,9 +1,9 @@
 ﻿import { Body, Controller, Post, UseFilters } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { RefreshTokenDto } from './refresh-token.dto';
-import { RefreshTokensCommand } from '../../../../application/commands/refresh-tokens/refresh-tokens.command';
-import { AuthErrorFilter } from '../../../../presentation/filters/auth-error.filter';
-import type { AuthTokens } from '../../../../application/shared/auth.types';
+import { RefreshTokenDto } from '@modules/auth/presentation/http/commands/refresh-tokens/refresh-token.dto';
+import { RefreshTokensCommand } from '@modules/auth/application/commands/refresh-tokens/refresh-tokens.command';
+import { AuthErrorFilter } from '@modules/auth/presentation/filters/auth-error.filter';
+import type { AuthTokens } from '@modules/auth/application/shared/auth.types';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')

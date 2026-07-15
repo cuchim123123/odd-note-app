@@ -1,11 +1,11 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { UserNotFoundError } from '../../../domain/errors/auth-error';
-import type { User } from '../../../domain/entities/user.entity';
-import { USER_REPOSITORY } from '../../ports/user.repository.port';
-import type { UserRepository } from '../../ports/user.repository.port';
-import { UpdateProfileCommand } from './update-profile.command';
+import { UserNotFoundError } from '@modules/auth/domain/errors/auth-error';
+import type { User } from '@modules/auth/domain/entities/user.entity';
+import { USER_REPOSITORY } from '@modules/auth/application/ports/user.repository.port';
+import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import { UpdateProfileCommand } from '@modules/auth/application/commands/update-profile/update-profile.command';
 
 @CommandHandler(UpdateProfileCommand)
 export class UpdateProfileHandler implements ICommandHandler<UpdateProfileCommand> {

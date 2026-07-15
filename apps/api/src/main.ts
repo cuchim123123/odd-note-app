@@ -1,10 +1,8 @@
-﻿import { NestFactory, HttpAdapterHost } from '@nestjs/core';
-import type { MicroserviceOptions } from '@nestjs/microservices';
-import { Transport } from '@nestjs/microservices';
+import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ZodValidationPipe } from 'nestjs-zod';
-import type { EnvConfig } from './config/config.module';
-import { DomainExceptionFilter } from './shared/presentation/http/filters/domain-exception.filter';
+import type { EnvConfig } from '@config/config.module';
+import { DomainExceptionFilter } from '@shared/presentation/http/filters/domain-exception.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -16,7 +14,7 @@ async function bootstrap(): Promise<void> {
 
   const env = app.get<EnvConfig>('ENV_CONFIG');
 
-  const { CustomIoAdapter } = await import('./shared/infrastructure/adapters/custom-io.adapter');
+  const { CustomIoAdapter } = await import('@shared/infrastructure/adapters/custom-io.adapter');
   app.useWebSocketAdapter(new CustomIoAdapter(app, env));
 
   // Enable CORS for the web frontend (development origin)
@@ -31,6 +29,7 @@ async function bootstrap(): Promise<void> {
   const port = env.API_PORT;
   
   // Connect Kafka Microservice
+  /*
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
@@ -45,6 +44,7 @@ async function bootstrap(): Promise<void> {
   });
 
   await app.startAllMicroservices();
+  */
   await app.listen(port, '0.0.0.0');
 }
 

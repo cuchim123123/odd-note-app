@@ -1,8 +1,8 @@
 ﻿import { Controller, Get, Headers, Param, UseGuards } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
-import { AccessTokenGuard } from '../../../../../../shared/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../../shared/presentation/http/decorators/current-user.decorator';
-import { GetDraftQuery } from '../../../../application/queries/get-draft/get-draft.query';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
+import { GetDraftQuery } from '@modules/notes/application/queries/get-draft/get-draft.query';
 
 @Controller('notes')
 @UseGuards(AccessTokenGuard)

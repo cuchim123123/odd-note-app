@@ -1,6 +1,6 @@
-export { AppConfigModule } from './app-config.module';
-export { AppConfigService } from './app-config.service';
-export { AuthConfigModule } from './auth-config.module';
-export { AuthConfigService } from './auth-config.service';
-export { JwtConfigModule } from './jwt-config.module';
-export { JwtConfigService } from './jwt-config.service';
+export { AppConfigModule } from '@config/app-config.module';
+export { AppConfigService } from '@config/app-config.service';
+export { AuthConfigModule } from '@config/auth-config.module';
+export { AuthConfigService } from '@config/auth-config.service';
+export { JwtConfigModule } from '@config/jwt-config.module';
+export { JwtConfigService } from '@config/jwt-config.service';

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ShareNoteHandler } from '../application/commands/share-note/share-note.handler';
-import { ShareNoteCommand } from '../application/commands/share-note/share-note.command';
-import { NoteEntity } from '../domain/entities/note.entity';
-import { NoteTitle } from '../domain/value-objects/note-title.vo';
-import { NoteNotFoundError } from '../domain/errors/note.errors';
-import { RecipientNotFoundError, SelfShareError } from '../domain/errors/share.errors';
-import { NoteAlreadySharedError } from '../domain/errors/note.errors';
+import { ShareNoteHandler } from '@modules/notes/application/commands/share-note/share-note.handler';
+import { ShareNoteCommand } from '@modules/notes/application/commands/share-note/share-note.command';
+import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
+import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
+import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
+import { RecipientNotFoundError, SelfShareError } from '@modules/notes/domain/errors/share.errors';
+import { NoteAlreadySharedError } from '@modules/notes/domain/errors/note.errors';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

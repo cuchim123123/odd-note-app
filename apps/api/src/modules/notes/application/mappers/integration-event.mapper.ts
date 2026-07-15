@@ -1,5 +1,5 @@
-import type { DomainEvent } from '../../../../shared/domain/ddd/domain-event';
-import { NoteSharedDomainEvent } from '../../domain/events/note-shared.domain-event';
+import type { DomainEvent } from '@shared/domain/ddd/domain-event';
+import { NoteSharedDomainEvent } from '@modules/notes/domain/events/note-shared.domain-event';
 
 export type OutboxMessageDraft = {
   topic: string;

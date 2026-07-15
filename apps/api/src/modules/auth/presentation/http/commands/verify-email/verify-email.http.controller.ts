@@ -1,9 +1,9 @@
 ﻿import { Controller, Get, Param, UseFilters } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { VerifyEmailCommand } from '../../../../application/commands/verify-email/verify-email.command';
-import { AuthErrorFilter } from '../../../../presentation/filters/auth-error.filter';
-import { UserProfileMapper } from '../../../../presentation/mappers/user-profile.mapper';
-import type { User } from '../../../../domain/entities/user.entity';
+import { VerifyEmailCommand } from '@modules/auth/application/commands/verify-email/verify-email.command';
+import { AuthErrorFilter } from '@modules/auth/presentation/filters/auth-error.filter';
+import { UserProfileMapper } from '@modules/auth/presentation/mappers/user-profile.mapper';
+import type { User } from '@modules/auth/domain/entities/user.entity';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')

@@ -1,8 +1,8 @@
 ﻿import { Body, Controller, Post, UseFilters, Inject } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { GenerateTestResetTokenCommand } from '../../../../application/commands/generate-test-reset-token/generate-test-reset-token.command';
-import { AuthErrorFilter } from '../../../../presentation/filters/auth-error.filter';
-import type { EnvConfig } from '../../../../../../config/env.validation';
+import { GenerateTestResetTokenCommand } from '@modules/auth/application/commands/generate-test-reset-token/generate-test-reset-token.command';
+import { AuthErrorFilter } from '@modules/auth/presentation/filters/auth-error.filter';
+import type { EnvConfig } from '@config/env.validation';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')

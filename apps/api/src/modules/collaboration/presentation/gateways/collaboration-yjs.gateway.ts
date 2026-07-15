@@ -6,13 +6,13 @@ import {
 } from '@nestjs/websockets';
 import { Logger, Inject } from '@nestjs/common';
 import { Socket } from 'socket.io';
-import { COLLABORATION_NAMESPACE } from '../../collaboration.constants';
-import { COLLABORATION_STATE_PORT } from '../../application/ports/collaboration-state.port';
-import type { ICollaborationStatePort } from '../../application/ports/collaboration-state.port';
-import { YJS_DOCUMENT_PORT } from '../../application/ports/yjs-document.port';
-import type { IYjsDocumentPort } from '../../application/ports/yjs-document.port';
-import { NOTE_ACCESS_PORT } from '../../application/ports/note-access.port';
-import type { INoteAccessPort } from '../../application/ports/note-access.port';
+import { COLLABORATION_NAMESPACE } from '@modules/collaboration/collaboration.constants';
+import { COLLABORATION_STATE_PORT } from '@modules/collaboration/application/ports/collaboration-state.port';
+import type { ICollaborationStatePort } from '@modules/collaboration/application/ports/collaboration-state.port';
+import { YJS_DOCUMENT_PORT } from '@modules/collaboration/application/ports/yjs-document.port';
+import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
+import { NOTE_ACCESS_PORT } from '@modules/collaboration/application/ports/note-access.port';
+import type { INoteAccessPort } from '@modules/collaboration/application/ports/note-access.port';
 
 @WebSocketGateway({
   namespace: COLLABORATION_NAMESPACE,

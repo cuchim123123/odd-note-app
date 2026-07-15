@@ -1,11 +1,11 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { CreateNoteCommand } from './create-note.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../ports/unit-of-work.port';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document-sync.port';
-import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../ports/draft-cache.port';
-import { NoteEntity } from '../../../domain/entities/note.entity';
-import { NoteTitle } from '../../../domain/value-objects/note-title.vo';
+import { CreateNoteCommand } from '@modules/notes/application/commands/create-note/create-note.command';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import { DRAFT_CACHE_PORT, type IDraftCachePort } from '@modules/notes/application/ports/draft-cache.port';
+import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
+import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
 
 @CommandHandler(CreateNoteCommand)
 export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { validateEnv } from './env.validation';
-import type { EnvConfig } from './env.validation';
+import { validateEnv } from '@config/env.validation';
+import type { EnvConfig } from '@config/env.validation';
 
 const envConfig = validateEnv(process.env);
 

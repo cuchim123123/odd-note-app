@@ -1,14 +1,14 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
-import type { TokenProvider } from '../../ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
-import type { TokenRepository } from '../../ports/token.repository.port';
-import { USER_REPOSITORY } from '../../ports/user.repository.port';
-import type { UserRepository } from '../../ports/user.repository.port';
-import { PasswordResetToken } from '../../../domain/entities/token.entity';
-import { GenerateTestResetTokenCommand } from './generate-test-reset-token.command';
+import { TOKEN_PROVIDER } from '@modules/auth/application/ports/token-provider.port';
+import type { TokenProvider } from '@modules/auth/application/ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '@modules/auth/application/ports/token.repository.port';
+import type { TokenRepository } from '@modules/auth/application/ports/token.repository.port';
+import { USER_REPOSITORY } from '@modules/auth/application/ports/user.repository.port';
+import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import { PasswordResetToken } from '@modules/auth/domain/entities/token.entity';
+import { GenerateTestResetTokenCommand } from '@modules/auth/application/commands/generate-test-reset-token/generate-test-reset-token.command';
 
 @CommandHandler(GenerateTestResetTokenCommand)
 export class GenerateTestResetTokenHandler implements ICommandHandler<GenerateTestResetTokenCommand> {

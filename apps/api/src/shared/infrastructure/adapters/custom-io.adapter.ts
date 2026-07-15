@@ -1,7 +1,7 @@
 ﻿import { IoAdapter } from '@nestjs/platform-socket.io';
 import type { ServerOptions } from 'socket.io';
 import type { INestApplication } from '@nestjs/common';
-import type { EnvConfig } from '../../../config/env.validation';
+import type { EnvConfig } from '@config/env.validation';
 
 export class CustomIoAdapter extends IoAdapter {
   private readonly corsOrigin: string;

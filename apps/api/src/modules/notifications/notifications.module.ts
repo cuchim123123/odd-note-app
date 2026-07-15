@@ -1,31 +1,31 @@
 ﻿import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
-import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
-import { JwtConfigModule } from '../../config';
-import { AccessTokenGuard } from '../../shared/presentation/http/guards/access-token.guard';
+import { PrismaModule } from '@infrastructure/prisma/prisma.module';
+import { JwtConfigModule } from '@config';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
 
-import { NOTIFICATION_REPOSITORY } from './application/ports/notification.repository.port';
-import { PrismaNotificationRepository } from './infrastructure/persistence/prisma-notification.repository';
+import { NOTIFICATION_REPOSITORY } from '@modules/notifications/application/ports/notification.repository.port';
+import { PrismaNotificationRepository } from '@modules/notifications/infrastructure/persistence/prisma-notification.repository';
 
 // ─── Application: Command Handlers ──────────────────────────────────────────
-import { CreateNotificationHandler } from './application/commands/create-notification/create-notification.handler';
-import { MarkAsReadHandler } from './application/commands/mark-as-read/mark-as-read.handler';
-import { MarkAllAsReadHandler } from './application/commands/mark-all-as-read/mark-all-as-read.handler';
-import { DeleteNotificationHandler } from './application/commands/delete-notification/delete-notification.handler';
+import { CreateNotificationHandler } from '@modules/notifications/application/commands/create-notification/create-notification.handler';
+import { MarkAsReadHandler } from '@modules/notifications/application/commands/mark-as-read/mark-as-read.handler';
+import { MarkAllAsReadHandler } from '@modules/notifications/application/commands/mark-all-as-read/mark-all-as-read.handler';
+import { DeleteNotificationHandler } from '@modules/notifications/application/commands/delete-notification/delete-notification.handler';
 
 // ─── Application: Query Handlers ─────────────────────────────────────────────
-import { GetNotificationsHandler } from './application/queries/get-notifications/get-notifications.handler';
-import { GetUnreadCountHandler } from './application/queries/get-unread-count/get-unread-count.handler';
+import { GetNotificationsHandler } from '@modules/notifications/application/queries/get-notifications/get-notifications.handler';
+import { GetUnreadCountHandler } from '@modules/notifications/application/queries/get-unread-count/get-unread-count.handler';
 
 // ─── Presentation: HTTP Controllers ──────────────────────────────────────────
-import { MarkAsReadHttpController } from './presentation/http/commands/mark-as-read/mark-as-read.http.controller';
-import { MarkAllAsReadHttpController } from './presentation/http/commands/mark-all-as-read/mark-all-as-read.http.controller';
-import { DeleteNotificationHttpController } from './presentation/http/commands/delete-notification/delete-notification.http.controller';
-import { GetNotificationsHttpController } from './presentation/http/queries/get-notifications/get-notifications.http.controller';
-import { GetUnreadCountHttpController } from './presentation/http/queries/get-unread-count/get-unread-count.http.controller';
+import { MarkAsReadHttpController } from '@modules/notifications/presentation/http/commands/mark-as-read/mark-as-read.http.controller';
+import { MarkAllAsReadHttpController } from '@modules/notifications/presentation/http/commands/mark-all-as-read/mark-all-as-read.http.controller';
+import { DeleteNotificationHttpController } from '@modules/notifications/presentation/http/commands/delete-notification/delete-notification.http.controller';
+import { GetNotificationsHttpController } from '@modules/notifications/presentation/http/queries/get-notifications/get-notifications.http.controller';
+import { GetUnreadCountHttpController } from '@modules/notifications/presentation/http/queries/get-unread-count/get-unread-count.http.controller';
 
 // ─── Presentation: Kafka Consumers ───────────────────────────────────────────
-import { NoteSharedConsumer } from './presentation/kafka/note-shared.consumer';
+import { NoteSharedConsumer } from '@modules/notifications/presentation/kafka/note-shared.consumer';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule],

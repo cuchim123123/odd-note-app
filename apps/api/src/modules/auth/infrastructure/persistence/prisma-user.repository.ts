@@ -1,16 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import type { PrismaTransactionClient } from './prisma-client.type';
-import type { UserRepository } from '../../application/ports/user.repository.port';
-import type { User } from '../../domain/entities/user.entity';
-import { UserPersistenceMapper } from './mappers/user-persistence.mapper';
-import { UserAlreadyExistsError } from '../../domain/errors/auth-error';
-import type { AggregateTracker } from '../../../../shared/domain/ddd/aggregate-tracker';
+import { Injectable, Inject, Optional } from '@nestjs/common';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import type { PrismaTransactionClient } from '@modules/auth/infrastructure/persistence/prisma-client.type';
+import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import type { User } from '@modules/auth/domain/entities/user.entity';
+import { UserPersistenceMapper } from '@modules/auth/infrastructure/persistence/mappers/user-persistence.mapper';
+import { UserAlreadyExistsError } from '@modules/auth/domain/errors/auth-error';
+import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepository {
   constructor(
-    private readonly prisma: PrismaTransactionClient,
-    private readonly tracker?: AggregateTracker
+    @Inject(PrismaService) private readonly prisma: PrismaTransactionClient,
+    @Optional() @Inject('AGGREGATE_TRACKER') private readonly tracker?: AggregateTracker
   ) {}
 
   async findById(id: string): Promise<User | null> {

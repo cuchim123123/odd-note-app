@@ -2,10 +2,10 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { ListNotesQuery } from './list-notes.query';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document-sync.port';
-import type { NoteResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
+import { ListNotesQuery } from '@modules/notes/application/queries/list-notes/list-notes.query';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import type { NoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
 
 /**
  * Query handler: bypass domain and repository, query DB directly for read performance.

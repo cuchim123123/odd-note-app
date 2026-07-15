@@ -1,12 +1,12 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { NotePermissionDeniedError, IncorrectPasswordError } from '../../../domain/errors/note.errors';
-import { GetDraftQuery } from './get-draft.query';
-import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../ports/draft-cache.port';
-import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '../../ports/note-protection.port';
-import type { NoteDraftResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
+import { NotePermissionDeniedError, IncorrectPasswordError } from '@modules/notes/domain/errors/note.errors';
+import { GetDraftQuery } from '@modules/notes/application/queries/get-draft/get-draft.query';
+import { DRAFT_CACHE_PORT, type IDraftCachePort } from '@modules/notes/application/ports/draft-cache.port';
+import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/note-protection.port';
+import type { NoteDraftResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
 
 @QueryHandler(GetDraftQuery)
 export class GetDraftQueryHandler implements IQueryHandler<GetDraftQuery> {

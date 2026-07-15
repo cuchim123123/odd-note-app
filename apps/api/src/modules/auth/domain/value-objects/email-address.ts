@@ -1,5 +1,5 @@
-import { ValueObject } from '../../../../shared/domain/ddd/value-object';
-import { InvalidCredentialsError } from '../errors/auth-error';
+import { ValueObject } from '@shared/domain/ddd/value-object';
+import { InvalidCredentialsError } from '@modules/auth/domain/errors/auth-error';
 
 export interface EmailAddressProps {
   value: string;

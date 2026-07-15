@@ -1,8 +1,8 @@
 ﻿import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes } from 'crypto';
-import { JwtConfigService, AuthConfigService } from '../../../../config';
-import { InvalidTokenError } from '../../domain/errors/auth-error';
+import { JwtConfigService, AuthConfigService } from '@config';
+import { InvalidTokenError } from '@modules/auth/domain/errors/auth-error';
 import type {
   TokenProvider,
   AccessTokenData,

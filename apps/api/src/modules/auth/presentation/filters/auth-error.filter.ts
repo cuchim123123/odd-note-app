@@ -1,7 +1,7 @@
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { Catch } from '@nestjs/common';
 import type { Response } from 'express';
-import { AuthError } from '../../domain/errors/auth-error';
+import { AuthError } from '@modules/auth/domain/errors/auth-error';
 
 const STATUS_MAP: Record<string, number> = {
   INVALID_CREDENTIALS: 401,

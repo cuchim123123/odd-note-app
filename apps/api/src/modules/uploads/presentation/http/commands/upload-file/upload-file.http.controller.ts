@@ -2,8 +2,8 @@
 import { CommandBus } from '@nestjs/cqrs';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { AccessTokenGuard } from '../../../../../../shared/presentation/http/guards/access-token.guard';
-import { UploadFileCommand } from '../../../../application/commands/upload-file/upload-file.command';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
+import { UploadFileCommand } from '@modules/uploads/application/commands/upload-file/upload-file.command';
 
 @Controller('uploads')
 @UseGuards(AccessTokenGuard)

@@ -1,9 +1,9 @@
 ﻿import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
-import { AccessTokenGuard } from '../../../../../../shared/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../../shared/presentation/http/decorators/current-user.decorator';
-import { GetNotificationsQuery } from '../../../../application/queries/get-notifications/get-notifications.query';
-import { GetUnreadCountQuery } from '../../../../application/queries/get-unread-count/get-unread-count.query';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
+import { GetNotificationsQuery } from '@modules/notifications/application/queries/get-notifications/get-notifications.query';
+import { GetUnreadCountQuery } from '@modules/notifications/application/queries/get-unread-count/get-unread-count.query';
 
 @Controller('notifications')
 @UseGuards(AccessTokenGuard)

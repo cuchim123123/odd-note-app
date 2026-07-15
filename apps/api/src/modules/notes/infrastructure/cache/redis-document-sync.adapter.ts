@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { IDocumentSyncPort } from '../../application/ports/document-sync.port';
-import { NotesCrdtService } from '../crdt/notes-crdt.service';
+import type { IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import { NotesCrdtService } from '@modules/notes/infrastructure/crdt/notes-crdt.service';
 
 @Injectable()
 export class RedisDocumentSyncAdapter implements IDocumentSyncPort {

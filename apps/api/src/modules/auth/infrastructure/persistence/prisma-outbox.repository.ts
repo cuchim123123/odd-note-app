@@ -1,5 +1,5 @@
-import type { OutboxPort } from '../../application/ports/outbox.port';
-import type { PrismaTransactionClient } from './prisma-client.type';
+import type { OutboxPort } from '@modules/auth/application/ports/outbox.port';
+import type { PrismaTransactionClient } from '@modules/auth/infrastructure/persistence/prisma-client.type';
 
 export class PrismaOutboxRepository implements OutboxPort {
   constructor(private readonly prisma: PrismaTransactionClient) {}

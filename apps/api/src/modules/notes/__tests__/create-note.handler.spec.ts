@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CreateNoteHandler } from '../application/commands/create-note/create-note.handler';
-import { CreateNoteCommand } from '../application/commands/create-note/create-note.command';
-import { NoteEntity } from '../domain/entities/note.entity';
+import { CreateNoteHandler } from '@modules/notes/application/commands/create-note/create-note.handler';
+import { CreateNoteCommand } from '@modules/notes/application/commands/create-note/create-note.command';
+import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
 
 // ─── Port Mocks ─────────────────────────────────────────────────────────────
 

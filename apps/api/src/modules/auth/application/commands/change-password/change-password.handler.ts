@@ -1,12 +1,12 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { UserNotFoundError } from '../../../domain/errors/auth-error';
-import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
-import type { PasswordHasher } from '../../ports/password-hasher.port';
-import { USER_REPOSITORY } from '../../ports/user.repository.port';
-import type { UserRepository } from '../../ports/user.repository.port';
-import { ChangePasswordCommand } from './change-password.command';
+import { UserNotFoundError } from '@modules/auth/domain/errors/auth-error';
+import { PASSWORD_HASHER } from '@modules/auth/application/ports/password-hasher.port';
+import type { PasswordHasher } from '@modules/auth/application/ports/password-hasher.port';
+import { USER_REPOSITORY } from '@modules/auth/application/ports/user.repository.port';
+import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import { ChangePasswordCommand } from '@modules/auth/application/commands/change-password/change-password.command';
 
 @CommandHandler(ChangePasswordCommand)
 export class ChangePasswordHandler implements ICommandHandler<ChangePasswordCommand> {

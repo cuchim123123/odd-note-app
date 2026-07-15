@@ -1,4 +1,4 @@
-import { NoteEntity } from '../../domain/entities/note.entity';
+import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
 
 export const NOTE_REPOSITORY = Symbol('NOTE_REPOSITORY');
 

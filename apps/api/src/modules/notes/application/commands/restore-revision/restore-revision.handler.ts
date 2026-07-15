@@ -1,13 +1,13 @@
 import { CommandHandler, type ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { RestoreRevisionCommand } from './restore-revision.command';
-import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '../../ports/note-revision.repository.port';
-import { NOTE_REPOSITORY, type INoteRepository } from '../../ports/note.repository.port';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document-sync.port';
-import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '../../ports/user-preferences.repository.port';
-import { NoteNotFoundError, NotePermissionDeniedError } from '../../../domain/errors/note.errors';
-import { NoteTitle } from '../../../domain/value-objects/note-title.vo';
-import { CreateRevisionCommand } from '../create-revision/create-revision.command';
+import { RestoreRevisionCommand } from '@modules/notes/application/commands/restore-revision/restore-revision.command';
+import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
+import { NOTE_REPOSITORY, type INoteRepository } from '@modules/notes/application/ports/note.repository.port';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '@modules/notes/application/ports/user-preferences.repository.port';
+import { NoteNotFoundError, NotePermissionDeniedError } from '@modules/notes/domain/errors/note.errors';
+import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
+import { CreateRevisionCommand } from '@modules/notes/application/commands/create-revision/create-revision.command';
 
 export class RevisionNotFoundError extends Error {
   constructor(revisionId: string) {

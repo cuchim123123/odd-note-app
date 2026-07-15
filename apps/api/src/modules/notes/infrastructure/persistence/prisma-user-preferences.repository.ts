@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { IUserPreferencesRepository } from '../../application/ports/user-preferences.repository.port';
-import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
-import type { PrismaTransactionClient } from './prisma-client.type';
+import type { IUserPreferencesRepository } from '@modules/notes/application/ports/user-preferences.repository.port';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
 
 /**
  * Infrastructure adapter: manages per-user note preferences (pins and labels).

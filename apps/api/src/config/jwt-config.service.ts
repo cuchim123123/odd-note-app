@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { JwtSignOptions } from '@nestjs/jwt';
-import type { EnvConfig } from './config.module';
+import type { EnvConfig } from '@config/config.module';
 
 @Injectable()
 export class JwtConfigService {

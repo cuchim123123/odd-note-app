@@ -1,4 +1,4 @@
-import type { DomainEvent } from './domain-event';
+import type { DomainEvent } from '@shared/domain/ddd/domain-event';
 
 export abstract class AggregateRoot {
   private readonly _domainEvents: DomainEvent[] = [];

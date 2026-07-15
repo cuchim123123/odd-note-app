@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { IUserReadPort, UserBasicInfo, UserDisplayInfo } from '../../application/ports/user-read.port';
-import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
-import type { PrismaTransactionClient } from './prisma-client.type';
+import type { IUserReadPort, UserBasicInfo, UserDisplayInfo } from '@modules/notes/application/ports/user-read.port';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
 
 /**
  * Infrastructure adapter: provides read-only user lookups for the Notes module.

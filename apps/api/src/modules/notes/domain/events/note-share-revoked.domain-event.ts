@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import type { DomainEvent } from '../../../../shared/domain/ddd/domain-event';
+import type { DomainEvent } from '@shared/domain/ddd/domain-event';
 
 export class NoteShareRevokedDomainEvent implements DomainEvent {
   public readonly eventId: string;

@@ -1,7 +1,7 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { BadRequestException } from '@nestjs/common';
-import { DeleteLabelCommand } from './delete-label.command';
-import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '../../ports/user-preferences.repository.port';
+import { DeleteLabelCommand } from '@modules/notes/application/commands/delete-label/delete-label.command';
+import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '@modules/notes/application/ports/user-preferences.repository.port';
 import { Inject } from '@nestjs/common';
 
 @CommandHandler(DeleteLabelCommand)

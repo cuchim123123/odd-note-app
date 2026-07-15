@@ -1,5 +1,5 @@
 ﻿import { Inject, Injectable } from '@nestjs/common';
-import type { EnvConfig } from '../../../config/env.validation';
+import type { EnvConfig } from '@config/env.validation';
 
 @Injectable()
 export class AuthUrlService {

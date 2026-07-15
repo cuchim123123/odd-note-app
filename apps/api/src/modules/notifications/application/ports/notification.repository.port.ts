@@ -1,4 +1,4 @@
-import type { NotificationEntity } from '../../domain/entities/notification.entity';
+import type { NotificationEntity } from '@modules/notifications/domain/entities/notification.entity';
 
 export const NOTIFICATION_REPOSITORY = Symbol('NOTIFICATION_REPOSITORY');
 

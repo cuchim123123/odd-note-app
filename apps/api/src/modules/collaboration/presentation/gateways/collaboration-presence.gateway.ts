@@ -7,12 +7,12 @@ import {
 } from '@nestjs/websockets';
 import { Logger, Inject } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { COLLABORATION_NAMESPACE, COLLABORATOR_COLORS } from '../../collaboration.constants';
-import { COLLABORATION_STATE_PORT } from '../../application/ports/collaboration-state.port';
-import type { ICollaborationStatePort } from '../../application/ports/collaboration-state.port';
-import { NOTE_ACCESS_PORT } from '../../application/ports/note-access.port';
-import type { INoteAccessPort } from '../../application/ports/note-access.port';
-import { CollaborationSessionEntity } from '../../domain/entities/collaboration-session.entity';
+import { COLLABORATION_NAMESPACE, COLLABORATOR_COLORS } from '@modules/collaboration/collaboration.constants';
+import { COLLABORATION_STATE_PORT } from '@modules/collaboration/application/ports/collaboration-state.port';
+import type { ICollaborationStatePort } from '@modules/collaboration/application/ports/collaboration-state.port';
+import { NOTE_ACCESS_PORT } from '@modules/collaboration/application/ports/note-access.port';
+import type { INoteAccessPort } from '@modules/collaboration/application/ports/note-access.port';
+import { CollaborationSessionEntity } from '@modules/collaboration/domain/entities/collaboration-session.entity';
 
 @WebSocketGateway({
   namespace: COLLABORATION_NAMESPACE,

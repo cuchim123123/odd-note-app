@@ -1,12 +1,12 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { NoteNotFoundError } from '../../../domain/errors/note.errors';
-import { GetNoteByIdQuery } from './get-note-by-id.query';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document-sync.port';
-import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '../../ports/note-protection.port';
-import type { NoteResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
+import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
+import { GetNoteByIdQuery } from '@modules/notes/application/queries/get-note-by-id/get-note-by-id.query';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/note-protection.port';
+import type { NoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
 
 @QueryHandler(GetNoteByIdQuery)
 export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> {

@@ -1,7 +1,7 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { UploadFileCommand } from './upload-file.command';
-import { STORAGE_PORT, type IStoragePort, type UploadResult } from '../../ports/storage.port';
+import { UploadFileCommand } from '@modules/uploads/application/commands/upload-file/upload-file.command';
+import { STORAGE_PORT, type IStoragePort, type UploadResult } from '@modules/uploads/application/ports/storage.port';
 
 @CommandHandler(UploadFileCommand)
 export class UploadFileHandler implements ICommandHandler<UploadFileCommand> {

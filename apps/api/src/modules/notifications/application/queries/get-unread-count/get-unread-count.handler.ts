@@ -1,7 +1,7 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { GetUnreadCountQuery } from './get-unread-count.query';
-import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '../../ports/notification.repository.port';
+import { GetUnreadCountQuery } from '@modules/notifications/application/queries/get-unread-count/get-unread-count.query';
+import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '@modules/notifications/application/ports/notification.repository.port';
 
 @QueryHandler(GetUnreadCountQuery)
 export class GetUnreadCountHandler implements IQueryHandler<GetUnreadCountQuery> {

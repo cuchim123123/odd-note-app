@@ -1,14 +1,14 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
-import type { TokenProvider } from '../../ports/token-provider.port';
-import { USER_REPOSITORY } from '../../ports/user.repository.port';
-import type { UserRepository } from '../../ports/user.repository.port';
-import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
-import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { ForgotPasswordCommand } from './forgot-password.command';
-import { PasswordResetToken } from '../../../domain/entities/token.entity';
+import { TOKEN_PROVIDER } from '@modules/auth/application/ports/token-provider.port';
+import type { TokenProvider } from '@modules/auth/application/ports/token-provider.port';
+import { USER_REPOSITORY } from '@modules/auth/application/ports/user.repository.port';
+import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import { UNIT_OF_WORK } from '@modules/auth/application/ports/unit-of-work.port';
+import type { UnitOfWork } from '@modules/auth/application/ports/unit-of-work.port';
+import { ForgotPasswordCommand } from '@modules/auth/application/commands/forgot-password/forgot-password.command';
+import { PasswordResetToken } from '@modules/auth/domain/entities/token.entity';
 
 @CommandHandler(ForgotPasswordCommand)
 export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordCommand> {

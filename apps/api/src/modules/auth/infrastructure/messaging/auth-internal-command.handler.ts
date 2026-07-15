@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import type { IInternalCommandHandler } from '../../../../shared/infrastructure/outbox/internal-command-handler.port';
-import { MAIL_SENDER, type MailSender } from '../../application/ports/mail-sender.port';
+import type { IInternalCommandHandler } from '@shared/infrastructure/outbox/internal-command-handler.port';
+import { MAIL_SENDER, type MailSender } from '@modules/auth/application/ports/mail-sender.port';
 
 /**
  * Handles INTERNAL_COMMAND outbox messages owned by the Auth bounded context.

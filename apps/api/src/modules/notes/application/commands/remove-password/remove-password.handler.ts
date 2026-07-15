@@ -1,8 +1,8 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { RemovePasswordCommand } from './remove-password.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../ports/unit-of-work.port';
-import { NoteNotFoundError, IncorrectPasswordError } from '../../../domain/errors/note.errors';
+import { RemovePasswordCommand } from '@modules/notes/application/commands/remove-password/remove-password.command';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
+import { NoteNotFoundError, IncorrectPasswordError } from '@modules/notes/domain/errors/note.errors';
 
 @CommandHandler(RemovePasswordCommand)
 export class RemovePasswordHandler implements ICommandHandler<RemovePasswordCommand> {

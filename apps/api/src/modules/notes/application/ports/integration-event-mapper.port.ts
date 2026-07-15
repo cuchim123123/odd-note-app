@@ -1,5 +1,5 @@
-import type { DomainEvent } from '../../../../shared/domain/ddd/domain-event';
-import type { OutboxMessageDraft } from '../mappers/integration-event.mapper';
+import type { DomainEvent } from '@shared/domain/ddd/domain-event';
+import type { OutboxMessageDraft } from '@modules/notes/application/mappers/integration-event.mapper';
 
 export const NOTE_INTEGRATION_EVENT_MAPPER = Symbol('NOTE_INTEGRATION_EVENT_MAPPER');
 

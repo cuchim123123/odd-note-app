@@ -1,15 +1,15 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
-import type { PasswordHasher } from '../../ports/password-hasher.port';
-import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
-import type { TokenProvider } from '../../ports/token-provider.port';
+import { PASSWORD_HASHER } from '@modules/auth/application/ports/password-hasher.port';
+import type { PasswordHasher } from '@modules/auth/application/ports/password-hasher.port';
+import { TOKEN_PROVIDER } from '@modules/auth/application/ports/token-provider.port';
+import type { TokenProvider } from '@modules/auth/application/ports/token-provider.port';
 
-import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
-import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { InvalidTokenError, UserNotFoundError } from '../../../domain/errors/auth-error';
-import { ResetPasswordCommand } from './reset-password.command';
+import { UNIT_OF_WORK } from '@modules/auth/application/ports/unit-of-work.port';
+import type { UnitOfWork } from '@modules/auth/application/ports/unit-of-work.port';
+import { InvalidTokenError, UserNotFoundError } from '@modules/auth/domain/errors/auth-error';
+import { ResetPasswordCommand } from '@modules/auth/application/commands/reset-password/reset-password.command';
 
 @CommandHandler(ResetPasswordCommand)
 export class ResetPasswordHandler implements ICommandHandler<ResetPasswordCommand> {

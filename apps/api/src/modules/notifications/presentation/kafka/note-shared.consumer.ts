@@ -1,7 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { CommandBus } from '@nestjs/cqrs';
-import { CreateNotificationCommand } from '../../application/commands/create-notification/create-notification.command';
+import { CreateNotificationCommand } from '@modules/notifications/application/commands/create-notification/create-notification.command';
 
 interface NoteSharedPayload {
   noteId: string;

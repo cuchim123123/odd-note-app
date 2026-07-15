@@ -1,8 +1,8 @@
 ﻿import { Body, Controller, Post, UseFilters } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { RefreshTokenDto } from '../refresh-tokens/refresh-token.dto';
-import { LogoutCommand } from '../../../../application/commands/logout/logout.command';
-import { AuthErrorFilter } from '../../../../presentation/filters/auth-error.filter';
+import { RefreshTokenDto } from '@modules/auth/presentation/http/commands/refresh-tokens/refresh-token.dto';
+import { LogoutCommand } from '@modules/auth/application/commands/logout/logout.command';
+import { AuthErrorFilter } from '@modules/auth/presentation/filters/auth-error.filter';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')

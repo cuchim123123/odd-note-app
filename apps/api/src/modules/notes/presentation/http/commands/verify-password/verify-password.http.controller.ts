@@ -1,9 +1,9 @@
 ﻿import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { AccessTokenGuard } from '../../../../../../shared/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../../shared/presentation/http/decorators/current-user.decorator';
-import { VerifyPasswordCommand } from '../../../../application/commands/verify-password/verify-password.command';
-import { ZodValidationPipe } from '../../../../../../shared/presentation/http/pipes/zod-validation.pipe';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
+import { VerifyPasswordCommand } from '@modules/notes/application/commands/verify-password/verify-password.command';
+import { ZodValidationPipe } from '@shared/presentation/http/pipes/zod-validation.pipe';
 import { z } from 'zod';
 
 const schema = z.object({ password: z.string().trim().min(1, 'Password is required') });

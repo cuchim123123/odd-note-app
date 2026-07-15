@@ -1,9 +1,9 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { RevokeShareCommand } from './revoke-share.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../ports/unit-of-work.port';
-import { NoteNotFoundError } from '../../../domain/errors/note.errors';
-import { ShareNotFoundError } from '../../../domain/errors/share.errors';
+import { RevokeShareCommand } from '@modules/notes/application/commands/revoke-share/revoke-share.command';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
+import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
+import { ShareNotFoundError } from '@modules/notes/domain/errors/share.errors';
 
 @CommandHandler(RevokeShareCommand)
 export class RevokeShareHandler implements ICommandHandler<RevokeShareCommand> {

@@ -1,8 +1,8 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { NotificationNotFoundError, NotificationPermissionDeniedError } from '../../../domain/errors/notification.errors';
-import { DeleteNotificationCommand } from './delete-notification.command';
-import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '../../ports/notification.repository.port';
+import { NotificationNotFoundError, NotificationPermissionDeniedError } from '@modules/notifications/domain/errors/notification.errors';
+import { DeleteNotificationCommand } from '@modules/notifications/application/commands/delete-notification/delete-notification.command';
+import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '@modules/notifications/application/ports/notification.repository.port';
 
 @CommandHandler(DeleteNotificationCommand)
 export class DeleteNotificationHandler implements ICommandHandler<DeleteNotificationCommand> {

@@ -1,15 +1,15 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
-import type { UnitOfWork, TransactionContext } from '../../application/ports/unit-of-work.port';
-import { PrismaUserRepository } from './prisma-user.repository';
-import { PrismaTokenRepository } from './prisma-token.repository';
-import { PrismaOutboxRepository } from './prisma-outbox.repository';
-import type { AggregateRoot } from '../../../../shared/domain/ddd/aggregate-root';
-import type { AggregateTracker } from '../../../../shared/domain/ddd/aggregate-tracker';
-import { INTEGRATION_EVENT_MAPPER } from '../../application/ports/integration-event-mapper.port';
-import type { IntegrationEventMapper } from '../../application/ports/integration-event-mapper.port';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import type { UnitOfWork, TransactionContext } from '@modules/auth/application/ports/unit-of-work.port';
+import { PrismaUserRepository } from '@modules/auth/infrastructure/persistence/prisma-user.repository';
+import { PrismaTokenRepository } from '@modules/auth/infrastructure/persistence/prisma-token.repository';
+import { PrismaOutboxRepository } from '@modules/auth/infrastructure/persistence/prisma-outbox.repository';
+import type { AggregateRoot } from '@shared/domain/ddd/aggregate-root';
+import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
+import { INTEGRATION_EVENT_MAPPER } from '@modules/auth/application/ports/integration-event-mapper.port';
+import type { IntegrationEventMapper } from '@modules/auth/application/ports/integration-event-mapper.port';
 
-import type { PrismaTransactionClient } from './prisma-client.type';
+import type { PrismaTransactionClient } from '@modules/auth/infrastructure/persistence/prisma-client.type';
 
 @Injectable()
 export class PrismaUnitOfWork implements UnitOfWork {

@@ -1,9 +1,9 @@
 ﻿import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { AccessTokenGuard } from '../../../../../../shared/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../../shared/presentation/http/decorators/current-user.decorator';
-import { RenameLabelCommand } from '../../../../application/commands/rename-label/rename-label.command';
-import { ZodValidationPipe } from '../../../../../../shared/presentation/http/pipes/zod-validation.pipe';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
+import { RenameLabelCommand } from '@modules/notes/application/commands/rename-label/rename-label.command';
+import { ZodValidationPipe } from '@shared/presentation/http/pipes/zod-validation.pipe';
 import { z } from 'zod';
 
 const schema = z.object({

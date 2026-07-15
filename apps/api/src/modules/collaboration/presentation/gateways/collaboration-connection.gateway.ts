@@ -6,13 +6,13 @@ import type { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit } from '@n
 import { Logger, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { JwtConfigService } from '../../../../config';
-import { RedisService } from '../../../../infrastructure/redis/redis.service';
+import { JwtConfigService } from '@config';
+import { RedisService } from '@infrastructure/redis/redis.service';
 import { Server, Socket } from 'socket.io';
 import type Redis from 'ioredis';
-import { COLLABORATION_NAMESPACE, REDIS_EVENT_TYPES } from '../../collaboration.constants';
-import { COLLABORATION_STATE_PORT } from '../../application/ports/collaboration-state.port';
-import type { ICollaborationStatePort } from '../../application/ports/collaboration-state.port';
+import { COLLABORATION_NAMESPACE, REDIS_EVENT_TYPES } from '@modules/collaboration/collaboration.constants';
+import { COLLABORATION_STATE_PORT } from '@modules/collaboration/application/ports/collaboration-state.port';
+import type { ICollaborationStatePort } from '@modules/collaboration/application/ports/collaboration-state.port';
 
 @WebSocketGateway({
   namespace: COLLABORATION_NAMESPACE,

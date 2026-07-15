@@ -1,9 +1,9 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
-import { NoteNotFoundError } from '../../../domain/errors/note.errors';
-import { GetProtectionStatusQuery } from './get-protection-status.query';
-import type { ProtectionStatusResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
+import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
+import { GetProtectionStatusQuery } from '@modules/notes/application/queries/get-protection-status/get-protection-status.query';
+import type { ProtectionStatusResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
 
 @QueryHandler(GetProtectionStatusQuery)
 export class GetProtectionStatusQueryHandler implements IQueryHandler<GetProtectionStatusQuery> {

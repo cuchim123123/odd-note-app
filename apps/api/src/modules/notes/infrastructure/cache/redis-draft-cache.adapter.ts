@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '../../../../infrastructure/redis/redis.service';
-import type { IDraftCachePort, NoteDraftDraft } from '../../application/ports/draft-cache.port';
+import { RedisService } from '@infrastructure/redis/redis.service';
+import type { IDraftCachePort, NoteDraftDraft } from '@modules/notes/application/ports/draft-cache.port';
 
 @Injectable()
 export class RedisDraftCacheAdapter implements IDraftCachePort {

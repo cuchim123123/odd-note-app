@@ -1,8 +1,8 @@
-import { InvalidCredentialsError, IncorrectPasswordError } from '../errors/auth-error';
+import { InvalidCredentialsError, IncorrectPasswordError } from '@modules/auth/domain/errors/auth-error';
 import * as crypto from 'crypto';
-import { AggregateRoot } from '../../../../shared/domain/ddd/aggregate-root';
-import { EmailAddress } from '../value-objects/email-address';
-import { UserRegisteredDomainEvent } from '../events/user-registered.domain-event';
+import { AggregateRoot } from '@shared/domain/ddd/aggregate-root';
+import { EmailAddress } from '@modules/auth/domain/value-objects/email-address';
+import { UserRegisteredDomainEvent } from '@modules/auth/domain/events/user-registered.domain-event';
 
 export class User extends AggregateRoot {
   constructor(

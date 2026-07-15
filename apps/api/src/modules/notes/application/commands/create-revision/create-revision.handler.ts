@@ -1,9 +1,9 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { CreateRevisionCommand } from './create-revision.command';
-import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '../../ports/note-revision.repository.port';
-import { NoteRevisionEntity } from '../../../domain/entities/note-revision.entity';
+import { CreateRevisionCommand } from '@modules/notes/application/commands/create-revision/create-revision.command';
+import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
+import { NoteRevisionEntity } from '@modules/notes/domain/entities/note-revision.entity';
 
 @CommandHandler(CreateRevisionCommand)
 export class CreateRevisionHandler implements ICommandHandler<CreateRevisionCommand> {

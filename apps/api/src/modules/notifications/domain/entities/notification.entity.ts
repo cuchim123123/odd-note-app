@@ -1,4 +1,4 @@
-import { Entity } from '../../../../shared/domain/ddd/entity';
+import { Entity } from '@shared/domain/ddd/entity';
 
 export interface NotificationProps {
   userId: string;

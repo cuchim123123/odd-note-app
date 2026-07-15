@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { INoteOutboxPort } from '../../application/ports/note-outbox.port';
-import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
-import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
+import type { INoteOutboxPort } from '@modules/notes/application/ports/note-outbox.port';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
 /**
  * Infrastructure adapter: persists integration event messages to the OutboxMessage table.
  * The OutboxProcessor (in AuthModule) polls this table and forwards events to Kafka.

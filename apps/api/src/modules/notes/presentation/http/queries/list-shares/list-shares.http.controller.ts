@@ -1,8 +1,8 @@
 ﻿import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
-import { AccessTokenGuard } from '../../../../../../shared/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../../shared/presentation/http/decorators/current-user.decorator';
-import { ListSharesQuery } from '../../../../application/queries/list-shares/list-shares.query';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
+import { ListSharesQuery } from '@modules/notes/application/queries/list-shares/list-shares.query';
 
 @Controller('notes')
 @UseGuards(AccessTokenGuard)

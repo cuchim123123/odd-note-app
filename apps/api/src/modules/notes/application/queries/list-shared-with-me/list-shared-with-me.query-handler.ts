@@ -2,10 +2,10 @@
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { ListSharedWithMeQuery } from './list-shared-with-me.query';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document-sync.port';
-import type { SharedNoteResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
+import { ListSharedWithMeQuery } from '@modules/notes/application/queries/list-shared-with-me/list-shared-with-me.query';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import type { SharedNoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
 
 @QueryHandler(ListSharedWithMeQuery)
 export class ListSharedWithMeQueryHandler implements IQueryHandler<ListSharedWithMeQuery> {

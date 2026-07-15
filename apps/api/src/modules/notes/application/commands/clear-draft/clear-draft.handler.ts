@@ -1,7 +1,7 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { ClearDraftCommand } from './clear-draft.command';
-import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../ports/draft-cache.port';
+import { ClearDraftCommand } from '@modules/notes/application/commands/clear-draft/clear-draft.command';
+import { DRAFT_CACHE_PORT, type IDraftCachePort } from '@modules/notes/application/ports/draft-cache.port';
 
 @CommandHandler(ClearDraftCommand)
 export class ClearDraftHandler implements ICommandHandler<ClearDraftCommand> {

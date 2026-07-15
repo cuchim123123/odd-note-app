@@ -1,8 +1,8 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
-import { CreateNotificationCommand } from './create-notification.command';
-import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '../../ports/notification.repository.port';
-import { NotificationEntity } from '../../../domain/entities/notification.entity';
+import { CreateNotificationCommand } from '@modules/notifications/application/commands/create-notification/create-notification.command';
+import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '@modules/notifications/application/ports/notification.repository.port';
+import { NotificationEntity } from '@modules/notifications/domain/entities/notification.entity';
 
 @CommandHandler(CreateNotificationCommand)
 export class CreateNotificationHandler implements ICommandHandler<CreateNotificationCommand> {

@@ -1,9 +1,9 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { SaveDraftCommand } from './save-draft.command';
-import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../ports/draft-cache.port';
-import { NOTE_REPOSITORY, type INoteRepository } from '../../ports/note.repository.port';
-import { NotePermissionDeniedError } from '../../../domain/errors/note.errors';
+import { SaveDraftCommand } from '@modules/notes/application/commands/save-draft/save-draft.command';
+import { DRAFT_CACHE_PORT, type IDraftCachePort } from '@modules/notes/application/ports/draft-cache.port';
+import { NOTE_REPOSITORY, type INoteRepository } from '@modules/notes/application/ports/note.repository.port';
+import { NotePermissionDeniedError } from '@modules/notes/domain/errors/note.errors';
 
 @CommandHandler(SaveDraftCommand)
 export class SaveDraftHandler implements ICommandHandler<SaveDraftCommand> {

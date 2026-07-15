@@ -1,8 +1,8 @@
 ﻿import { Body, Controller, Post, UseFilters } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { ForgotPasswordDto } from './forgot-password.dto';
-import { ForgotPasswordCommand } from '../../../../application/commands/forgot-password/forgot-password.command';
-import { AuthErrorFilter } from '../../../../presentation/filters/auth-error.filter';
+import { ForgotPasswordDto } from '@modules/auth/presentation/http/commands/forgot-password/forgot-password.dto';
+import { ForgotPasswordCommand } from '@modules/auth/application/commands/forgot-password/forgot-password.command';
+import { AuthErrorFilter } from '@modules/auth/presentation/filters/auth-error.filter';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')

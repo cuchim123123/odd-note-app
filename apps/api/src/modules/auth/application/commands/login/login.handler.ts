@@ -1,18 +1,18 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { InvalidCredentialsError } from '../../../domain/errors/auth-error';
-import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
-import type { PasswordHasher } from '../../ports/password-hasher.port';
-import type { LoginResult } from '../../shared/auth.types';
-import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
-import type { TokenProvider } from '../../ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '../../ports/token.repository.port';
-import type { TokenRepository } from '../../ports/token.repository.port';
-import { USER_REPOSITORY } from '../../ports/user.repository.port';
-import type { UserRepository } from '../../ports/user.repository.port';
-import { LoginCommand } from './login.command';
-import { RefreshToken } from '../../../domain/entities/token.entity';
+import { InvalidCredentialsError } from '@modules/auth/domain/errors/auth-error';
+import { PASSWORD_HASHER } from '@modules/auth/application/ports/password-hasher.port';
+import type { PasswordHasher } from '@modules/auth/application/ports/password-hasher.port';
+import type { LoginResult } from '@modules/auth/application/shared/auth.types';
+import { TOKEN_PROVIDER } from '@modules/auth/application/ports/token-provider.port';
+import type { TokenProvider } from '@modules/auth/application/ports/token-provider.port';
+import { TOKEN_REPOSITORY } from '@modules/auth/application/ports/token.repository.port';
+import type { TokenRepository } from '@modules/auth/application/ports/token.repository.port';
+import { USER_REPOSITORY } from '@modules/auth/application/ports/user.repository.port';
+import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import { LoginCommand } from '@modules/auth/application/commands/login/login.command';
+import { RefreshToken } from '@modules/auth/domain/entities/token.entity';
 
 @CommandHandler(LoginCommand)
 export class LoginHandler implements ICommandHandler<LoginCommand> {

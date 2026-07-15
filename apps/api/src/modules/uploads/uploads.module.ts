@@ -1,11 +1,11 @@
 ﻿import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
-import { UploadFileHttpController } from './presentation/http/commands/upload-file/upload-file.http.controller';
-import { UploadFileHandler } from './application/commands/upload-file/upload-file.handler';
-import { JwtConfigModule } from '../../config/jwt-config.module';
-import { ConfigModule } from '../../config/config.module';
-import { STORAGE_PORT } from './application/ports/storage.port';
-import { S3StorageAdapter } from './infrastructure/storage/s3-storage.adapter';
+import { UploadFileHttpController } from '@modules/uploads/presentation/http/commands/upload-file/upload-file.http.controller';
+import { UploadFileHandler } from '@modules/uploads/application/commands/upload-file/upload-file.handler';
+import { JwtConfigModule } from '@config/jwt-config.module';
+import { ConfigModule } from '@config/config.module';
+import { STORAGE_PORT } from '@modules/uploads/application/ports/storage.port';
+import { S3StorageAdapter } from '@modules/uploads/infrastructure/storage/s3-storage.adapter';
 
 @Module({
   imports: [CqrsModule, JwtConfigModule, ConfigModule],

@@ -1,10 +1,10 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { UpdateShareCommand } from './update-share.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../ports/unit-of-work.port';
-import { SharePermission } from '../../../domain/value-objects/share-permission.vo';
-import { NoteNotFoundError } from '../../../domain/errors/note.errors';
-import { ShareNotFoundError } from '../../../domain/errors/share.errors';
+import { UpdateShareCommand } from '@modules/notes/application/commands/update-share/update-share.command';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
+import { SharePermission } from '@modules/notes/domain/value-objects/share-permission.vo';
+import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
+import { ShareNotFoundError } from '@modules/notes/domain/errors/share.errors';
 
 @CommandHandler(UpdateShareCommand)
 export class UpdateShareHandler implements ICommandHandler<UpdateShareCommand> {

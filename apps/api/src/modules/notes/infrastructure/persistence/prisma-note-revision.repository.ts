@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { INoteRevisionRepository } from '../../application/ports/note-revision.repository.port';
-import { NoteRevisionEntity } from '../../domain/entities/note-revision.entity';
-import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
-import type { PrismaTransactionClient } from './prisma-client.type';
+import type { INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
+import { NoteRevisionEntity } from '@modules/notes/domain/entities/note-revision.entity';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
 
 @Injectable()
 export class PrismaNoteRevisionRepository implements INoteRevisionRepository {

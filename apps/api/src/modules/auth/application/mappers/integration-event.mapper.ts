@@ -1,5 +1,5 @@
-import type { DomainEvent } from '../../../../shared/domain/ddd/domain-event';
-import { UserRegisteredDomainEvent } from '../../domain/events/user-registered.domain-event';
+import type { DomainEvent } from '@shared/domain/ddd/domain-event';
+import { UserRegisteredDomainEvent } from '@modules/auth/domain/events/user-registered.domain-event';
 
 export type OutboxMessageDraft = {
   topic: string;

@@ -1,6 +1,6 @@
 import type { User as PrismaUser } from '@prisma/client';
-import { User as DomainUser } from '../../../domain/entities/user.entity';
-import { EmailAddress } from '../../../domain/value-objects/email-address';
+import { User as DomainUser } from '@modules/auth/domain/entities/user.entity';
+import { EmailAddress } from '@modules/auth/domain/value-objects/email-address';
 
 /**
  * Maps between Prisma persistence model and the domain entity.

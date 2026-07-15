@@ -1,8 +1,8 @@
 ﻿import { Controller, Delete, Param, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { AccessTokenGuard } from '../../../../../../shared/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../../shared/presentation/http/decorators/current-user.decorator';
-import { DeleteNoteCommand } from '../../../../application/commands/delete-note/delete-note.command';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
+import { DeleteNoteCommand } from '@modules/notes/application/commands/delete-note/delete-note.command';
 
 @Controller('notes')
 @UseGuards(AccessTokenGuard)

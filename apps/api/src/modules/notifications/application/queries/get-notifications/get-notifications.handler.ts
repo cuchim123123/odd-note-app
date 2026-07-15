@@ -1,7 +1,7 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { GetNotificationsQuery } from './get-notifications.query';
-import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '../../ports/notification.repository.port';
+import { GetNotificationsQuery } from '@modules/notifications/application/queries/get-notifications/get-notifications.query';
+import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '@modules/notifications/application/ports/notification.repository.port';
 
 @QueryHandler(GetNotificationsQuery)
 export class GetNotificationsHandler implements IQueryHandler<GetNotificationsQuery> {

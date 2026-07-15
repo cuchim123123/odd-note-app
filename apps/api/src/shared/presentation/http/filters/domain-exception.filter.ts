@@ -1,7 +1,7 @@
 import { Catch, HttpStatus, Logger } from '@nestjs/common';
 import type { ArgumentsHost } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
-import { DomainError } from '../../../domain/errors/domain-error';
+import { DomainError } from '@shared/domain/errors/domain-error';
 
 /**
  * Global exception filter that maps domain errors to appropriate HTTP responses.

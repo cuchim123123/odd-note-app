@@ -1,4 +1,4 @@
-import { TokenAlreadyUsedError, TokenExpiredError, InvalidTokenError } from '../errors/auth-error';
+import { TokenAlreadyUsedError, TokenExpiredError, InvalidTokenError } from '@modules/auth/domain/errors/auth-error';
 import * as crypto from 'crypto';
 
 export abstract class Token {

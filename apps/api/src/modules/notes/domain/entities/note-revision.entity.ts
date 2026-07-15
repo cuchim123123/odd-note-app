@@ -1,4 +1,4 @@
-import { NoteId, UserId } from '../../../../shared/domain/ddd/id-types';
+import { NoteId, UserId } from '@shared/domain/ddd/id-types';
 
 /**
  * NoteRevisionEntity — an immutable snapshot of note content at a point in time.

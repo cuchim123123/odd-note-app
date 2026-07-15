@@ -1,10 +1,10 @@
 ﻿import { Injectable, Logger, Inject } from '@nestjs/common';
-import type { EnvConfig } from '../../../../config/env.validation';
+import type { EnvConfig } from '@config/env.validation';
 import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand, GetObjectCommand, PutBucketPolicyCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
-import type { IStoragePort } from '../../application/ports/storage.port';
+import type { IStoragePort } from '@modules/uploads/application/ports/storage.port';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

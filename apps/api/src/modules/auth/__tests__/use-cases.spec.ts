@@ -1,9 +1,9 @@
 ﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { UserAlreadyExistsError, InvalidCredentialsError } from '../domain/errors/auth-error';
-import { RegisterCommand } from '../application/commands/register/register.command';
-import { User } from '../domain/entities/user.entity';
-import { EmailAddress } from '../domain/value-objects/email-address';
-import { LoginCommand } from '../application/commands/login/login.command';
+import { UserAlreadyExistsError, InvalidCredentialsError } from '@modules/auth/domain/errors/auth-error';
+import { RegisterCommand } from '@modules/auth/application/commands/register/register.command';
+import { User } from '@modules/auth/domain/entities/user.entity';
+import { EmailAddress } from '@modules/auth/domain/value-objects/email-address';
+import { LoginCommand } from '@modules/auth/application/commands/login/login.command';
 
 vi.mock('../../../config', () => ({
   AuthConfigService: class AuthConfigService {
@@ -14,10 +14,10 @@ vi.mock('../../../config', () => ({
   JwtConfigService: class JwtConfigService {},
 }));
 
-import { RegisterHandler } from '../application/commands/register/register.handler';
-import { LoginHandler } from '../application/commands/login/login.handler';
-import { ChangePasswordHandler } from '../application/commands/change-password/change-password.handler';
-import { RefreshTokensHandler } from '../application/commands/refresh-tokens/refresh-tokens.handler';
+import { RegisterHandler } from '@modules/auth/application/commands/register/register.handler';
+import { LoginHandler } from '@modules/auth/application/commands/login/login.handler';
+import { ChangePasswordHandler } from '@modules/auth/application/commands/change-password/change-password.handler';
+import { RefreshTokensHandler } from '@modules/auth/application/commands/refresh-tokens/refresh-tokens.handler';
 
 function createMocks() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

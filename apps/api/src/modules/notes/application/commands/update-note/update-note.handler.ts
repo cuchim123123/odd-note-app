@@ -1,11 +1,11 @@
 import { CommandHandler, type ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { UpdateNoteCommand } from './update-note.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../ports/unit-of-work.port';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document-sync.port';
-import { NoteTitle } from '../../../domain/value-objects/note-title.vo';
-import { NoteNotFoundError, NotePermissionDeniedError } from '../../../domain/errors/note.errors';
-import { CreateRevisionCommand } from '../create-revision/create-revision.command';
+import { UpdateNoteCommand } from '@modules/notes/application/commands/update-note/update-note.command';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
+import { NoteNotFoundError, NotePermissionDeniedError } from '@modules/notes/domain/errors/note.errors';
+import { CreateRevisionCommand } from '@modules/notes/application/commands/create-revision/create-revision.command';
 
 @CommandHandler(UpdateNoteCommand)
 export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {

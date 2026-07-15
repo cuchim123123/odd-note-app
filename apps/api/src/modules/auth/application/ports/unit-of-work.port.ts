@@ -1,6 +1,6 @@
-import type { UserRepository } from './user.repository.port';
-import type { TokenRepository } from './token.repository.port';
-import type { OutboxPort } from './outbox.port';
+import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import type { TokenRepository } from '@modules/auth/application/ports/token.repository.port';
+import type { OutboxPort } from '@modules/auth/application/ports/outbox.port';
 
 export interface TransactionContext {
   userRepository: UserRepository;

@@ -1,8 +1,8 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { NotificationNotFoundError, NotificationPermissionDeniedError } from '../../../domain/errors/notification.errors';
-import { MarkAsReadCommand } from './mark-as-read.command';
-import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '../../ports/notification.repository.port';
+import { NotificationNotFoundError, NotificationPermissionDeniedError } from '@modules/notifications/domain/errors/notification.errors';
+import { MarkAsReadCommand } from '@modules/notifications/application/commands/mark-as-read/mark-as-read.command';
+import { NOTIFICATION_REPOSITORY, type INotificationRepository } from '@modules/notifications/application/ports/notification.repository.port';
 
 @CommandHandler(MarkAsReadCommand)
 export class MarkAsReadHandler implements ICommandHandler<MarkAsReadCommand> {

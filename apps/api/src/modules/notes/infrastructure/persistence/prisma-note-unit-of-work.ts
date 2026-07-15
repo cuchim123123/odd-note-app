@@ -1,18 +1,18 @@
 ﻿import { Injectable, Inject } from '@nestjs/common';
-import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
-import type { INoteUnitOfWork, NoteTransactionContext } from '../../application/ports/unit-of-work.port';
-import { PrismaNoteRepository } from './prisma-note.repository';
-import { PrismaNoteShareRepository } from './prisma-note-share.repository';
-import { PrismaOutboxAdapter } from '../outbox/prisma-outbox.adapter';
-import { PrismaNoteProtectionAdapter } from './prisma-note-protection.adapter';
-import { PrismaUserPreferencesRepository } from './prisma-user-preferences.repository';
-import { PrismaNoteRevisionRepository } from './prisma-note-revision.repository';
-import { JwtConfigService } from '../../../../config/jwt-config.service';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import type { INoteUnitOfWork, NoteTransactionContext } from '@modules/notes/application/ports/unit-of-work.port';
+import { PrismaNoteRepository } from '@modules/notes/infrastructure/persistence/prisma-note.repository';
+import { PrismaNoteShareRepository } from '@modules/notes/infrastructure/persistence/prisma-note-share.repository';
+import { PrismaOutboxAdapter } from '@modules/notes/infrastructure/outbox/prisma-outbox.adapter';
+import { PrismaNoteProtectionAdapter } from '@modules/notes/infrastructure/persistence/prisma-note-protection.adapter';
+import { PrismaUserPreferencesRepository } from '@modules/notes/infrastructure/persistence/prisma-user-preferences.repository';
+import { PrismaNoteRevisionRepository } from '@modules/notes/infrastructure/persistence/prisma-note-revision.repository';
+import { JwtConfigService } from '@config/jwt-config.service';
 import { JwtService } from '@nestjs/jwt';
-import type { PrismaTransactionClient } from './prisma-client.type';
-import type { AggregateRoot } from '../../../../shared/domain/ddd/aggregate-root';
-import type { AggregateTracker } from '../../../../shared/domain/ddd/aggregate-tracker';
-import { NOTE_INTEGRATION_EVENT_MAPPER, type INoteIntegrationEventMapper } from '../../application/ports/integration-event-mapper.port';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
+import type { AggregateRoot } from '@shared/domain/ddd/aggregate-root';
+import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
+import { NOTE_INTEGRATION_EVENT_MAPPER, type INoteIntegrationEventMapper } from '@modules/notes/application/ports/integration-event-mapper.port';
 
 @Injectable()
 export class PrismaNoteUnitOfWork implements INoteUnitOfWork {

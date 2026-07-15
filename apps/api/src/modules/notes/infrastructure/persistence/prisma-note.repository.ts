@@ -1,14 +1,14 @@
-import { Injectable, Inject } from '@nestjs/common';
-import type { INoteRepository } from '../../application/ports/note.repository.port';
-import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
-import type { PrismaTransactionClient } from './prisma-client.type';
-import { NoteEntity } from '../../domain/entities/note.entity';
-import { NoteMapper } from './note.mapper';
-import type { AggregateTracker } from '../../../../shared/domain/ddd/aggregate-tracker';
+import { Injectable, Inject, Optional } from '@nestjs/common';
+import type { INoteRepository } from '@modules/notes/application/ports/note.repository.port';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
+import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
+import { NoteMapper } from '@modules/notes/infrastructure/persistence/note.mapper';
+import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 
 @Injectable()
 export class PrismaNoteRepository implements INoteRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient, private readonly tracker?: AggregateTracker) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient, @Optional() @Inject('AGGREGATE_TRACKER') private readonly tracker?: AggregateTracker) {}
 
   async save(note: NoteEntity): Promise<void> {
     if (this.tracker) {

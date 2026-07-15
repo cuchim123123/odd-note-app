@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NoteSharedConsumer } from '../../presentation/kafka/note-shared.consumer';
-import { CreateNotificationCommand } from '../../application/commands/create-notification/create-notification.command';
+import { NoteSharedConsumer } from '@modules/notifications/presentation/kafka/note-shared.consumer';
+import { CreateNotificationCommand } from '@modules/notifications/application/commands/create-notification/create-notification.command';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 

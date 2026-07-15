@@ -1,9 +1,9 @@
-import type { INoteRepository } from './note.repository.port';
-import type { INoteShareRepository } from './note-share.repository.port';
-import type { INoteOutboxPort } from './note-outbox.port';
-import type { INoteProtectionPort } from './note-protection.port';
-import type { IUserPreferencesRepository } from './user-preferences.repository.port';
-import type { INoteRevisionRepository } from './note-revision.repository.port';
+import type { INoteRepository } from '@modules/notes/application/ports/note.repository.port';
+import type { INoteShareRepository } from '@modules/notes/application/ports/note-share.repository.port';
+import type { INoteOutboxPort } from '@modules/notes/application/ports/note-outbox.port';
+import type { INoteProtectionPort } from '@modules/notes/application/ports/note-protection.port';
+import type { IUserPreferencesRepository } from '@modules/notes/application/ports/user-preferences.repository.port';
+import type { INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
 
 export interface NoteTransactionContext {
   noteRepository: INoteRepository;

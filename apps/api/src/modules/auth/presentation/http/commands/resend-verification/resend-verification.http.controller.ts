@@ -1,8 +1,8 @@
 ﻿import { Body, Controller, Post, UseFilters } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { ResendVerificationDto } from './resend-verification.dto';
-import { ResendVerificationCommand } from '../../../../application/commands/resend-verification/resend-verification.command';
-import { AuthErrorFilter } from '../../../../presentation/filters/auth-error.filter';
+import { ResendVerificationDto } from '@modules/auth/presentation/http/commands/resend-verification/resend-verification.dto';
+import { ResendVerificationCommand } from '@modules/auth/application/commands/resend-verification/resend-verification.command';
+import { AuthErrorFilter } from '@modules/auth/presentation/filters/auth-error.filter';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')

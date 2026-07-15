@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
-import { NotePermissionDeniedError } from '../../../domain/errors/note.errors';
-import { ListSharesQuery } from './list-shares.query';
-import type { NoteShareResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
+import { NotePermissionDeniedError } from '@modules/notes/domain/errors/note.errors';
+import { ListSharesQuery } from '@modules/notes/application/queries/list-shares/list-shares.query';
+import type { NoteShareResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
+import { PrismaService } from '@infrastructure/prisma/prisma.service';
 
 @QueryHandler(ListSharesQuery)
 export class ListSharesQueryHandler implements IQueryHandler<ListSharesQuery> {

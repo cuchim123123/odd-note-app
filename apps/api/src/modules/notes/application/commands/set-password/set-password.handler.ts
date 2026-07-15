@@ -1,8 +1,8 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { SetPasswordCommand } from './set-password.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '../../ports/unit-of-work.port';
-import { NoteNotFoundError } from '../../../domain/errors/note.errors';
+import { SetPasswordCommand } from '@modules/notes/application/commands/set-password/set-password.command';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
+import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 
 @CommandHandler(SetPasswordCommand)
 export class SetPasswordHandler implements ICommandHandler<SetPasswordCommand> {

@@ -1,10 +1,10 @@
 ﻿import { Body, Controller, Patch, UseFilters, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { ChangePasswordDto } from './change-password.dto';
-import { ChangePasswordCommand } from '../../../../application/commands/change-password/change-password.command';
-import { AuthErrorFilter } from '../../../../presentation/filters/auth-error.filter';
-import { AccessTokenGuard } from '../../../../../../shared/presentation/http/guards/access-token.guard';
-import { CurrentUser } from '../../../../../../shared/presentation/http/decorators/current-user.decorator';
+import { ChangePasswordDto } from '@modules/auth/presentation/http/commands/change-password/change-password.dto';
+import { ChangePasswordCommand } from '@modules/auth/application/commands/change-password/change-password.command';
+import { AuthErrorFilter } from '@modules/auth/presentation/filters/auth-error.filter';
+import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
+import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')

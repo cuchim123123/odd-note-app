@@ -1,20 +1,20 @@
 import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import type { ICommandHandler } from '@nestjs/cqrs';
-import { UserAlreadyExistsError } from '../../../domain/errors/auth-error';
-import { PASSWORD_HASHER } from '../../ports/password-hasher.port';
-import type { PasswordHasher } from '../../ports/password-hasher.port';
-import type { RegisterResult } from '../../shared/auth.types';
-import { TOKEN_PROVIDER } from '../../ports/token-provider.port';
-import type { TokenProvider } from '../../ports/token-provider.port';
+import { UserAlreadyExistsError } from '@modules/auth/domain/errors/auth-error';
+import { PASSWORD_HASHER } from '@modules/auth/application/ports/password-hasher.port';
+import type { PasswordHasher } from '@modules/auth/application/ports/password-hasher.port';
+import type { RegisterResult } from '@modules/auth/application/shared/auth.types';
+import { TOKEN_PROVIDER } from '@modules/auth/application/ports/token-provider.port';
+import type { TokenProvider } from '@modules/auth/application/ports/token-provider.port';
 
-import { USER_REPOSITORY } from '../../ports/user.repository.port';
-import type { UserRepository } from '../../ports/user.repository.port';
-import { UNIT_OF_WORK } from '../../ports/unit-of-work.port';
-import type { UnitOfWork } from '../../ports/unit-of-work.port';
-import { RegisterCommand } from './register.command';
-import { VerificationToken, RefreshToken } from '../../../domain/entities/token.entity';
-import { User } from '../../../domain/entities/user.entity';
+import { USER_REPOSITORY } from '@modules/auth/application/ports/user.repository.port';
+import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import { UNIT_OF_WORK } from '@modules/auth/application/ports/unit-of-work.port';
+import type { UnitOfWork } from '@modules/auth/application/ports/unit-of-work.port';
+import { RegisterCommand } from '@modules/auth/application/commands/register/register.command';
+import { VerificationToken, RefreshToken } from '@modules/auth/domain/entities/token.entity';
+import { User } from '@modules/auth/domain/entities/user.entity';
 
 @CommandHandler(RegisterCommand)
 export class RegisterHandler implements ICommandHandler<RegisterCommand> {
