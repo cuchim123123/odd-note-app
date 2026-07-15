@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { api } from '../../../lib/axios';
-import { useAuthStore, type UserProfile } from '../stores/auth.store';
+import { api } from '@/lib/axios';
+import { useAuthStore, type UserProfile } from '@/features/auth/stores/auth.store';
 import type { ChangePasswordInput } from '@odd-note-app/validation';
 
 export type UpdateProfileInput = {

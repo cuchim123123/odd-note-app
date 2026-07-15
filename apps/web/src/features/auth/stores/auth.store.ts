@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { clearAllOfflineData } from '../../notes/api/notes.storage';
+import { clearAllOfflineData } from '@/features/notes/api/notes.storage';
 
 export type UserProfile = {
   id: string;

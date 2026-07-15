@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Tag, Plus, Search, Check, X, Settings2 } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { useLabelManagementStore } from '../../settings/stores/label-management.store';
-import { cn } from '../../../lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useLabelManagementStore } from '@/features/settings/stores/label-management.store';
+import { cn } from '@/lib/utils';
 
 type LabelSelectorProps = {
   selectedLabels: string[];

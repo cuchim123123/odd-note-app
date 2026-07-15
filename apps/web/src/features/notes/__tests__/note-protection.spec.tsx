@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { NoteDashboard } from '../components/note-dashboard';
-import * as notesApi from '../api/notes.api';
-import { useNoteProtectionStore } from '../stores/note-protection.store';
-import { renderWithQueryClient } from '../../../test/render-with-query-client';
+import { NoteDashboard } from '@/features/notes/components/note-dashboard';
+import * as notesApi from '@/features/notes/api/notes.api';
+import { useNoteProtectionStore } from '@/features/notes/stores/note-protection.store';
+import { renderWithQueryClient } from '@/test/render-with-query-client';
 
 import { Routes, Route } from 'react-router-dom';
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import { NoteEditor } from '../components/note-editor';
-import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
+import { NoteEditor } from '@/features/notes/components/note-editor';
+import { useNotePreferencesStore } from '@/features/settings/stores/note-preferences.store';
 
 const resetFontPreference = () => {
   useNotePreferencesStore.getState().setNoteFontSize('base');

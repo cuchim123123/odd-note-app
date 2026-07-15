@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X, CheckCheck, Share2 } from 'lucide-react';
-import { useNotifications, useMarkNotificationAsRead, useDeleteNotification, useMarkAllNotificationsAsRead } from '../hooks/useNotifications';
-import type { Notification } from '../types/notification';
+import { useNotifications, useMarkNotificationAsRead, useDeleteNotification, useMarkAllNotificationsAsRead } from '@/hooks/useNotifications';
+import type { Notification } from '@/types/notification';
 import { Button } from './ui/button';
 
 export const NotificationCenter = () => {

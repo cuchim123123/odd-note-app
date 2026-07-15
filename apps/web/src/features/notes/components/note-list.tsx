@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { useNotes, useSharedNotes, useCreateNote, useBulkDeleteNotes, useBulkAddLabel } from '../api/notes.api';
+import { useNotes, useSharedNotes, useCreateNote, useBulkDeleteNotes, useBulkAddLabel } from '@/features/notes/api/notes.api';
 import type { Note } from '@odd-note-app/validation';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Plus, Search, Share2, FileText, Trash, Grid2x2, List, Tag } from 'lucide-react';
 import { LabelSelector } from './label-selector';
-import { Input } from '../../../components/ui/input';
-import { cn } from '../../../lib/utils';
-import { useLabelManagementStore } from '../../settings/stores/label-management.store';
-import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { useLabelManagementStore } from '@/features/settings/stores/label-management.store';
+import { useNotePreferencesStore } from '@/features/settings/stores/note-preferences.store';
 import { NoteCard } from './note-card';
-import type { SharedNoteItem } from '../api/notes.api';
+import type { SharedNoteItem } from '@/features/notes/api/notes.api';
 import { LabelFilterModal } from './label-filter-modal';
 
 type DisplayNote = Note | SharedNoteItem;

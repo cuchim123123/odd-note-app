@@ -1,15 +1,15 @@
-import { useTheme } from '../../../providers/theme-provider';
-import { useAuthStore } from '../../auth/stores/auth.store';
-import { useNotePreferencesStore, type NoteFontSize } from '../stores/note-preferences.store';
-import { useLabelManagementStore } from '../stores/label-management.store';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Label } from '../../../components/ui/label';
-import { Input } from '../../../components/ui/input';
-import { Button } from '../../../components/ui/button';
+import { useTheme } from '@/providers/theme-provider';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useNotePreferencesStore, type NoteFontSize } from '@/features/settings/stores/note-preferences.store';
+import { useLabelManagementStore } from '@/features/settings/stores/label-management.store';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Monitor, Palette, Settings, Sun, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useRenameLabel, useDeleteLabel, useNotes } from '../../notes/api/notes.api';
-import { api } from '../../../lib/axios';
+import { useRenameLabel, useDeleteLabel, useNotes } from '@/features/notes/api/notes.api';
+import { api } from '@/lib/axios';
 import { AvatarUpload } from './avatar-upload';
 import { ChangePasswordForm } from './change-password-form';
 

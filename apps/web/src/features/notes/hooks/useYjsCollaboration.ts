@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import * as Y from 'yjs';
 import { io, type Socket } from 'socket.io-client';
-import { useAuthStore } from '../../auth/stores/auth.store';
-import { useNoteProtectionStore } from '../stores/note-protection.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useNoteProtectionStore } from '@/features/notes/stores/note-protection.store';
 import {
   NOTE_COLLABORATION_EVENTS,
   NOTE_COLLABORATION_FRAGMENT_NAME,
@@ -12,7 +12,7 @@ import {
   NOTE_COLLABORATION_REFRESH_MAX_ATTEMPTS,
   NOTE_COLLABORATION_SYNC_JOIN_DELAY_MS,
   NOTE_COLLABORATION_SYNC_RETRY_DELAY_MS,
-} from '../constants/note-collaboration.constants';
+} from '@/features/notes/constants/note-collaboration.constants';
 
 // Shared Y.Doc instances keyed by noteId to ensure one stable Y.Doc per note
 const sharedYDocs = new Map<string, Y.Doc>();

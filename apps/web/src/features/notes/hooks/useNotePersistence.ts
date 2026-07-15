@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { getNoteDraft, saveNoteDraft, clearNoteDraft } from '../api/notes.api';
-import { useNoteProtectionStore } from '../stores/note-protection.store';
+import { getNoteDraft, saveNoteDraft, clearNoteDraft } from '@/features/notes/api/notes.api';
+import { useNoteProtectionStore } from '@/features/notes/stores/note-protection.store';
 import type { Note } from '@odd-note-app/validation';
 
 interface UseNotePersistenceProps {

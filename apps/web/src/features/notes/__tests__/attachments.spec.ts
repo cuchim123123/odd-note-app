@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { appendImageToContent } from '../utils/attachments';
+import { appendImageToContent } from '@/features/notes/utils/attachments';
 
 describe('Attachment helper', () => {
   it('creates image markup for empty content', () => {

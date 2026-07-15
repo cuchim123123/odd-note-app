@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/react';
 import { Bold, Code, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Quote, Strikethrough, Underline as UnderlineIcon } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { NOTE_EDITOR_BUTTON_SPACER_CLASS, NOTE_EDITOR_TOOLBAR_BUTTON_CLASS, NOTE_EDITOR_TOOLBAR_CLASS } from '../constants/note-editor.constants';
+import { Button } from '@/components/ui/button';
+import { NOTE_EDITOR_BUTTON_SPACER_CLASS, NOTE_EDITOR_TOOLBAR_BUTTON_CLASS, NOTE_EDITOR_TOOLBAR_CLASS } from '@/features/notes/constants/note-editor.constants';
 
 type NoteEditorToolbarProps = {
   editor: Editor;

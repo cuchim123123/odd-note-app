@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { X, Tag, Trash2, Edit2, Check, AlertCircle } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { useLabelManagementStore } from '../../settings/stores/label-management.store';
-import { useRenameLabel, useDeleteLabel } from '../api/notes.api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useLabelManagementStore } from '@/features/settings/stores/label-management.store';
+import { useRenameLabel, useDeleteLabel } from '@/features/notes/api/notes.api';
 
 type LabelManagementModalProps = {
   isOpen: boolean;

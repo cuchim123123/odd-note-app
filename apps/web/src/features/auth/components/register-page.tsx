@@ -2,14 +2,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerRequestSchema, type RegisterRequestInput } from '@odd-note-app/validation';
-import { useRegister } from '../api/auth.api';
+import { useRegister } from '@/features/auth/api/auth.api';
 import { AxiosError } from 'axios';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { PasswordInput } from '../../../components/ui/password-input';
-import { Label } from '../../../components/ui/label';
-import { Button } from '../../../components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 export function RegisterPage() {
   const navigate = useNavigate();

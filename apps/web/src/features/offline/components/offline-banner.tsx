@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
+import { useOfflineSyncStore } from '@/stores/offline-sync.store';
 
 export function OfflineDetectionProvider() {
   const { setOnline } = useOfflineSyncStore();

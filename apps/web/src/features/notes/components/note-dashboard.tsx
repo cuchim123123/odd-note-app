@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { NoteList } from './note-list';
 import { NoteDetailView } from './note-detail-view';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 
 type ViewMode = 'grid' | 'list';

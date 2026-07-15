@@ -2,14 +2,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { loginSchema, type LoginInput } from '@odd-note-app/validation';
-import { useLogin } from '../api/auth.api';
+import { useLogin } from '@/features/auth/api/auth.api';
 import { AxiosError } from 'axios';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { PasswordInput } from '../../../components/ui/password-input';
-import { Label } from '../../../components/ui/label';
-import { Button } from '../../../components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 export function LoginPage() {
   const navigate = useNavigate();

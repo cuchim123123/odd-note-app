@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { renameLabelInNotes } from '../../notes/api/notes.api';
+import { renameLabelInNotes } from '@/features/notes/api/notes.api';
 
 type LabelManagementState = {
   labels: string[];

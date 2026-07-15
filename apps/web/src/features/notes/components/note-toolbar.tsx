@@ -1,5 +1,5 @@
-import { Input } from '../../../components/ui/input';
-import { Button } from '../../../components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Trash2, Check, Pin, ImagePlus, Lock, Share2, Tag, X } from 'lucide-react';
 import type { Note } from '@odd-note-app/validation';
 import { LabelSelector } from './label-selector';

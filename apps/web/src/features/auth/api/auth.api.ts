@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../../lib/axios';
-import { useAuthStore, type UserProfile } from '../stores/auth.store';
+import { api } from '@/lib/axios';
+import { useAuthStore, type UserProfile } from '@/features/auth/stores/auth.store';
 import type { LoginInput, RegisterRequestInput } from '@odd-note-app/validation';
 
 type AuthResponse = {

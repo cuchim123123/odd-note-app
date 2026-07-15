@@ -1,11 +1,11 @@
 import { memo } from 'react';
-import { useUpdateNote } from '../api/notes.api';
-import type { SharedNoteItem } from '../api/notes.api';
+import { useUpdateNote } from '@/features/notes/api/notes.api';
+import type { SharedNoteItem } from '@/features/notes/api/notes.api';
 import type { Note } from '@odd-note-app/validation';
 import { FileText, Lock, Pin, Check } from 'lucide-react';
-import { cn } from '../../../lib/utils';
-import { useNotePreferencesStore, noteColorClasses } from '../../settings/stores/note-preferences.store';
-import type { NoteColor } from '../../settings/stores/note-preferences.store';
+import { cn } from '@/lib/utils';
+import { useNotePreferencesStore, noteColorClasses } from '@/features/settings/stores/note-preferences.store';
+import type { NoteColor } from '@/features/settings/stores/note-preferences.store';
 
 type DisplayNote = Note | SharedNoteItem;
 

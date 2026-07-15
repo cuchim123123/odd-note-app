@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Share2, ArrowLeft, Trash2 } from 'lucide-react';
-import { useNotifications, useMarkNotificationAsRead, useDeleteNotification, useMarkAllNotificationsAsRead } from '../../../hooks/useNotifications';
-import { Button } from '../../../components/ui/button';
-import { cn } from '../../../lib/utils';
-import type { Notification } from '../../../types/notification';
+import { useNotifications, useMarkNotificationAsRead, useDeleteNotification, useMarkAllNotificationsAsRead } from '@/hooks/useNotifications';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { Notification } from '@/types/notification';
 
 export const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();

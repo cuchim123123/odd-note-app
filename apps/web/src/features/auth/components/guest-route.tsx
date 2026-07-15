@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 import type { ReactNode } from 'react';
 
 type GuestRouteProps = {

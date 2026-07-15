@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { NoteDashboard } from '../components/note-dashboard';
-import { resetMockNotes } from '../api/notes.api';
-import { renderWithQueryClient } from '../../../test/render-with-query-client';
+import { NoteDashboard } from '@/features/notes/components/note-dashboard';
+import { resetMockNotes } from '@/features/notes/api/notes.api';
+import { renderWithQueryClient } from '@/test/render-with-query-client';
 
 import { Routes, Route } from 'react-router-dom';
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { resetMockNotes, createNote, getNoteById } from '../../notes/api/notes.api';
-import { useLabelManagementStore } from '../stores/label-management.store';
+import { resetMockNotes, createNote, getNoteById } from '@/features/notes/api/notes.api';
+import { useLabelManagementStore } from '@/features/settings/stores/label-management.store';
 
 describe('Label management store', () => {
   beforeEach(() => {

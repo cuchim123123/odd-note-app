@@ -1,4 +1,4 @@
-import { api } from '../../../lib/axios';
+import { api } from '@/lib/axios';
 import type { Note, CreateNoteInput, UpdateNoteInput } from '@odd-note-app/validation';
 import type { SharedNoteItem, NoteShareRecord } from './notes.api';
 

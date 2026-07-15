@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { PasswordInput } from '../../../components/ui/password-input';
-import { Button } from '../../../components/ui/button';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Button } from '@/components/ui/button';
 import { Lock, Loader2, CheckCircle2 } from 'lucide-react';
-import { cn } from '../../../lib/utils';
-import { setNotePassword, removeNotePassword, verifyNotePassword } from '../api/notes.api';
-import { useUpdateNote } from '../api/notes.api';
+import { cn } from '@/lib/utils';
+import { setNotePassword, removeNotePassword, verifyNotePassword } from '@/features/notes/api/notes.api';
+import { useUpdateNote } from '@/features/notes/api/notes.api';
 
 export function ProtectionUnlockPrompt({ noteId, onUnlock }: { noteId: string; onUnlock: (token?: string) => void }) {
   const [password, setPassword] = useState('');

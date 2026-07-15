@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { api } from '../../../lib/axios';
-import { useAuthStore } from '../stores/auth.store';
+import { api } from '@/lib/axios';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 
 export function AuthSessionBootstrap() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

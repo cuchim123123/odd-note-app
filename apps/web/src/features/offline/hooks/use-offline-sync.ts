@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
-import { api } from '../../../lib/axios';
-import type { SyncQueueItem } from '../../../stores/offline-sync.store';
+import { useOfflineSyncStore } from '@/stores/offline-sync.store';
+import { api } from '@/lib/axios';
+import type { SyncQueueItem } from '@/stores/offline-sync.store';
 
 const MAX_SYNC_RETRIES = 3;
 

@@ -1,10 +1,10 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { useAuthStore } from '../../features/auth/stores/auth.store';
-import { useLogout, useResendVerification } from '../../features/auth/api/auth.api';
-import { NotificationCenter } from '../NotificationCenter';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useLogout, useResendVerification } from '@/features/auth/api/auth.api';
+import { NotificationCenter } from '@/components/NotificationCenter';
 import { LogOut, Settings as SettingsIcon, BookOpen, BadgeCheck, ChevronDown } from 'lucide-react';
-import { useRealtimeNotifications } from '../../features/notifications/hooks/useRealtimeNotifications';
+import { useRealtimeNotifications } from '@/features/notifications/hooks/useRealtimeNotifications';
 
 export function DashboardLayout() {
   useRealtimeNotifications(); // Start global realtime notification socket listener

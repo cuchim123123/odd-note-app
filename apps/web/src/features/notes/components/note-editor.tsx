@@ -7,8 +7,8 @@ import Image from '@tiptap/extension-image';
 import Collaboration from '@tiptap/extension-collaboration';
 import { useEffect, useMemo, useRef } from 'react';
 import * as Y from 'yjs';
-import { useNotePreferencesStore, noteColorClasses } from '../../settings/stores/note-preferences.store';
-import { cn } from '../../../lib/utils';
+import { useNotePreferencesStore, noteColorClasses } from '@/features/settings/stores/note-preferences.store';
+import { cn } from '@/lib/utils';
 import { NoteEditorToolbar } from './note-editor-toolbar';
 import {
   NOTE_EDITOR_CONTENT_CLASS,
@@ -16,7 +16,7 @@ import {
   NOTE_EDITOR_HEADER_CLASS,
   NOTE_EDITOR_PLACEHOLDER,
   NOTE_EDITOR_WRAPPER_CLASS,
-} from '../constants/note-editor.constants';
+} from '@/features/notes/constants/note-editor.constants';
 
 import type { Editor } from '@tiptap/react';
 

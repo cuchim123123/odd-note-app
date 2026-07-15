@@ -1,9 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { api } from '../../../lib/axios';
-import { useAuthStore } from '../../auth/stores/auth.store';
-import { useOfflineSyncStore } from '../../../stores/offline-sync.store';
-import { useNoteProtectionStore } from '../stores/note-protection.store';
+import { api } from '@/lib/axios';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useOfflineSyncStore } from '@/stores/offline-sync.store';
+import { useNoteProtectionStore } from '@/features/notes/stores/note-protection.store';
 import type { Note, CreateNoteInput, UpdateNoteInput, CreateNoteShareInput, UpdateNoteShareInput } from '@odd-note-app/validation';
 
 import { openNotesDb, readAllNotesFromDb, readNoteFromDb, upsertNoteInDb, upsertNotesInDb, deleteNoteFromDb } from './notes.storage';

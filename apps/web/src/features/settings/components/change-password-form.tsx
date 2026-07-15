@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Label } from '../../../components/ui/label';
-import { PasswordInput } from '../../../components/ui/password-input';
-import { Button } from '../../../components/ui/button';
-import { useChangePassword } from '../../auth/api/profile.api';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Button } from '@/components/ui/button';
+import { useChangePassword } from '@/features/auth/api/profile.api';
 import { KeyRound, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export function ChangePasswordForm() {

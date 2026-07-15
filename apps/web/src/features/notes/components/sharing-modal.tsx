@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useUpdateNoteShare, useDeleteNoteShare } from '../api/notes.api';
+import { useUpdateNoteShare, useDeleteNoteShare } from '@/features/notes/api/notes.api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X, AlertTriangle, Loader2, Trash2 } from 'lucide-react';

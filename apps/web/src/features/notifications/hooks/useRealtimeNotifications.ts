@@ -2,10 +2,10 @@ import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../auth/stores/auth.store';
-import { useToast } from '../../../components/ui/toast';
-import { NOTE_COLLABORATION_NAMESPACE } from '../../notes/constants/note-collaboration.constants';
-import type { Notification } from '../../../types/notification';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useToast } from '@/components/ui/toast';
+import { NOTE_COLLABORATION_NAMESPACE } from '@/features/notes/constants/note-collaboration.constants';
+import type { Notification } from '@/types/notification';
 
 function getWsUrl(): string {
   if (typeof window === 'undefined') {

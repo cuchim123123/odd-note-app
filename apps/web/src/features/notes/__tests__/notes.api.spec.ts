@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { resetMockNotes, createNote, getSortedNotes, getNoteById, updateNote, deleteNote } from '../api/notes.api';
+import { resetMockNotes, createNote, getSortedNotes, getNoteById, updateNote, deleteNote } from '@/features/notes/api/notes.api';
 
 describe('Notes API — in-memory mock behavior', () => {
   beforeEach(() => {

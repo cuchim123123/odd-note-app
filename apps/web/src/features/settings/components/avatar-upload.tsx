@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { Camera, Loader2, Trash2 } from 'lucide-react';
-import { useUploadAvatar, useUpdateProfile } from '../../auth/api/profile.api';
-import { Button } from '../../../components/ui/button';
-import { useAuthStore } from '../../auth/stores/auth.store';
+import { useUploadAvatar, useUpdateProfile } from '@/features/auth/api/profile.api';
+import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 
 export function AvatarUpload() {
   const user = useAuthStore((state) => state.user);

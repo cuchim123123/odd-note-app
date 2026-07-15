@@ -12,20 +12,20 @@ import {
   NOTES_KEYS,
   type NoteDetailItem,
   useUploadNoteImage,
-} from '../api/notes.api';
+} from '@/features/notes/api/notes.api';
 import { NoteEditor } from './note-editor';
 import { NoteToolbar } from './note-toolbar';
 import { ProtectionPanel, ProtectionUnlockPrompt } from './protection-panel';
 import { SharingModal } from './sharing-modal';
 import { LabelManagementModal } from './label-management-modal';
-import { Button } from '../../../components/ui/button';
-import { useNoteProtectionStore } from '../stores/note-protection.store';
-import { useYjsCollaboration } from '../hooks/useYjsCollaboration';
+import { Button } from '@/components/ui/button';
+import { useNoteProtectionStore } from '@/features/notes/stores/note-protection.store';
+import { useYjsCollaboration } from '@/features/notes/hooks/useYjsCollaboration';
 import { ProtectedNoteRoute, type ProtectedNote } from './protected-note-route';
-import { useNoteDraftAndAutoSave } from '../hooks/use-note-draft-autosave';
+import { useNoteDraftAndAutoSave } from '@/features/notes/hooks/use-note-draft-autosave';
 
-import { cn } from '../../../lib/utils';
-import { useNotePreferencesStore } from '../../settings/stores/note-preferences.store';
+import { cn } from '@/lib/utils';
+import { useNotePreferencesStore } from '@/features/settings/stores/note-preferences.store';
 
 function getYDocDebugId(yDoc?: YDoc | null): string {
   const debugDoc = yDoc as YDoc & { guid?: string | number; clientID?: string | number };

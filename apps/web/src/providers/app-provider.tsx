@@ -1,13 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { AuthSessionBootstrap } from '../features/auth/components/auth-session-bootstrap';
+import { AuthSessionBootstrap } from '@/features/auth/components/auth-session-bootstrap';
 import {
   OfflineDetectionProvider,
   OfflineBanner,
-} from '../features/offline/components/offline-banner';
-import { useOfflineSync } from '../features/offline/hooks/use-offline-sync';
-import { ToastProvider } from '../components/ui/toast';
+} from '@/features/offline/components/offline-banner';
+import { useOfflineSync } from '@/features/offline/hooks/use-offline-sync';
+import { ToastProvider } from '@/components/ui/toast';
 
 type AppProviderProps = { children: ReactNode };
 

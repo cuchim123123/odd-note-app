@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Note } from '@odd-note-app/validation';
-import { useNoteProtectionStore } from '../stores/note-protection.store';
+import { useNoteProtectionStore } from '@/features/notes/stores/note-protection.store';
 import {
   getNoteProtectionStatus,
   getNoteDraft,
@@ -9,9 +9,9 @@ import {
   clearNoteDraft,
   NOTES_KEYS,
   type NoteDetailItem,
-} from '../api/notes.api';
-import { normalizeNoteHtml, safeTimestamp } from '../utils/note-html';
-import { clearLocalDraft, readLocalDraft, writeLocalDraft } from '../utils/note-draft.storage';
+} from '@/features/notes/api/notes.api';
+import { normalizeNoteHtml, safeTimestamp } from '@/features/notes/utils/note-html';
+import { clearLocalDraft, readLocalDraft, writeLocalDraft } from '@/features/notes/utils/note-draft.storage';
 
 type UseNoteDraftAndAutoSaveProps = {
   noteId: string;

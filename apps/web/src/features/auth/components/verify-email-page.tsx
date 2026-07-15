@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Loader2, CheckCircle, AlertCircle, MailOpen } from 'lucide-react';
-import { api } from '../../../lib/axios';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { useResendVerification } from '../api/auth.api';
-import { useAuthStore } from '../stores/auth.store';
+import { api } from '@/lib/axios';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useResendVerification } from '@/features/auth/api/auth.api';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 
 export function VerifyEmailPage() {
   const { token } = useParams<{ token: string }>();
