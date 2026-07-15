@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "nest start --debug 0.0.0.0:9229 --watch",
+    "dev": "nest start -b swc --debug 0.0.0.0:9229 --watch",
     "start": "node dist/main.js",
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src --ext .ts",
@@ -43,12 +43,16 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",
+    "@swc/cli": "^0.8.1",
+    "@swc/core": "^1.15.43",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.6",
     "@types/multer": "^1.4.13",
     "@types/node": "^22.15.21",
     "@types/nodemailer": "^8.0.0",
     "prisma": "^5.22.0",
+    "tsc-alias": "^1.9.1",
+    "tsconfig-paths": "^4.2.0",
     "vitest": "^2.1.8"
   }
 }
