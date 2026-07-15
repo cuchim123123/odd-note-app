@@ -43,3 +43,6 @@ Thumbs.db
 
 # local infra data
 infrastructure/docker/data/
+
+scratch.js
+rewrite-imports.js
