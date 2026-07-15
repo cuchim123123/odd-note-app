@@ -1,10 +1,10 @@
-import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
+﻿import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import type { OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import type { OutboxMessage } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { KAFKA_CLIENT_TOKEN } from '../../../config/kafka-config.module';
 import {
   INTERNAL_COMMAND_HANDLERS,

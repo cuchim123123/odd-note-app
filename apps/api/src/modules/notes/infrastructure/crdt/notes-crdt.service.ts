@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as Y from 'yjs';
-import { RedisService } from '../../../../redis/redis.service';
+import { RedisService } from '../../../../infrastructure/redis/redis.service';
 
 export type CollaborationSnapshot = {
   title: string;

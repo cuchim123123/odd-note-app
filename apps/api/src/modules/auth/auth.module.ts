@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '../../config/config.module';
-import { PrismaModule } from '../../prisma/prisma.module';
+import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { TOKEN_PROVIDER } from './application/ports/token-provider.port';
 import { JwtTokenProvider } from './infrastructure/security/jwt-token-provider';
 import { AuthConfigModule, JwtConfigModule } from '../../config';
@@ -40,18 +40,18 @@ import { GenerateTestResetTokenHandler } from './application/commands/generate-t
 import { GetCurrentUserHandler } from './application/queries/get-current-user/get-current-user.handler';
 
 // ─── Presentation (HTTP Controllers) ─────────────────────────────────────────
-import { RegisterHttpController } from './presentation/http/commands/register.http.controller';
-import { LoginHttpController } from './presentation/http/commands/login.http.controller';
-import { VerifyEmailHttpController } from './presentation/http/commands/verify-email.http.controller';
-import { ResendVerificationHttpController } from './presentation/http/commands/resend-verification.http.controller';
-import { UpdateProfileHttpController } from './presentation/http/commands/update-profile.http.controller';
-import { ChangePasswordHttpController } from './presentation/http/commands/change-password.http.controller';
-import { RefreshTokensHttpController } from './presentation/http/commands/refresh-tokens.http.controller';
-import { LogoutHttpController } from './presentation/http/commands/logout.http.controller';
-import { ForgotPasswordHttpController } from './presentation/http/commands/forgot-password.http.controller';
-import { ResetPasswordHttpController } from './presentation/http/commands/reset-password.http.controller';
-import { GenerateTestResetTokenHttpController } from './presentation/http/commands/generate-test-reset-token.http.controller';
-import { GetCurrentUserHttpController } from './presentation/http/queries/get-current-user.http.controller';
+import { RegisterHttpController } from './presentation/http/commands/register/register.http.controller';
+import { LoginHttpController } from './presentation/http/commands/login/login.http.controller';
+import { VerifyEmailHttpController } from './presentation/http/commands/verify-email/verify-email.http.controller';
+import { ResendVerificationHttpController } from './presentation/http/commands/resend-verification/resend-verification.http.controller';
+import { UpdateProfileHttpController } from './presentation/http/commands/update-profile/update-profile.http.controller';
+import { ChangePasswordHttpController } from './presentation/http/commands/change-password/change-password.http.controller';
+import { RefreshTokensHttpController } from './presentation/http/commands/refresh-tokens/refresh-tokens.http.controller';
+import { LogoutHttpController } from './presentation/http/commands/logout/logout.http.controller';
+import { ForgotPasswordHttpController } from './presentation/http/commands/forgot-password/forgot-password.http.controller';
+import { ResetPasswordHttpController } from './presentation/http/commands/reset-password/reset-password.http.controller';
+import { GenerateTestResetTokenHttpController } from './presentation/http/commands/generate-test-reset-token/generate-test-reset-token.http.controller';
+import { GetCurrentUserHttpController } from './presentation/http/queries/get-current-user/get-current-user.http.controller';
 
 @Module({
   imports: [CqrsModule, ConfigModule, PrismaModule, AuthConfigModule, JwtConfigModule],

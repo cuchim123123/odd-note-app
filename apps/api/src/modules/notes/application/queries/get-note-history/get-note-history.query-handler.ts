@@ -1,6 +1,6 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { PrismaService } from '../../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
 import { GetNoteHistoryQuery } from './get-note-history.query';
 import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '../../ports/note-revision.repository.port';
 import { NotePermissionDeniedError, NoteNotFoundError } from '../../../domain/errors/note.errors';

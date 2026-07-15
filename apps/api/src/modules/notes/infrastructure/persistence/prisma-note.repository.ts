@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { INoteRepository } from '../../application/ports/note.repository.port';
-import { PrismaService } from '../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from './prisma-client.type';
 import { NoteEntity } from '../../domain/entities/note.entity';
 import { NoteMapper } from './note.mapper';

@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { INoteRevisionRepository } from '../../application/ports/note-revision.repository.port';
 import { NoteRevisionEntity } from '../../domain/entities/note-revision.entity';
-import { PrismaService } from '../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from './prisma-client.type';
 
 @Injectable()

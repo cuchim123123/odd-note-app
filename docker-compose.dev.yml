@@ -43,6 +43,7 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: this-is-a-long-dev-access-secret-at-least-32-chars
       JWT_REFRESH_SECRET: this-is-a-long-dev-refresh-secret-at-least-32-chars
+      JWT_NOTE_UNLOCK_SECRET: this-is-a-long-dev-note-unlock-secret
       SMTP_HOST: localhost
       SMTP_PORT: 1025
       SMTP_FROM: noreply@oddnote.local
@@ -66,6 +67,7 @@ services:
       - api-validation-node-modules:/workspace/packages/validation/node_modules
     ports:
       - '4000:4000'
+      - '9229:9229'
 
   web:
     build:

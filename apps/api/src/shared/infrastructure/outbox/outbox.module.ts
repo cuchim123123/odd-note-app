@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { PrismaModule } from '../../../prisma/prisma.module';
+import { PrismaModule } from '../../../infrastructure/prisma/prisma.module';
 import { KafkaConfigModule } from '../../../config/kafka-config.module';
 import { OutboxProcessor } from './outbox.processor';
 

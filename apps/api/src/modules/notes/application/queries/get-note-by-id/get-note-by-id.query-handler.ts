@@ -6,7 +6,7 @@ import { GetNoteByIdQuery } from './get-note-by-id.query';
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document-sync.port';
 import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '../../ports/note-protection.port';
 import type { NoteResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
 
 @QueryHandler(GetNoteByIdQuery)
 export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> {

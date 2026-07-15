@@ -5,7 +5,7 @@ import { Inject } from '@nestjs/common';
 import { ListNotesQuery } from './list-notes.query';
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '../../ports/document-sync.port';
 import type { NoteResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
 
 /**
  * Query handler: bypass domain and repository, query DB directly for read performance.

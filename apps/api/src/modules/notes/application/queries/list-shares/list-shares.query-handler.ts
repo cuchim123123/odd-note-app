@@ -4,7 +4,7 @@ import type { IQueryHandler } from '@nestjs/cqrs';
 import { NotePermissionDeniedError } from '../../../domain/errors/note.errors';
 import { ListSharesQuery } from './list-shares.query';
 import type { NoteShareResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
 
 @QueryHandler(ListSharesQuery)
 export class ListSharesQueryHandler implements IQueryHandler<ListSharesQuery> {

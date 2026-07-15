@@ -1,7 +1,7 @@
-import { Injectable, Inject } from '@nestjs/common';
+﻿import { Injectable, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from './prisma-client.type';
 import { JwtConfigService } from '../../../../config/jwt-config.service';
 import type { INoteProtectionPort } from '../../application/ports/note-protection.port';

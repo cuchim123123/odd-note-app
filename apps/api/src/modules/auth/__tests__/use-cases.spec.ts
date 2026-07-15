@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserAlreadyExistsError, InvalidCredentialsError } from '../domain/errors/auth-error';
 import { RegisterCommand } from '../application/commands/register/register.command';
 import { User } from '../domain/entities/user.entity';

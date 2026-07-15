@@ -6,7 +6,7 @@ import { GetDraftQuery } from './get-draft.query';
 import { DRAFT_CACHE_PORT, type IDraftCachePort } from '../../ports/draft-cache.port';
 import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '../../ports/note-protection.port';
 import type { NoteDraftResponseDto } from '../../../presentation/http/dto/note.response.dto';
-import { PrismaService } from '../../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../../infrastructure/prisma/prisma.service';
 
 @QueryHandler(GetDraftQuery)
 export class GetDraftQueryHandler implements IQueryHandler<GetDraftQuery> {

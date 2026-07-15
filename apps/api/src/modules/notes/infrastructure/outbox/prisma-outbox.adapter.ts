@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { INoteOutboxPort } from '../../application/ports/note-outbox.port';
-import { PrismaService } from '../../../../prisma/prisma.service';
+import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from '../persistence/prisma-client.type';
 /**
  * Infrastructure adapter: persists integration event messages to the OutboxMessage table.

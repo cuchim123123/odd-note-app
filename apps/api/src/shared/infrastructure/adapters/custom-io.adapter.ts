@@ -1,4 +1,4 @@
-import { IoAdapter } from '@nestjs/platform-socket.io';
+﻿import { IoAdapter } from '@nestjs/platform-socket.io';
 import type { ServerOptions } from 'socket.io';
 import type { INestApplication } from '@nestjs/common';
 import type { EnvConfig } from '../../../config/env.validation';

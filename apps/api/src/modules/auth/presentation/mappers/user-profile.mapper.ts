@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+﻿import { Inject, Injectable } from '@nestjs/common';
 import type { User as DomainUser } from '../../domain/entities/user.entity';
 import type { EnvConfig } from '../../../../config/config.module';
 

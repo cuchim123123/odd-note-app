@@ -1,5 +1,5 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { PrismaService } from '../../../../prisma/prisma.service';
+﻿import { Injectable, Inject } from '@nestjs/common';
+import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import type { INoteUnitOfWork, NoteTransactionContext } from '../../application/ports/unit-of-work.port';
 import { PrismaNoteRepository } from './prisma-note.repository';
 import { PrismaNoteShareRepository } from './prisma-note-share.repository';

@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
-import { PrismaModule } from '../../prisma/prisma.module';
+import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { JwtConfigModule } from '../../config';
 import { AccessTokenGuard } from '../../shared/presentation/http/guards/access-token.guard';
 
@@ -18,11 +18,11 @@ import { GetNotificationsHandler } from './application/queries/get-notifications
 import { GetUnreadCountHandler } from './application/queries/get-unread-count/get-unread-count.handler';
 
 // ─── Presentation: HTTP Controllers ──────────────────────────────────────────
-import { MarkAsReadHttpController } from './presentation/http/commands/mark-as-read.http.controller';
-import { MarkAllAsReadHttpController } from './presentation/http/commands/mark-all-as-read.http.controller';
-import { DeleteNotificationHttpController } from './presentation/http/commands/delete-notification.http.controller';
-import { GetNotificationsHttpController } from './presentation/http/queries/get-notifications.http.controller';
-import { GetUnreadCountHttpController } from './presentation/http/queries/get-unread-count.http.controller';
+import { MarkAsReadHttpController } from './presentation/http/commands/mark-as-read/mark-as-read.http.controller';
+import { MarkAllAsReadHttpController } from './presentation/http/commands/mark-all-as-read/mark-all-as-read.http.controller';
+import { DeleteNotificationHttpController } from './presentation/http/commands/delete-notification/delete-notification.http.controller';
+import { GetNotificationsHttpController } from './presentation/http/queries/get-notifications/get-notifications.http.controller';
+import { GetUnreadCountHttpController } from './presentation/http/queries/get-unread-count/get-unread-count.http.controller';
 
 // ─── Presentation: Kafka Consumers ───────────────────────────────────────────
 import { NoteSharedConsumer } from './presentation/kafka/note-shared.consumer';
