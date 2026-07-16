@@ -37,6 +37,7 @@ model User {
   notifications     Notification[]
   noteLabels        UserNoteLabel[]
   notePins          UserNotePin[]
+  notificationStat  UserNotificationStat?
 }
 
 model Note {
@@ -127,7 +128,7 @@ model RefreshToken {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid(7))
   userId    String
   type      String   // 'note_shared'
   title     String
@@ -141,6 +142,14 @@ model Notification {
   @@index([userId])
   @@index([read])
 }
+
+model UserNotificationStat {
+  userId      String   @id
+  unreadCount Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 
 model UserNoteLabel {
   id        String   @id @default(cuid())
@@ -173,7 +182,7 @@ model UserNotePin {
 }
 
 model OutboxMessage {
-  id           String    @id @default(cuid())
+  id           String    @id @default(uuid(7))
   type         String    // 'INTEGRATION_EVENT' or 'INTERNAL_COMMAND'
   topic        String    // e.g. 'UserRegistered', 'SendVerificationEmail'
   payload      String    // JSON payload

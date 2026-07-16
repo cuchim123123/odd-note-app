@@ -16,16 +16,7 @@ export class CreateNotificationHandler implements ICommandHandler<CreateNotifica
   async execute(command: CreateNotificationCommand): Promise<{ id: string }> {
     const { userId, type, title, message, data, eventId } = command;
 
-    // Idempotency guard: if this eventId was already processed, skip silently.
-    // This protects against Kafka at-least-once redelivery creating duplicate notifications.
-    if (eventId) {
-      const alreadyExists = await this.notificationRepository.existsByEventId(eventId);
-      if (alreadyExists) {
-        this.logger.warn(`Skipping duplicate notification for eventId=${eventId}`);
-        // Return a stable sentinel id — callers should not depend on this id for duplicates
-        return { id: 'duplicate-skipped' };
-      }
-    }
+
 
     const notification = NotificationEntity.create(
       userId,
