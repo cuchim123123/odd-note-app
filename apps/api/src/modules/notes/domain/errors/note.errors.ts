@@ -13,8 +13,8 @@ export class NotePermissionDeniedError extends DomainError {
 }
 
 export class NoteAlreadySharedError extends DomainError {
-  constructor(recipientEmail: string) {
-    super(`Note is already shared with ${recipientEmail}`, 'NOTE_ALREADY_SHARED');
+  constructor() {
+    super(`Note is already shared to this user`, 'NOTE_ALREADY_SHARED');
   }
 }
 

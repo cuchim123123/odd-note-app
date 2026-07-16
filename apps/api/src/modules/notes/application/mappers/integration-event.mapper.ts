@@ -25,7 +25,6 @@ export class DefaultNoteIntegrationEventMapper implements NoteIntegrationEventMa
             shareId: event.shareId,
             ownerId: event.ownerId,
             recipientId: event.recipientId,
-            recipientEmail: event.recipientEmail,
             permission: event.permission,
             noteTitle: '', // Domain event does not carry note title
           },

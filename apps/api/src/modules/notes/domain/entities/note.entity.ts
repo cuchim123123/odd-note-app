@@ -15,7 +15,6 @@ import * as crypto from 'crypto';
 export interface NoteShare {
   id: ShareId;
   recipientId: UserId;
-  recipientEmail: string;
   permission: SharePermission;
 }
 
@@ -83,20 +82,19 @@ export class NoteEntity extends AggregateRoot {
     this.updateModifiedTime();
   }
 
-  public shareWith(recipientId: string, recipientEmail: string, permission: SharePermission, requestedBy: string): void {
+  public shareWith(recipientId: string, permission: SharePermission, requestedBy: string): void {
     this.verifyOwner(requestedBy);
 
     const typedRecipientId = UserId.from(recipientId);
     const existingShare = this.props.shares.find(s => s.recipientId === typedRecipientId);
     if (existingShare) {
-      throw new NoteAlreadySharedError(recipientEmail);
+      throw new NoteAlreadySharedError();
     }
 
     const shareId = ShareId.from(crypto.randomUUID());
     this.props.shares.push({
       id: shareId,
       recipientId: typedRecipientId,
-      recipientEmail,
       permission,
     });
     this.props.isShared = true;
@@ -106,7 +104,6 @@ export class NoteEntity extends AggregateRoot {
       this.id,
       this.ownerId,
       recipientId,
-      recipientEmail,
       permission.value,
       shareId,
     ));

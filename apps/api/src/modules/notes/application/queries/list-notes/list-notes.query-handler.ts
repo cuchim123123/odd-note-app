@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
@@ -30,7 +29,7 @@ export class ListNotesQueryHandler implements IQueryHandler<ListNotesQuery> {
       },
     });
 
-    const noteIds = notes.map((n: any) => n.id);
+    const noteIds = notes.map(n => n.id);
 
     // Batch-fetch personal user preferences (labels, pins)
     const [labelsRecords, pinsRecords] = await Promise.all([
@@ -38,17 +37,17 @@ export class ListNotesQueryHandler implements IQueryHandler<ListNotesQuery> {
       this.prisma.userNotePin.findMany({ where: { userId, noteId: { in: noteIds } }, select: { noteId: true, isPinned: true } }),
     ]);
 
-    const labelsMap = Object.fromEntries(labelsRecords.map((r: any) => [r.noteId, r.labels]));
-    const pinsMap = Object.fromEntries(pinsRecords.map((r: any) => [r.noteId, r.isPinned]));
+    const labelsMap = Object.fromEntries(labelsRecords.map(r => [r.noteId, r.labels]));
+    const pinsMap = Object.fromEntries(pinsRecords.map(r => [r.noteId, r.isPinned]));
 
     // Enrich with personal data + sort (pinned first, then by updatedAt desc)
     const enriched = notes
-      .map((note: any) => ({
+      .map(note => ({
         ...note,
         isPinned: pinsMap[note.id] ?? false,
         labels: labelsMap[note.id] ?? [],
       }))
-      .sort((a: any, b: any) => {
+      .sort((a, b) => {
         if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });

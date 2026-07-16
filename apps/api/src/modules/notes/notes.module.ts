@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { AuthConfigModule, JwtConfigModule } from '@config';
 import { ConfigModule } from '@config/config.module';
@@ -22,10 +22,10 @@ import { SaveDraftHandler } from '@modules/notes/application/commands/save-draft
 import { ClearDraftHandler } from '@modules/notes/application/commands/clear-draft/clear-draft.handler';
 import { RenameLabelHandler } from '@modules/notes/application/commands/rename-label/rename-label.handler';
 import { DeleteLabelHandler } from '@modules/notes/application/commands/delete-label/delete-label.handler';
-import { CreateRevisionHandler } from '@modules/notes/application/commands/create-revision/create-revision.handler';
 import { RestoreRevisionHandler } from '@modules/notes/application/commands/restore-revision/restore-revision.handler';
 
 // ─── Application Domain Event Handlers ──────────────────────────────────────
+import { NoteContentSnapshotTakenEventHandler } from '@modules/notes/application/events/note-content-snapshot-taken.event-handler';
 
 // ─── Application Query Handlers ──────────────────────────────────────────────
 import { ListNotesQueryHandler } from '@modules/notes/application/queries/list-notes/list-notes.query-handler';
@@ -132,9 +132,9 @@ import { NOTE_MAIL_SENDER } from '@modules/notes/application/ports/note-mail-sen
     ClearDraftHandler,
     RenameLabelHandler,
     DeleteLabelHandler,
-    CreateRevisionHandler,
     RestoreRevisionHandler,
     // ── Application: Domain Event Handlers ────────────────────────────────
+    NoteContentSnapshotTakenEventHandler,
     // ── Application: Query Handlers ───────────────────────────────────────
     ListNotesQueryHandler,
     ListSharedWithMeQueryHandler,

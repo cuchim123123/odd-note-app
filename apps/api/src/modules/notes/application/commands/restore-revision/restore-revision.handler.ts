@@ -1,4 +1,4 @@
-import { CommandHandler, type ICommandHandler, CommandBus } from '@nestjs/cqrs';
+import { CommandHandler, type ICommandHandler, CommandBus, EventBus } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { RestoreRevisionCommand } from '@modules/notes/application/commands/restore-revision/restore-revision.command';
 import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
@@ -7,7 +7,7 @@ import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/appli
 import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '@modules/notes/application/ports/user-preferences.repository.port';
 import { NoteNotFoundError, NotePermissionDeniedError } from '@modules/notes/domain/errors/note.errors';
 import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
-import { CreateRevisionCommand } from '@modules/notes/application/commands/create-revision/create-revision.command';
+import { NoteContentSnapshotTakenEvent } from '@modules/notes/application/events/note-content-snapshot-taken.event';
 
 export class RevisionNotFoundError extends Error {
   constructor(revisionId: string) {
@@ -28,6 +28,7 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
     @Inject(USER_PREFERENCES_REPOSITORY)
     private readonly userPreferencesRepository: IUserPreferencesRepository,
     private readonly commandBus: CommandBus,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(command: RestoreRevisionCommand): Promise<{ id: string }> {
@@ -56,9 +57,9 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
       new Date(),
     );
 
-    // Record the restore as a new revision entry (so history is append-only)
-    await this.commandBus.execute(
-      new CreateRevisionCommand(
+    // Record the restore as a new revision entry by emitting an event (so history is append-only)
+    this.eventBus.publish(
+      new NoteContentSnapshotTakenEvent(
         noteId,
         revision.title,
         revision.content,

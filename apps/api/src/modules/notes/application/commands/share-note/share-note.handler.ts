@@ -4,7 +4,7 @@ import { ShareNoteCommand } from '@modules/notes/application/commands/share-note
 import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
 import { USER_READ_PORT, type IUserReadPort } from '@modules/notes/application/ports/user-read.port';
 import { SharePermission } from '@modules/notes/domain/value-objects/share-permission.vo';
-import { NoteNotFoundError, NoteAlreadySharedError } from '@modules/notes/domain/errors/note.errors';
+import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import { RecipientNotFoundError, SelfShareError } from '@modules/notes/domain/errors/share.errors';
 import { NOTE_MAIL_SENDER, type INoteMailSender } from '@modules/notes/application/ports/note-mail-sender.port';
 
@@ -32,12 +32,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       if (!note) throw new NoteNotFoundError(noteId);
 
       const permissionVO = SharePermission.create(permission);
-      try {
-        note.shareWith(recipient.id, recipient.email, permissionVO, userId);
-      } catch (err) {
-        if (err instanceof NoteAlreadySharedError) throw err;
-        throw err;
-      }
+      note.shareWith(recipient.id, permissionVO, userId);
 
       await ctx.noteRepository.save(note);
 

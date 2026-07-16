@@ -11,7 +11,6 @@ export class NoteSharedDomainEvent implements DomainEvent {
     public readonly noteId: string,
     public readonly ownerId: string,
     public readonly recipientId: string,
-    public readonly recipientEmail: string,
     public readonly permission: string,
     public readonly shareId: string,
   ) {
