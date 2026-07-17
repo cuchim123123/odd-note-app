@@ -24,6 +24,8 @@ import { INTERNAL_COMMAND_HANDLERS } from '@shared/infrastructure/outbox/interna
 import { AuthInternalCommandHandler } from '@modules/auth/infrastructure/messaging/auth-internal-command.handler';
 import { MailerService } from '@shared/infrastructure/messaging/mailer/mailer.service';
 import { AuthUrlService } from '@modules/auth/infrastructure/auth-url.service';
+import { USER_QUERY_DAO } from '@modules/auth/application/ports/user-query.dao.port';
+import { PrismaUserQueryDao } from '@modules/auth/infrastructure/persistence/prisma-user-query.dao';
 
 // ─── Application: Command Handlers ──────────────────────────────────────────
 import { RegisterHandler } from '@modules/auth/application/commands/register/register.handler';
@@ -102,6 +104,7 @@ import { GetCurrentUserHttpController } from '@modules/auth/presentation/http/qu
     { provide: TOKEN_PROVIDER, useClass: JwtTokenProvider },
     { provide: MAIL_SENDER, useClass: NodemailerMailSender },
     { provide: INTEGRATION_EVENT_MAPPER, useClass: DefaultIntegrationEventMapper },
+    { provide: USER_QUERY_DAO, useClass: PrismaUserQueryDao },
     // Register auth's internal command handler with the shared OutboxProcessor.
     AuthInternalCommandHandler,
     {

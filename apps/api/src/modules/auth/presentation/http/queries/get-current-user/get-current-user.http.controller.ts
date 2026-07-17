@@ -1,11 +1,11 @@
-﻿import { Controller, Get, UseFilters, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseFilters, UseGuards } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { GetCurrentUserQuery } from '@modules/auth/application/queries/get-current-user/get-current-user.query';
 import { AuthErrorFilter } from '@modules/auth/presentation/filters/auth-error.filter';
 import { UserProfileMapper } from '@modules/auth/presentation/mappers/user-profile.mapper';
 import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
 import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
-import type { User } from '@modules/auth/domain/entities/user.entity';
+import type { UserView } from '@modules/auth/application/ports/user-query.dao.port';
 
 @UseFilters(AuthErrorFilter)
 @Controller('auth')
@@ -18,7 +18,7 @@ export class GetCurrentUserHttpController {
   @UseGuards(AccessTokenGuard)
   @Get('me')
   async me(@CurrentUser() userId: string) {
-    const user = await this.queryBus.execute<GetCurrentUserQuery, User>(new GetCurrentUserQuery(userId));
+    const user = await this.queryBus.execute<GetCurrentUserQuery, UserView>(new GetCurrentUserQuery(userId));
     return this.userProfileMapper.toProfile(user);
   }
 }

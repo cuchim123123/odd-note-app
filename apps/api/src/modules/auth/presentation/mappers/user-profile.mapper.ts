@@ -1,4 +1,5 @@
-﻿import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import type { UserView } from '@modules/auth/application/ports/user-query.dao.port';
 import type { User as DomainUser } from '@modules/auth/domain/entities/user.entity';
 import type { EnvConfig } from '@config/config.module';
 
@@ -21,7 +22,7 @@ export type AuthUserProfile = {
 export class UserProfileMapper {
   constructor(@Inject('ENV_CONFIG') private readonly env: EnvConfig) {}
 
-  toProfile(user: DomainUser): AuthUserProfile {
+  toProfile(user: DomainUser | UserView): AuthUserProfile {
     let avatarUrl = user.avatarUrl;
 
     if (avatarUrl) {
@@ -42,7 +43,7 @@ export class UserProfileMapper {
 
     return {
       id: user.id,
-      email: user.email.value,
+      email: typeof user.email === 'string' ? user.email : user.email.value,
       displayName: user.displayName,
       isEmailVerified: user.isEmailVerified,
       avatarUrl,
