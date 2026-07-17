@@ -6,12 +6,13 @@ import { GetNoteByIdQuery } from '@modules/notes/application/queries/get-note-by
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
 import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/note-protection.port';
 import type { NoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/note-query.dao.port';
 
 @QueryHandler(GetNoteByIdQuery)
 export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(NOTE_QUERY_DAO)
+    private readonly noteQueryDao: INoteQueryDao,
     @Inject(DOCUMENT_SYNC_PORT)
     private readonly documentSyncPort: IDocumentSyncPort,
     @Inject(NOTE_PROTECTION_PORT)
@@ -21,33 +22,10 @@ export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> 
   async execute(query: GetNoteByIdQuery): Promise<NoteResponseDto> {
     const { userId, noteId, unlockToken } = query;
 
-    const note = await this.prisma.note.findFirst({
-      where: {
-        id: noteId,
-        OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
-      },
-      include: {
-        shares: { select: { id: true } },
-        protection: { select: { id: true } },
-      },
-    });
-
+    const note = await this.noteQueryDao.findNoteById(noteId, userId);
     if (!note) throw new NoteNotFoundError(noteId);
 
-    // Check if this is a shared access (not owner)
-    const sharedAccess = note.userId !== userId
-      ? await this.prisma.noteShare.findFirst({
-          where: { noteId, recipientId: userId },
-          include: { owner: { select: { id: true, email: true, displayName: true } } },
-        })
-      : null;
-
-    const [labelsRecord, pinRecord] = await Promise.all([
-      this.prisma.userNoteLabel.findUnique({ where: { userId_noteId: { userId, noteId } }, select: { labels: true } }),
-      this.prisma.userNotePin.findUnique({ where: { userId_noteId: { userId, noteId } }, select: { isPinned: true } }),
-    ]);
-
-    const isProtected = Boolean(note.protection);
+    const isProtected = note.isProtected;
     let content = await this.documentSyncPort.readContent(noteId) ?? note.content ?? '';
 
     // Server-side content gate: blank content if protected and unlockToken is invalid
@@ -57,19 +35,8 @@ export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> 
     }
 
     return {
-      id: note.id,
-      title: note.title,
+      ...note,
       content,
-      isPinned: pinRecord?.isPinned ?? false,
-      isProtected,
-      isShared: note.isShared || note.shares.length > 0,
-      labels: labelsRecord?.labels ?? [],
-      createdAt: note.createdAt.toISOString(),
-      updatedAt: note.updatedAt.toISOString(),
-      accessMode: sharedAccess ? 'shared' : 'owner',
-      sharedPermission: sharedAccess ? (sharedAccess.permission as 'READ' | 'EDIT') : undefined,
-      sharedBy: sharedAccess?.owner ?? undefined,
-      sharedAt: sharedAccess?.createdAt.toISOString() ?? undefined,
     };
   }
 }

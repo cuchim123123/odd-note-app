@@ -1,8 +1,8 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/note-query.dao.port';
+import { NOTE_REVISION_QUERY_DAO, type INoteRevisionQueryDao } from '@modules/notes/application/ports/note-revision-query.dao.port';
 import { GetNoteHistoryQuery } from '@modules/notes/application/queries/get-note-history/get-note-history.query';
-import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
 import { NotePermissionDeniedError, NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import type { NoteRevisionSummaryDto } from '@modules/notes/presentation/http/dto/note-revision-summary.dto';
 
@@ -11,9 +11,10 @@ export type { NoteRevisionSummaryDto };
 @QueryHandler(GetNoteHistoryQuery)
 export class GetNoteHistoryQueryHandler implements IQueryHandler<GetNoteHistoryQuery> {
   constructor(
-    private readonly prisma: PrismaService,
-    @Inject(NOTE_REVISION_REPOSITORY)
-    private readonly revisionRepository: INoteRevisionRepository,
+    @Inject(NOTE_QUERY_DAO)
+    private readonly noteQueryDao: INoteQueryDao,
+    @Inject(NOTE_REVISION_QUERY_DAO)
+    private readonly revisionQueryDao: INoteRevisionQueryDao,
   ) {}
 
   async execute(query: GetNoteHistoryQuery): Promise<NoteRevisionSummaryDto[]> {
@@ -26,28 +27,15 @@ export class GetNoteHistoryQueryHandler implements IQueryHandler<GetNoteHistoryQ
      *  2) ownership re-check (where: { userId })
      * Both can be collapsed by projecting userId and comparing in-memory.
      */
-    const note = await this.prisma.note.findFirst({
-      where: {
-        id: noteId,
-        OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
-      },
-      select: { userId: true },
-    });
+    const access = await this.noteQueryDao.checkAccess(noteId, userId);
 
-    if (!note) throw new NoteNotFoundError(noteId);
-    if (note.userId !== userId) {
+    if (!access) throw new NoteNotFoundError(noteId);
+    if (!access.isOwner) {
       throw new NotePermissionDeniedError('Only the note owner can view version history');
     }
 
-    const revisions = await this.revisionRepository.findByNoteId(noteId);
+    const revisions = await this.revisionQueryDao.findByNoteId(noteId);
 
-    return revisions.map((r) => ({
-      id: r.id,
-      revisionNumber: r.revisionNumber,
-      title: r.title,
-      createdAt: r.createdAt.toISOString(),
-      createdBy: r.createdBy,
-      label: r.label,
-    }));
+    return revisions;
   }
 }

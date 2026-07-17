@@ -83,6 +83,10 @@ import { PrismaUserReadAdapter } from '@modules/notes/infrastructure/persistence
 import { NOTE_REVISION_REPOSITORY } from '@modules/notes/application/ports/note-revision.repository.port';
 import { PrismaNoteRevisionRepository } from '@modules/notes/infrastructure/persistence/prisma-note-revision.repository';
 import { NOTE_MAIL_SENDER } from '@modules/notes/application/ports/note-mail-sender.port';
+import { NOTE_QUERY_DAO } from '@modules/notes/application/ports/note-query.dao.port';
+import { PrismaNoteQueryDao } from '@modules/notes/infrastructure/persistence/prisma-note-query.dao';
+import { NOTE_REVISION_QUERY_DAO } from '@modules/notes/application/ports/note-revision-query.dao.port';
+import { PrismaNoteRevisionQueryDao } from '@modules/notes/infrastructure/persistence/prisma-note-revision-query.dao';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
@@ -156,6 +160,8 @@ import { NOTE_MAIL_SENDER } from '@modules/notes/application/ports/note-mail-sen
     { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },
     { provide: NOTE_REVISION_REPOSITORY, useClass: PrismaNoteRevisionRepository },
     { provide: NOTE_MAIL_SENDER, useClass: NoteMailerAdapter },
+    { provide: NOTE_QUERY_DAO, useClass: PrismaNoteQueryDao },
+    { provide: NOTE_REVISION_QUERY_DAO, useClass: PrismaNoteRevisionQueryDao },
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it

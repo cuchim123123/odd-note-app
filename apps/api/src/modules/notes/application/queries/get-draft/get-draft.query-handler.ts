@@ -6,12 +6,13 @@ import { GetDraftQuery } from '@modules/notes/application/queries/get-draft/get-
 import { DRAFT_CACHE_PORT, type IDraftCachePort } from '@modules/notes/application/ports/draft-cache.port';
 import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/note-protection.port';
 import type { NoteDraftResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/note-query.dao.port';
 
 @QueryHandler(GetDraftQuery)
 export class GetDraftQueryHandler implements IQueryHandler<GetDraftQuery> {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(NOTE_QUERY_DAO)
+    private readonly noteQueryDao: INoteQueryDao,
     @Inject(DRAFT_CACHE_PORT)
     private readonly draftCachePort: IDraftCachePort,
     @Inject(NOTE_PROTECTION_PORT)
@@ -23,21 +24,13 @@ export class GetDraftQueryHandler implements IQueryHandler<GetDraftQuery> {
 
     // Verify access for non-new notes
     if (noteId !== 'new') {
-      const note = await this.prisma.note.findFirst({
-        where: {
-          id: noteId,
-          OR: [{ userId }, { shares: { some: { recipientId: userId, permission: 'EDIT' } } }],
-        },
-        select: { id: true },
-      });
-
-      if (!note) throw new NotePermissionDeniedError('Note not found or you do not have edit permission');
+      const access = await this.noteQueryDao.checkAccess(noteId, userId);
+      if (!access || (!access.isOwner && access.permission !== 'EDIT')) {
+        throw new NotePermissionDeniedError('Note not found or you do not have edit permission');
+      }
 
       // Check protection
-      const protection = await this.prisma.noteProtection.findFirst({
-        where: { noteId },
-        select: { id: true },
-      });
+      const protection = await this.noteQueryDao.isProtected(noteId, access.ownerId);
 
       if (protection) {
         const isUnlocked = await this.protectionPort.verifyUnlockToken(userId, noteId, unlockToken);

@@ -31,25 +31,6 @@ export class PrismaNoteRevisionRepository implements INoteRevisionRepository {
     });
   }
 
-  async findByNoteId(noteId: string): Promise<Omit<NoteRevisionEntity, 'content'>[]> {
-    const rows = await this.prisma.noteRevision.findMany({
-      where: { noteId },
-      orderBy: { revisionNumber: 'desc' },
-      select: {
-        id: true,
-        noteId: true,
-        revisionNumber: true,
-        title: true,
-        createdAt: true,
-        createdBy: true,
-        label: true,
-      },
-    });
-    return rows.map((r) =>
-      NoteRevisionEntity.create({ ...r, content: '' }),
-    );
-  }
-
   async findById(revisionId: string): Promise<NoteRevisionEntity | null> {
     const row = await this.prisma.noteRevision.findUnique({
       where: { id: revisionId },
