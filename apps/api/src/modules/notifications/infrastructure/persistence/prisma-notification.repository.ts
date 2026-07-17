@@ -3,7 +3,6 @@ import type { INotificationRepository } from '@modules/notifications/application
 import { PrismaService } from '@infrastructure/prisma/prisma.service';
 import { NotificationEntity } from '@modules/notifications/domain/entities/notification.entity';
 import type { Notification } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class PrismaNotificationRepository implements INotificationRepository {
@@ -16,41 +15,37 @@ export class PrismaNotificationRepository implements INotificationRepository {
       title: record.title,
       message: record.message,
       read: record.read,
-      data: record.data,
+      data: record.data ? JSON.parse(record.data) as Record<string, unknown> : null,
       eventId: record.eventId ?? null,
       createdAt: record.createdAt,
     });
   }
 
   async save(notification: NotificationEntity): Promise<void> {
-    try {
-      await this.prisma.notification.create({
-        data: {
-          id: notification.id,
-          userId: notification.userId,
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          read: notification.read,
-          data: notification.data,
-          eventId: notification.eventId,
-          createdAt: notification.createdAt,
-        }
+    // Idempotent insert, wont return anything on duplicate.
+    const result = await this.prisma.notification.createMany({
+      data: [{
+        id: notification.id,
+        userId: notification.userId,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        read: notification.read,
+        data: notification.data ? JSON.stringify(notification.data) : null,
+        eventId: notification.eventId,
+        createdAt: notification.createdAt,
+      }],
+      skipDuplicates: true,
+    });
+    
+    // Idempotent
+    // Success (count > 0) means no duplicate,
+    if (result.count > 0 && !notification.read) {
+      await this.prisma.userNotificationStat.upsert({
+        where: { userId: notification.userId },
+        create: { userId: notification.userId, unreadCount: 1 },
+        update: { unreadCount: { increment: 1 } },
       });
-      
-      if (!notification.read) {
-        await this.prisma.userNotificationStat.upsert({
-          where: { userId: notification.userId },
-          create: { userId: notification.userId, unreadCount: 1 },
-          update: { unreadCount: { increment: 1 } },
-        });
-      }
-    } catch (e) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-        // Idempotency: duplicate eventId or id, ignore
-        return;
-      }
-      throw e;
     }
   }
 

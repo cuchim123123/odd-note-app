@@ -10,7 +10,7 @@ import { NoteShareRevokedDomainEvent } from '@modules/notes/domain/events/note-s
 import { NotePasswordSetDomainEvent } from '@modules/notes/domain/events/note-password-set.domain-event';
 import { NotePasswordRemovedDomainEvent } from '@modules/notes/domain/events/note-password-removed.domain-event';
 import { NoteId, UserId, ShareId } from '@shared/domain/ddd/id-types';
-import * as crypto from 'crypto';
+import { uuidv7 } from 'uuidv7';
 
 export interface NoteShare {
   id: ShareId;
@@ -34,7 +34,7 @@ export class NoteEntity extends AggregateRoot {
 
   private constructor(props: NoteProps, id?: NoteId) {
     super();
-    this._id = id ?? NoteId.from(crypto.randomUUID());
+    this._id = id ?? NoteId.from(uuidv7());
     this.props = props;
   }
 
@@ -91,7 +91,7 @@ export class NoteEntity extends AggregateRoot {
       throw new NoteAlreadySharedError();
     }
 
-    const shareId = ShareId.from(crypto.randomUUID());
+    const shareId = ShareId.from(uuidv7());
     this.props.shares.push({
       id: shareId,
       recipientId: typedRecipientId,

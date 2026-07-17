@@ -1,5 +1,5 @@
 import { InvalidCredentialsError, IncorrectPasswordError } from '@modules/auth/domain/errors/auth-error';
-import * as crypto from 'crypto';
+import { uuidv7 } from 'uuidv7';
 import { AggregateRoot } from '@shared/domain/ddd/aggregate-root';
 import { EmailAddress } from '@modules/auth/domain/value-objects/email-address';
 import { UserRegisteredDomainEvent } from '@modules/auth/domain/events/user-registered.domain-event';
@@ -21,7 +21,7 @@ export class User extends AggregateRoot {
   public static create(email: string, displayName: string, passwordHash: string): User {
     const emailAddress = EmailAddress.create(email);
     const user = new User(
-      crypto.randomUUID(),
+      uuidv7(),
       emailAddress,
       displayName,
       passwordHash,

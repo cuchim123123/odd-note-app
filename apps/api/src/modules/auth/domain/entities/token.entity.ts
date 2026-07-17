@@ -1,5 +1,5 @@
 import { TokenAlreadyUsedError, TokenExpiredError, InvalidTokenError } from '@modules/auth/domain/errors/auth-error';
-import * as crypto from 'crypto';
+import { uuidv7 } from 'uuidv7';
 
 export abstract class Token {
   constructor(
@@ -28,7 +28,7 @@ export class VerificationToken extends Token {
   }
 
   public static create(tokenHash: string, userId: string, expiresAt: Date): VerificationToken {
-    return new VerificationToken(crypto.randomUUID(), tokenHash, userId, expiresAt, null, new Date());
+    return new VerificationToken(uuidv7(), tokenHash, userId, expiresAt, null, new Date());
   }
 
   public consume(): VerificationToken {
@@ -63,7 +63,7 @@ export class PasswordResetToken extends Token {
   }
 
   public static create(tokenHash: string, userId: string, expiresAt: Date): PasswordResetToken {
-    return new PasswordResetToken(crypto.randomUUID(), tokenHash, userId, expiresAt, null, new Date());
+    return new PasswordResetToken(uuidv7(), tokenHash, userId, expiresAt, null, new Date());
   }
 
   public consume(): PasswordResetToken {
@@ -98,7 +98,7 @@ export class RefreshToken extends Token {
   }
 
   public static create(tokenHash: string, userId: string, expiresAt: Date): RefreshToken {
-    return new RefreshToken(crypto.randomUUID(), tokenHash, userId, expiresAt, null, new Date());
+    return new RefreshToken(uuidv7(), tokenHash, userId, expiresAt, null, new Date());
   }
 
   public revoke(): RefreshToken {

@@ -1,4 +1,5 @@
 import { Entity } from '@shared/domain/ddd/entity';
+import { uuidv7 } from 'uuidv7';
 
 export interface NotificationProps {
   userId: string;
@@ -7,11 +8,10 @@ export interface NotificationProps {
   message: string;
   read: boolean;
   /**
-   * Serialized JSON payload for the notification.
-   * Kept as string|null in props because this is what the DB stores and what
-   * the mapper reconstitutes from. Serialization is done once in create().
+   * Structured payload for the notification.
+   * Clean DDD: Domain holds the object, Infrastructure handles serialization.
    */
-  data: string | null;
+  data: Record<string, unknown> | null;
   /** Source DomainEvent.eventId — used for idempotent notification creation. */
   eventId: string | null;
   createdAt: Date;
@@ -23,23 +23,12 @@ export class NotificationEntity extends Entity<NotificationProps> {
   get title(): string { return this.props.title; }
   get message(): string { return this.props.message; }
   get read(): boolean { return this.props.read; }
-  /** Raw JSON string for persistence. Use parsedData() for typed access. */
-  get data(): string | null { return this.props.data; }
+  /** Structured JSON data */
+  get data(): Record<string, unknown> | null { return this.props.data; }
   get eventId(): string | null { return this.props.eventId; }
   get createdAt(): Date { return this.props.createdAt; }
 
-  /**
-   * Returns the parsed notification payload as a typed object.
-   * Returns null if no data was provided at creation time.
-   */
-  public parsedData(): Record<string, unknown> | null {
-    if (!this.props.data) return null;
-    try {
-      return JSON.parse(this.props.data) as Record<string, unknown>;
-    } catch {
-      return null;
-    }
-  }
+
 
   public markAsRead(): void {
     if (!this.props.read) {
@@ -49,8 +38,7 @@ export class NotificationEntity extends Entity<NotificationProps> {
 
   /**
    * Factory for new notifications.
-   * @param data  Structured payload — serialized to JSON internally.
-   *              Callers never deal with raw JSON strings.
+   * @param data  Structured payload.
    */
   public static create(
     userId: string,
@@ -66,13 +54,13 @@ export class NotificationEntity extends Entity<NotificationProps> {
       title,
       message,
       read: false,
-      data: data !== null ? JSON.stringify(data) : null,
+      data,
       eventId,
       createdAt: new Date(),
-    }, crypto.randomUUID());
+    }, uuidv7());
   }
 
-  /** Reconstitutes a notification from the DB row — data is already a JSON string. */
+  /** Reconstitutes a notification from the DB row. */
   public static reconstitute(id: string, props: NotificationProps): NotificationEntity {
     return new NotificationEntity(props, id);
   }

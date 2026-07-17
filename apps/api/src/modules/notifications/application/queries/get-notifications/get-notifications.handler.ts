@@ -20,7 +20,7 @@ export class GetNotificationsHandler implements IQueryHandler<GetNotificationsQu
       title: n.title,
       message: n.message,
       read: n.read,
-      data: n.data ? JSON.parse(n.data) : undefined,
+      data: n.data ?? undefined,
       createdAt: n.createdAt.toISOString(),
     }));
   }
