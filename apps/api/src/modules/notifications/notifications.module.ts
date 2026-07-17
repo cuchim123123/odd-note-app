@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaModule } from '@infrastructure/prisma/prisma.module';
 import { JwtConfigModule } from '@config';
@@ -6,6 +6,8 @@ import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.
 
 import { NOTIFICATION_REPOSITORY } from '@modules/notifications/application/ports/notification.repository.port';
 import { PrismaNotificationRepository } from '@modules/notifications/infrastructure/persistence/prisma-notification.repository';
+import { NOTIFICATION_QUERY_DAO } from '@modules/notifications/application/ports/notification-query.dao.port';
+import { PrismaNotificationQueryDao } from '@modules/notifications/infrastructure/persistence/prisma-notification-query.dao';
 
 // ─── Application: Command Handlers ──────────────────────────────────────────
 import { CreateNotificationHandler } from '@modules/notifications/application/commands/create-notification/create-notification.handler';
@@ -33,6 +35,7 @@ import { NoteSharedConsumer } from '@modules/notifications/presentation/kafka/no
     AccessTokenGuard,
     // ── Port → Adapter Bindings ───────────────────────────────────────────
     { provide: NOTIFICATION_REPOSITORY, useClass: PrismaNotificationRepository },
+    { provide: NOTIFICATION_QUERY_DAO, useClass: PrismaNotificationQueryDao },
     // ── Application: Command Handlers ─────────────────────────────────────
     CreateNotificationHandler,
     MarkAsReadHandler,

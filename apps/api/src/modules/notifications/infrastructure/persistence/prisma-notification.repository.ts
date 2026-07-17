@@ -89,31 +89,4 @@ export class PrismaNotificationRepository implements INotificationRepository {
       });
     }
   }
-
-  async countUnread(userId: string): Promise<number> {
-    const stat = await this.prisma.userNotificationStat.findUnique({
-      where: { userId },
-    });
-    return stat?.unreadCount ?? 0;
-  }
-
-  async findByUserId(userId: string, limit: number, cursor?: string): Promise<NotificationEntity[]> {
-    const records = await this.prisma.notification.findMany({
-      where: { userId },
-      orderBy: { id: 'desc' }, // uuid(7) is chronologically sortable
-      take: limit,
-      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-    });
-    return records.map((r) => this.toDomain(r));
-  }
-
-  async findUnread(userId: string, limit: number, cursor?: string): Promise<NotificationEntity[]> {
-    const records = await this.prisma.notification.findMany({
-      where: { userId, read: false },
-      orderBy: { id: 'desc' },
-      take: limit,
-      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-    });
-    return records.map((r) => this.toDomain(r));
-  }
 }
