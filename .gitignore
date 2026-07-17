@@ -44,6 +44,9 @@ Thumbs.db
 
 # local infra data
 infrastructure/docker/data/
+uploads/
+apps/api/uploads/
+apps/web/uploads/
 
 scratch.js
 rewrite-imports.js
