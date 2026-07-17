@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as Y from 'yjs';
 import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
-import { RedisService } from '@infrastructure/redis/redis.service';
+import { RedisService } from '@shared/infrastructure/redis/redis.service';
 
 type YDocState = {
   stateVector: number[];

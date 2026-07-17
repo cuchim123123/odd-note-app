@@ -2,7 +2,7 @@ import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import type { OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type { OutboxMessage } from '@prisma/client';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import {
   INTERNAL_COMMAND_HANDLERS,
   type IInternalCommandHandler,

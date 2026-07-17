@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { IUserQueryDao, UserView } from '@modules/auth/application/ports/user-query.dao.port';
 
 @Injectable()

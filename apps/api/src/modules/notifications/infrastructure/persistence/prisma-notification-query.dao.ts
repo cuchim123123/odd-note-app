@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { Notification } from '@prisma/client';
 import type { INotificationQueryDao, NotificationView } from '@modules/notifications/application/ports/notification-query.dao.port';
 

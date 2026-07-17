@@ -10,8 +10,6 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "baseUrl": "./",
     "paths": {
-      "@infrastructure/*": ["src/infrastructure/*"],
-      "@infrastructure": ["src/infrastructure/index"],
       "@modules/*": ["src/modules/*"],
       "@modules": ["src/modules/index"],
       "@shared/*": ["src/shared/*"],

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
-import { PrismaModule } from '@infrastructure/prisma/prisma.module';
+import { PrismaModule } from '@shared/infrastructure/prisma/prisma.module';
 import { JwtConfigModule } from '@config';
 import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
 

@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { UnitOfWork, TransactionContext } from '@modules/auth/application/ports/unit-of-work.port';
 import { PrismaUserRepository } from '@modules/auth/infrastructure/persistence/prisma-user.repository';
 import { PrismaTokenRepository } from '@modules/auth/infrastructure/persistence/prisma-token.repository';

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { ICollaborationStatePort, CollaboratorInfo, TypingInfo } from '@modules/collaboration/application/ports/collaboration-state.port';
-import { RedisService } from '@infrastructure/redis/redis.service';
+import { RedisService } from '@shared/infrastructure/redis/redis.service';
 import { COLLABORATION_TYPING_STALE_AFTER_MS } from '@modules/collaboration/collaboration.constants';
 
 @Injectable()

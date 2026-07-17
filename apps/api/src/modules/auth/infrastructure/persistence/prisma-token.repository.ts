@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from '@modules/auth/infrastructure/persistence/prisma-client.type';
 import type { TokenRepository } from '@modules/auth/application/ports/token.repository.port';
 import { VerificationToken, PasswordResetToken, RefreshToken } from '@modules/auth/domain/entities/token.entity';

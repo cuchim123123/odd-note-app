@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '@config/config.module';
-import { PrismaModule } from '@infrastructure/prisma/prisma.module';
+import { PrismaModule } from '@shared/infrastructure/prisma/prisma.module';
 import { TOKEN_PROVIDER } from '@modules/auth/application/ports/token-provider.port';
 import { JwtTokenProvider } from '@modules/auth/infrastructure/security/jwt-token-provider';
 import { AuthConfigModule, JwtConfigModule } from '@config';

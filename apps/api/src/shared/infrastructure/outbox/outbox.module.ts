@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { PrismaModule } from '@infrastructure/prisma/prisma.module';
+import { PrismaModule } from '@shared/infrastructure/prisma/prisma.module';
 import { OutboxProcessor } from '@shared/infrastructure/outbox/outbox.processor';
 
 /**

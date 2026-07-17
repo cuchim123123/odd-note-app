@@ -1,4 +1,4 @@
-﻿import {
+import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -7,7 +7,7 @@ import { Logger, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { JwtConfigService } from '@config';
-import { RedisService } from '@infrastructure/redis/redis.service';
+import { RedisService } from '@shared/infrastructure/redis/redis.service';
 import { Server, Socket } from 'socket.io';
 import type Redis from 'ioredis';
 import { COLLABORATION_NAMESPACE, REDIS_EVENT_TYPES } from '@modules/collaboration/collaboration.constants';

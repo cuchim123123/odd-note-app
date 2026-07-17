@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@infrastructure/prisma/prisma.service';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { INoteQueryDao, NoteView, SharedNoteView, NoteAccessView } from '@modules/notes/application/ports/note-query.dao.port';
 import type { NoteShareResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
 

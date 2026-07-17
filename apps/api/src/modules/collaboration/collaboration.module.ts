@@ -1,9 +1,9 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule } from '@config/config.module';
 import { JwtConfigModule, JwtConfigService } from '@config';
-import { RedisModule } from '@infrastructure/redis/redis.module';
-import { PrismaModule } from '@infrastructure/prisma/prisma.module';
+import { RedisModule } from '@shared/infrastructure/redis/redis.module';
+import { PrismaModule } from '@shared/infrastructure/prisma/prisma.module';
 import { NotesModule } from '@modules/notes/notes.module';
 
 // Ports & Adapters

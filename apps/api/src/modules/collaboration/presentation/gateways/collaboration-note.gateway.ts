@@ -14,7 +14,7 @@ import { YJS_DOCUMENT_PORT } from '@modules/collaboration/application/ports/yjs-
 import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
 import { NOTE_ACCESS_PORT } from '@modules/collaboration/application/ports/note-access.port';
 import type { INoteAccessPort } from '@modules/collaboration/application/ports/note-access.port';
-import { RedisService } from '@infrastructure/redis/redis.service';
+import { RedisService } from '@shared/infrastructure/redis/redis.service';
 
 @WebSocketGateway({
   namespace: COLLABORATION_NAMESPACE,
