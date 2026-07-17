@@ -1,6 +1,6 @@
 import { EventsHandler, type IEventHandler } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { uuidv7 } from 'uuidv7';
 import { NoteContentSnapshotTakenEvent } from '@modules/notes/application/events/note-content-snapshot-taken.event';
 import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
 import { NoteRevisionEntity } from '@modules/notes/domain/entities/note-revision.entity';
@@ -30,7 +30,7 @@ export class NoteContentSnapshotTakenEventHandler implements IEventHandler<NoteC
     const revisionNumber = latestRevision ? latestRevision.revisionNumber + 1 : 1;
 
     const revision = NoteRevisionEntity.create({
-      id: randomUUID(),
+      id: uuidv7(),
       noteId,
       revisionNumber,
       title,

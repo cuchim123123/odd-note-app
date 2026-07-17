@@ -1,8 +1,8 @@
-﻿import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import type { EnvConfig } from '@config/env.validation';
 import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand, GetObjectCommand, PutBucketPolicyCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { randomUUID } from 'crypto';
+import { uuidv7 } from 'uuidv7';
 
 import type { IStoragePort } from '@modules/uploads/application/ports/storage.port';
 
@@ -95,7 +95,7 @@ export class S3StorageAdapter implements IStoragePort {
   }
 
   async uploadBuffer(buffer: Buffer, filename: string, contentType?: string) {
-    const key = `${Date.now()}-${randomUUID()}-${filename.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+    const key = `${Date.now()}-${uuidv7()}-${filename.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
 
     await this.client.send(
       new PutObjectCommand({

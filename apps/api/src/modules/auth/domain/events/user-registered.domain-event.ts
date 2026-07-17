@@ -1,4 +1,4 @@
-import * as crypto from 'crypto';
+import { uuidv7 } from 'uuidv7';
 import type { DomainEvent } from '@shared/domain/ddd/domain-event';
 
 export class UserRegisteredDomainEvent implements DomainEvent {
@@ -11,7 +11,7 @@ export class UserRegisteredDomainEvent implements DomainEvent {
     public readonly userId: string,
     public readonly email: string,
   ) {
-    this.eventId = crypto.randomUUID();
+    this.eventId = uuidv7();
     this.aggregateId = userId;
     this.occurredOn = new Date();
   }

@@ -1,4 +1,4 @@
-import * as crypto from 'crypto';
+import { uuidv7 } from 'uuidv7';
 import type { DomainEvent } from '@shared/domain/ddd/domain-event';
 
 export class NotePasswordRemovedDomainEvent implements DomainEvent {
@@ -11,7 +11,7 @@ export class NotePasswordRemovedDomainEvent implements DomainEvent {
     public readonly noteId: string,
     public readonly ownerId: string,
   ) {
-    this.eventId = crypto.randomUUID();
+    this.eventId = uuidv7();
     this.aggregateId = noteId;
     this.occurredOn = new Date();
   }
