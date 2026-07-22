@@ -82,7 +82,11 @@ export class NoteEntity extends AggregateRoot {
     this.updateModifiedTime();
   }
 
-  public shareWith(recipientId: string, permission: SharePermission, requestedBy: string): void {
+  public shareWith(
+    recipientId: string,
+    permission: SharePermission,
+    requestedBy: string,
+  ): void {
     this.verifyOwner(requestedBy);
 
     const typedRecipientId = UserId.from(recipientId);

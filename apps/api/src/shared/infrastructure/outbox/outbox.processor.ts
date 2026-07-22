@@ -1,12 +1,15 @@
 import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import type { OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ClientKafka } from '@nestjs/microservices';
 import type { OutboxMessage } from '@prisma/client';
+import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import {
   INTERNAL_COMMAND_HANDLERS,
   type IInternalCommandHandler,
 } from './internal-command-handler.port';
+import { KAFKA_CLIENT_TOKEN } from '@config/kafka-config.module';
 
 /**
  * Generic Transactional Outbox Processor — with exponential backoff retry
@@ -53,8 +56,8 @@ export class OutboxProcessor implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    // @Inject(KAFKA_CLIENT_TOKEN)
-    // private readonly kafkaClient: ClientKafka,
+    @Inject(KAFKA_CLIENT_TOKEN)
+    private readonly kafkaClient: ClientKafka,
     /**
      * All IInternalCommandHandler implementations registered across modules.
      * Optional so the processor starts even if no handlers are registered.
@@ -65,7 +68,7 @@ export class OutboxProcessor implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    // await this.kafkaClient.connect();
+    await this.kafkaClient.connect();
   }
 
   // ─── Main polling loop ───────────────────────────────────────────────────
@@ -195,7 +198,7 @@ export class OutboxProcessor implements OnModuleInit {
     topic: string,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    this.logger.debug(`[KAFKA-MOCKED] Publish → ${topic}: ${JSON.stringify(payload)}`);
-    // await firstValueFrom(this.kafkaClient.emit(topic, payload));
+    this.logger.debug(`Publish → ${topic}: ${JSON.stringify(payload)}`);
+    await firstValueFrom(this.kafkaClient.emit(topic, payload));
   }
 }

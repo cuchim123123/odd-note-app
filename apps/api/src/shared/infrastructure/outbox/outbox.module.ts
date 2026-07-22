@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from '@shared/infrastructure/prisma/prisma.module';
+import { KafkaConfigModule } from '@config/kafka-config.module';
 import { OutboxProcessor } from '@shared/infrastructure/outbox/outbox.processor';
 
 /**
@@ -14,7 +15,7 @@ import { OutboxProcessor } from '@shared/infrastructure/outbox/outbox.processor'
  * Usage: import OutboxModule in AppModule (or any root module).
  */
 @Module({
-  imports: [ScheduleModule.forRoot(), PrismaModule],
+  imports: [ScheduleModule.forRoot(), PrismaModule, KafkaConfigModule],
   providers: [OutboxProcessor],
   exports: [OutboxProcessor],
 })

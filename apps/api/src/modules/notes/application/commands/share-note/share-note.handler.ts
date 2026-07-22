@@ -7,6 +7,8 @@ import { SharePermission } from '@modules/notes/domain/value-objects/share-permi
 import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import { RecipientNotFoundError, SelfShareError } from '@modules/notes/domain/errors/share.errors';
 import { NOTE_MAIL_SENDER, type INoteMailSender } from '@modules/notes/application/ports/note-mail-sender.port';
+import type { NoteSharedIntegrationEvent } from '@modules/notes/application/integration-events/note-shared.integration-event';
+import { NOTE_INTEGRATION_EVENT_MAPPER, type INoteIntegrationEventMapper } from '@modules/notes/application/ports/integration-event-mapper.port';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -17,7 +19,9 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     private readonly userReadPort: IUserReadPort,
     @Inject(NOTE_MAIL_SENDER)
     private readonly mailSender: INoteMailSender,
-      ) {}
+    @Inject(NOTE_INTEGRATION_EVENT_MAPPER)
+    private readonly integrationEventMapper: INoteIntegrationEventMapper,
+  ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
     const { userId, noteId, recipientEmail, permission } = command;
@@ -27,9 +31,13 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     if (recipient.id === userId) throw new SelfShareError();
     const owner = await this.userReadPort.findById(userId);
 
+    let noteTitle = 'Note';
+
     const shareId = await this.unitOfWork.execute(async (ctx) => {
       const note = await ctx.noteRepository.findById(noteId);
       if (!note) throw new NoteNotFoundError(noteId);
+
+      noteTitle = note.title;
 
       const permissionVO = SharePermission.create(permission);
       note.shareWith(recipient.id, permissionVO, userId);
@@ -44,8 +52,20 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
         permission,
       });
 
-      // Domain events are dispatched here; NoteSharedEventHandler will
-      // reactively pick up NoteSharedDomainEvent and schedule the Outbox message.
+      const outboxPayload: NoteSharedIntegrationEvent = {
+        eventId: share.id,
+        occurredOn: new Date().toISOString(),
+        noteId,
+        shareId: share.id,
+        ownerId: userId,
+        recipientId: recipient.id,
+        recipientEmail: recipient.email,
+        permission,
+        noteTitle,
+      };
+
+      const draft = this.integrationEventMapper.serialize('NoteShared', outboxPayload);
+      await ctx.outbox.scheduleIntegrationEvent(draft.topic, draft.payload);
 
       return share.id;
     });
@@ -55,7 +75,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
       to: recipient.email,
       recipientName: recipient.email.split('@')[0] ?? 'User',
       senderName: owner?.displayName ?? 'A user',
-      noteTitle: 'Note',
+      noteTitle,
       noteId: noteId,
       permission,
     });
