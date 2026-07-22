@@ -14,6 +14,11 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
 
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - mongodb-data:/data/db
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -29,6 +34,7 @@ services:
       dockerfile: ./apps/api/Dockerfile
     environment:
       DATABASE_URL: postgres://oddnote:oddnotepass@db:5432/oddnote
+      MONGODB_URI: mongodb://mongodb:27017/oddnote
       APP_URL: ${APP_URL:-http://localhost}
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-this-is-a-long-dev-access-secret-at-least-32-chars}
@@ -54,6 +60,7 @@ services:
     depends_on:
       - redis
       - db
+      - mongodb
       - minio
 
   web:
@@ -70,4 +77,5 @@ services:
 volumes:
   redis-data:
   db-data:
+  mongodb-data:
   minio-data:

@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ZodValidationPipe } from 'nestjs-zod';
 import type { EnvConfig } from '@config/config.module';
 import { DomainExceptionFilter } from '@shared/presentation/http/filters/domain-exception.filter';
+import { Transport, type MicroserviceOptions } from '@nestjs/microservices';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -27,9 +28,6 @@ async function bootstrap(): Promise<void> {
   });
 
   const port = env.API_PORT;
-  
-  // Connect Kafka Microservice
-  /*
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
@@ -44,7 +42,6 @@ async function bootstrap(): Promise<void> {
   });
 
   await app.startAllMicroservices();
-  */
   await app.listen(port, '0.0.0.0');
 }
 
