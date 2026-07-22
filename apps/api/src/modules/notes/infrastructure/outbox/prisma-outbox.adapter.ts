@@ -20,5 +20,16 @@ export class PrismaOutboxAdapter implements INoteOutboxPort {
       },
     });
   }
+
+  async scheduleInternalCommand(topic: string, payload: Record<string, unknown>): Promise<void> {
+    await this.prisma.outboxMessage.create({
+      data: {
+        type: 'INTERNAL_COMMAND',
+        topic,
+        payload: JSON.stringify(payload),
+        status: 'PENDING',
+      },
+    });
+  }
 }
 
