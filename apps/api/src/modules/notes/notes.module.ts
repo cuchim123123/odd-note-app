@@ -24,8 +24,7 @@ import { RenameLabelHandler } from '@modules/notes/application/commands/rename-l
 import { DeleteLabelHandler } from '@modules/notes/application/commands/delete-label/delete-label.handler';
 import { RestoreRevisionHandler } from '@modules/notes/application/commands/restore-revision/restore-revision.handler';
 
-// ─── Application Domain Event Handlers ──────────────────────────────────────
-import { NoteContentSnapshotTakenEventHandler } from '@modules/notes/application/events/note-content-snapshot-taken.event-handler';
+import { CreateRevisionHandler } from '@modules/notes/application/commands/create-revision/create-revision.handler';
 
 // ─── Application Query Handlers ──────────────────────────────────────────────
 import { ListNotesQueryHandler } from '@modules/notes/application/queries/list-notes/list-notes.query-handler';
@@ -87,9 +86,20 @@ import { NOTE_QUERY_DAO } from '@modules/notes/application/ports/note-query.dao.
 import { PrismaNoteQueryDao } from '@modules/notes/infrastructure/persistence/prisma-note-query.dao';
 import { NOTE_REVISION_QUERY_DAO } from '@modules/notes/application/ports/note-revision-query.dao.port';
 import { PrismaNoteRevisionQueryDao } from '@modules/notes/infrastructure/persistence/prisma-note-revision-query.dao';
+import { NOTE_UPDATE_REPOSITORY } from '@modules/notes/application/ports/note-update.repository.port';
+import { PrismaNoteUpdateRepository } from '@modules/notes/infrastructure/persistence/prisma-note-update.repository';
+import { SNAPSHOT_METADATA_REPOSITORY } from '@modules/notes/application/ports/snapshot-metadata.repository.port';
+import { PrismaSnapshotMetadataRepository } from '@modules/notes/infrastructure/persistence/prisma-snapshot-metadata.repository';
+import { SNAPSHOT_STORAGE_PORT } from '@modules/notes/application/ports/snapshot-storage.port';
+import { S3SnapshotStorageAdapter } from '@modules/notes/infrastructure/storage/s3-snapshot-storage.adapter';
+import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
+import { SnapshotThresholdMonitor } from '@modules/notes/application/workers/snapshot.worker';
+import { CreateSnapshotInternalCommandHandler } from '@modules/notes/application/workers/create-snapshot.internal-handler';
+import { INTERNAL_COMMAND_HANDLERS } from '@shared/infrastructure/outbox/internal-command-handler.port';
+import { IdempotencyModule } from '@shared/infrastructure/idempotency/idempotency.module';
 
 @Module({
-  imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule],
+  imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule, IdempotencyModule],
   controllers: [
     // ── Presentation: Commands ────────────────────────────────────────────
     CreateNoteHttpController,
@@ -137,8 +147,10 @@ import { PrismaNoteRevisionQueryDao } from '@modules/notes/infrastructure/persis
     RenameLabelHandler,
     DeleteLabelHandler,
     RestoreRevisionHandler,
-    // ── Application: Domain Event Handlers ────────────────────────────────
-    NoteContentSnapshotTakenEventHandler,
+    CreateRevisionHandler,
+    ReplayCoordinator,
+    SnapshotThresholdMonitor,
+    CreateSnapshotInternalCommandHandler,
     // ── Application: Query Handlers ───────────────────────────────────────
     ListNotesQueryHandler,
     ListSharedWithMeQueryHandler,
@@ -162,6 +174,11 @@ import { PrismaNoteRevisionQueryDao } from '@modules/notes/infrastructure/persis
     { provide: NOTE_MAIL_SENDER, useClass: NoteMailerAdapter },
     { provide: NOTE_QUERY_DAO, useClass: PrismaNoteQueryDao },
     { provide: NOTE_REVISION_QUERY_DAO, useClass: PrismaNoteRevisionQueryDao },
+    { provide: NOTE_UPDATE_REPOSITORY, useClass: PrismaNoteUpdateRepository },
+    { provide: SNAPSHOT_METADATA_REPOSITORY, useClass: PrismaSnapshotMetadataRepository },
+    { provide: SNAPSHOT_STORAGE_PORT, useClass: S3SnapshotStorageAdapter },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { provide: INTERNAL_COMMAND_HANDLERS, useClass: CreateSnapshotInternalCommandHandler, multi: true } as any,
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it

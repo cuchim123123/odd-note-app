@@ -5,7 +5,7 @@ import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/applicat
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
 import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
 import { NoteNotFoundError, NotePermissionDeniedError } from '@modules/notes/domain/errors/note.errors';
-import { NoteContentSnapshotTakenEvent } from '@modules/notes/application/events/note-content-snapshot-taken.event';
+
 
 @CommandHandler(UpdateNoteCommand)
 export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
@@ -21,7 +21,7 @@ export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
   async execute(command: UpdateNoteCommand): Promise<{ id: string }> {
     const { userId, noteId, title, content, isPinned, labels } = command;
 
-    const { note, personalIsPinned } = await this.unitOfWork.execute(async (ctx) => {
+    const { note } = await this.unitOfWork.execute(async (ctx) => {
       const note = await ctx.noteRepository.findById(noteId);
       if (!note) throw new NoteNotFoundError(noteId);
 
@@ -48,18 +48,10 @@ export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
       return { note, personalIsPinned: personalIsPinnedResult };
     });
 
+    // In the CRDT architecture, content updates happen via WebSockets and the NoteUpdate log.
+    // The REST API only updates metadata (title, labels, pins).
     if (content !== undefined) {
-      await this.documentSyncPort.persistSnapshot(
-        noteId,
-        note.title,
-        content,
-        personalIsPinned,
-        note.updatedAt,
-      );
-      // Snapshot this version in the revision history by emitting an event
-      this.eventBus.publish(
-        new NoteContentSnapshotTakenEvent(noteId, note.title, content, userId),
-      );
+      // A warning or error could be logged here, or handled if legacy support is needed.
     }
 
     return { id: note.id };

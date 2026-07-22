@@ -6,8 +6,7 @@
  */
 export interface NoteRevisionSummaryDto {
   id: string;
-  revisionNumber: number;
-  title: string;
+  targetSeq: string;   // bigint cast to string for JSON serialization
   createdAt: string;   // ISO-8601
   createdBy: string;   // userId
   label: string | null;

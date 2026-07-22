@@ -29,3 +29,9 @@ export class IncorrectPasswordError extends DomainError {
     super('The provided password is incorrect', 'INCORRECT_PASSWORD');
   }
 }
+
+export class NoteLockedForRestoreError extends DomainError {
+  constructor() {
+    super('The note is currently being restored by the owner. Please try again later.', 'NOTE_LOCKED_FOR_RESTORE');
+  }
+}
