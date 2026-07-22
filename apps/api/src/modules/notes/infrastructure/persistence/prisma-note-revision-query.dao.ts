@@ -10,11 +10,10 @@ export class PrismaNoteRevisionQueryDao implements INoteRevisionQueryDao {
   async findByNoteId(noteId: string): Promise<NoteRevisionSummaryDto[]> {
     const revisions = await this.prisma.noteRevision.findMany({
       where: { noteId },
-      orderBy: { revisionNumber: 'desc' },
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
-        revisionNumber: true,
-        title: true,
+        targetSeq: true,
         createdAt: true,
         createdBy: true,
         label: true,
@@ -23,8 +22,7 @@ export class PrismaNoteRevisionQueryDao implements INoteRevisionQueryDao {
 
     return revisions.map((r) => ({
       id: r.id,
-      revisionNumber: r.revisionNumber,
-      title: r.title,
+      targetSeq: r.targetSeq.toString(),
       createdAt: r.createdAt.toISOString(),
       createdBy: r.createdBy,
       label: r.label,

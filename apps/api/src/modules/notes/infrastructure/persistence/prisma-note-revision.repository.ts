@@ -8,22 +8,12 @@ import type { PrismaTransactionClient } from '@modules/notes/infrastructure/pers
 export class PrismaNoteRevisionRepository implements INoteRevisionRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
-  async nextRevisionNumber(noteId: string): Promise<number> {
-    const result = await this.prisma.noteRevision.aggregate({
-      where: { noteId },
-      _max: { revisionNumber: true },
-    });
-    return (result._max.revisionNumber ?? 0) + 1;
-  }
-
   async save(revision: NoteRevisionEntity): Promise<void> {
     await this.prisma.noteRevision.create({
       data: {
         id: revision.id,
         noteId: revision.noteId,
-        revisionNumber: revision.revisionNumber,
-        title: revision.title,
-        content: revision.content,
+        targetSeq: revision.targetSeq,
         createdAt: revision.createdAt,
         createdBy: revision.createdBy,
         label: revision.label,
@@ -39,39 +29,12 @@ export class PrismaNoteRevisionRepository implements INoteRevisionRepository {
     return NoteRevisionEntity.create(row);
   }
 
-  async findLatest(noteId: string): Promise<NoteRevisionEntity | null> {
-    const row = await this.prisma.noteRevision.findFirst({
+  async findManyByNoteId(noteId: string, limit: number = 50): Promise<NoteRevisionEntity[]> {
+    const rows = await this.prisma.noteRevision.findMany({
       where: { noteId },
-      orderBy: { revisionNumber: 'desc' },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
     });
-    if (!row) return null;
-    return NoteRevisionEntity.create(row);
-  }
-
-  /**
-   * Keeps the newest `keepCount` revisions and deletes anything older.
-   * Uses a sub-select to identify the IDs to delete without loading them
-   * into memory — efficient even for large revision histories.
-   */
-  async pruneOldest(noteId: string, keepCount: number): Promise<void> {
-    // Find the revision numbers to keep (newest N)
-    const toKeep = await this.prisma.noteRevision.findMany({
-      where: { noteId },
-      orderBy: { revisionNumber: 'desc' },
-      take: keepCount,
-      select: { id: true },
-    });
-
-    if (toKeep.length < keepCount) return; // not yet at cap
-
-    await this.prisma.noteRevision.deleteMany({
-      where: {
-        noteId,
-        id: { notIn: toKeep.map((r) => r.id) },
-      },
-    });
+    return rows.map((row) => NoteRevisionEntity.create(row));
   }
 }
-
-
-

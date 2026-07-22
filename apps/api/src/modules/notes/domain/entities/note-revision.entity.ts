@@ -1,39 +1,39 @@
 import { NoteId, UserId } from '@shared/domain/ddd/id-types';
 
 /**
- * NoteRevisionEntity — an immutable snapshot of note content at a point in time.
- * Internal IDs are branded; getters return plain strings for serialisation.
+ * NoteRevisionEntity — a logical checkpoint in the note's history.
+ * It contains NO document state. It acts strictly as a pointer (targetSeq)
+ * to a specific point in the append-only NoteUpdate log.
  */
 export class NoteRevisionEntity {
   private readonly _id: string;
   private readonly _noteId: NoteId;
   private readonly _createdBy: UserId;
+  private readonly _targetSeq: bigint;
 
   constructor(
     id: string,
     noteId: NoteId,
-    public readonly revisionNumber: number,
-    public readonly title: string,
-    public readonly content: string,
+    targetSeq: bigint,
     public readonly createdAt: Date,
     createdBy: UserId,
     public readonly label: string | null,
   ) {
     this._id = id;
     this._noteId = noteId;
+    this._targetSeq = targetSeq;
     this._createdBy = createdBy;
   }
 
   get id(): string { return this._id; }
   get noteId(): string { return this._noteId; }
   get createdBy(): string { return this._createdBy; }
+  get targetSeq(): bigint { return this._targetSeq; }
 
   static create(params: {
     id: string;
     noteId: string;
-    revisionNumber: number;
-    title: string;
-    content: string;
+    targetSeq: bigint;
     createdAt: Date;
     createdBy: string;
     label?: string | null;
@@ -41,9 +41,7 @@ export class NoteRevisionEntity {
     return new NoteRevisionEntity(
       params.id,
       NoteId.from(params.noteId),
-      params.revisionNumber,
-      params.title,
-      params.content,
+      params.targetSeq,
       params.createdAt,
       UserId.from(params.createdBy),
       params.label ?? null,
