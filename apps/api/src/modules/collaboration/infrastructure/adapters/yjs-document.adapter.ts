@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import * as Y from 'yjs';
 import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
 import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import type { EnvConfig } from '@config/env.validation';
 
 type YDocState = {
   stateVector: number[];
@@ -15,7 +16,10 @@ export class YjsDocumentAdapter implements IYjsDocumentPort {
   private readonly yDocs = new Map<string, Y.Doc>();
   private readonly cleanupTimers = new Map<string, NodeJS.Timeout>();
 
-  constructor(private readonly redisService: RedisService) {}
+  constructor(
+    private readonly redisService: RedisService,
+    @Inject('ENV_CONFIG') private readonly env: EnvConfig,
+  ) {}
 
   private get client() {
     return this.redisService.getClient();
@@ -69,6 +73,8 @@ export class YjsDocumentAdapter implements IYjsDocumentPort {
           updates: [Array.from(state)],
           timestamp: Date.now(),
         } as YDocState),
+        'EX',
+        this.env.CACHE_TTL_COLLAB_SNAPSHOT_SECONDS,
       );
     } catch (error) {
       this.logger.error(`Failed to persist Yjs document for note ${noteId}`, error as Error);

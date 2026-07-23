@@ -35,6 +35,8 @@ const envSchema = z.object({
   S3_PUBLIC_ENDPOINT: z.string().optional(),
   PASSWORD_SALT_ROUNDS: z.coerce.number().int().positive().default(12),
   ALLOW_TEST_ENDPOINTS: z.coerce.boolean().default(false),
+  CACHE_TTL_DRAFT_SECONDS: z.coerce.number().int().positive().default(604800), // 7 days
+  CACHE_TTL_COLLAB_SNAPSHOT_SECONDS: z.coerce.number().int().positive().default(86400), // 24 hours
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

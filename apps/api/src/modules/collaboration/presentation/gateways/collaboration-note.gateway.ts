@@ -15,6 +15,7 @@ import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/
 import { NOTE_ACCESS_PORT } from '@modules/collaboration/application/ports/note-access.port';
 import type { INoteAccessPort } from '@modules/collaboration/application/ports/note-access.port';
 import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import type { EnvConfig } from '@config/env.validation';
 
 @WebSocketGateway({
   namespace: COLLABORATION_NAMESPACE,
@@ -33,6 +34,7 @@ export class CollaborationNoteGateway {
     @Inject(NOTE_ACCESS_PORT)
     private readonly accessPort: INoteAccessPort,
     private readonly redis: RedisService,
+    @Inject('ENV_CONFIG') private readonly env: EnvConfig,
   ) {}
 
   @SubscribeMessage('note:update')
@@ -66,7 +68,7 @@ export class CollaborationNoteGateway {
       updatedAt: new Date().toISOString(),
     };
 
-    await this.redis.getClient().set(key, JSON.stringify(snapshot));
+    await this.redis.getClient().set(key, JSON.stringify(snapshot), 'EX', this.env.CACHE_TTL_COLLAB_SNAPSHOT_SECONDS);
 
     client.to(data.noteId).emit('note:updated', {
       userId: client.data.userId,

@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import * as Y from 'yjs';
 import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import type { EnvConfig } from '@config/env.validation';
 
 export type CollaborationSnapshot = {
   title: string;
@@ -17,7 +18,10 @@ export type YDocState = {
 
 @Injectable()
 export class NotesCrdtService {
-  constructor(private readonly redis: RedisService) {}
+  constructor(
+    private readonly redis: RedisService,
+    @Inject('ENV_CONFIG') private readonly env: EnvConfig,
+  ) {}
 
   collaborationSnapshotKey(noteId: string): string {
     return `collab:note:${noteId}:snapshot`;
@@ -44,7 +48,7 @@ export class NotesCrdtService {
       updatedAt: updatedAt.toISOString(),
     };
 
-    await this.redis.getClient().set(this.collaborationSnapshotKey(noteId), JSON.stringify(snapshot));
+    await this.redis.getClient().set(this.collaborationSnapshotKey(noteId), JSON.stringify(snapshot), 'EX', this.env.CACHE_TTL_COLLAB_SNAPSHOT_SECONDS);
   }
 
   async clearCollaborationSnapshot(noteId: string): Promise<void> {
