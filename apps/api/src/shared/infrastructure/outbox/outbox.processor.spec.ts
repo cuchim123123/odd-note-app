@@ -56,6 +56,7 @@ function createMocks() {
 
   const processor = new OutboxProcessor(
     prisma,
+    kafkaClient as never,
     [authCommandHandler],
   );
 

@@ -32,19 +32,12 @@ function createMocks() {
     clearState: vi.fn(),
   };
 
-  const draftCachePort = {
-    saveDraft: vi.fn(),
-    getDraft: vi.fn(),
-    clearDraft: vi.fn(),
-  };
-
   const handler = new CreateNoteHandler(
     unitOfWork as never,
     documentSyncPort as never,
-    draftCachePort as never,
   );
 
-  return { handler, noteRepository, documentSyncPort, draftCachePort, userPreferencesRepository, unitOfWork };
+  return { handler, noteRepository, documentSyncPort, userPreferencesRepository, unitOfWork };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -110,13 +103,7 @@ describe('CreateNoteHandler', () => {
     expect(userPreferencesRepository.createLabel).not.toHaveBeenCalled();
   });
 
-  it('always clears the draft for "new" note key after creation', async () => {
-    const { handler, draftCachePort } = createMocks();
 
-    await handler.execute(new CreateNoteCommand('user-1', 'Draft Clear Test'));
-
-    expect(draftCachePort.clearDraft).toHaveBeenCalledWith('user-1', 'new');
-  });
 
   it('enforces NoteTitle domain invariant — throws on empty title', async () => {
     const { handler } = createMocks();
