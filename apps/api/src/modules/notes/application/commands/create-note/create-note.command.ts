@@ -4,5 +4,6 @@ export class CreateNoteCommand {
     public readonly title: string,
     public readonly content?: string,
     public readonly labels?: string[],
+    public readonly id?: string,
   ) {}
 }

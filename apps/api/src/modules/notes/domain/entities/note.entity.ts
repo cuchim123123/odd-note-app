@@ -51,8 +51,10 @@ export class NoteEntity extends AggregateRoot {
 
   // ─── Factory methods ───────────────────────────────────────────────────────
 
-  public static create(ownerId: string, title: NoteTitle): NoteEntity {
+  public static create(ownerId: string, title: NoteTitle, id?: string): NoteEntity {
     const typedOwnerId = UserId.from(ownerId);
+    const noteId = id ? NoteId.from(id) : NoteId.from(uuidv7());
+    
     const note = new NoteEntity({
       ownerId: typedOwnerId,
       title,
@@ -61,7 +63,7 @@ export class NoteEntity extends AggregateRoot {
       isProtected: false,
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    }, noteId);
 
     note.addDomainEvent(new NoteCreatedDomainEvent(note.id, ownerId, title.value));
     return note;

@@ -15,6 +15,7 @@ export const noteSchema = z.object({
 export type Note = z.infer<typeof noteSchema>;
 
 export const createNoteSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().trim().min(1, 'Title is required').max(255),
   content: z.string().optional(),
   labels: z.array(z.string()).optional(),

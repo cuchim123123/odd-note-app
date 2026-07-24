@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
 import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
@@ -17,7 +17,7 @@ export class CreateNoteHttpController {
     @Body(new ZodValidationPipe(createNoteSchema)) body: CreateNoteInput,
   ) {
     const result = (await this.commandBus.execute(
-      new CreateNoteCommand(userId, body.title!, body.content, body.labels)
+      new CreateNoteCommand(userId, body.title!, body.content, body.labels, body.id)
     )) as { id: string };
 
     return { id: result.id };

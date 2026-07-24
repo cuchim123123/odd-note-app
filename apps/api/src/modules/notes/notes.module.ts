@@ -18,8 +18,7 @@ import { RevokeShareHandler } from '@modules/notes/application/commands/revoke-s
 import { SetPasswordHandler } from '@modules/notes/application/commands/set-password/set-password.handler';
 import { RemovePasswordHandler } from '@modules/notes/application/commands/remove-password/remove-password.handler';
 import { VerifyPasswordHandler } from '@modules/notes/application/commands/verify-password/verify-password.handler';
-import { SaveDraftHandler } from '@modules/notes/application/commands/save-draft/save-draft.handler';
-import { ClearDraftHandler } from '@modules/notes/application/commands/clear-draft/clear-draft.handler';
+
 import { RenameLabelHandler } from '@modules/notes/application/commands/rename-label/rename-label.handler';
 import { DeleteLabelHandler } from '@modules/notes/application/commands/delete-label/delete-label.handler';
 import { RestoreRevisionHandler } from '@modules/notes/application/commands/restore-revision/restore-revision.handler';
@@ -32,7 +31,7 @@ import { ListSharedWithMeQueryHandler } from '@modules/notes/application/queries
 import { GetNoteByIdQueryHandler } from '@modules/notes/application/queries/get-note-by-id/get-note-by-id.query-handler';
 import { ListSharesQueryHandler } from '@modules/notes/application/queries/list-shares/list-shares.query-handler';
 import { GetProtectionStatusQueryHandler } from '@modules/notes/application/queries/get-protection-status/get-protection-status.query-handler';
-import { GetDraftQueryHandler } from '@modules/notes/application/queries/get-draft/get-draft.query-handler';
+
 import { GetNoteHistoryQueryHandler } from '@modules/notes/application/queries/get-note-history/get-note-history.query-handler';
 
 // ─── Presentation (HTTP Controllers) ────────────────────────────────────────
@@ -45,8 +44,7 @@ import { RevokeShareHttpController } from '@modules/notes/presentation/http/comm
 import { SetPasswordHttpController } from '@modules/notes/presentation/http/commands/set-password/set-password.http.controller';
 import { RemovePasswordHttpController } from '@modules/notes/presentation/http/commands/remove-password/remove-password.http.controller';
 import { VerifyPasswordHttpController } from '@modules/notes/presentation/http/commands/verify-password/verify-password.http.controller';
-import { SaveDraftHttpController } from '@modules/notes/presentation/http/commands/save-draft/save-draft.http.controller';
-import { ClearDraftHttpController } from '@modules/notes/presentation/http/commands/clear-draft/clear-draft.http.controller';
+
 import { RenameLabelHttpController } from '@modules/notes/presentation/http/commands/rename-label/rename-label.http.controller';
 import { DeleteLabelHttpController } from '@modules/notes/presentation/http/commands/delete-label/delete-label.http.controller';
 import { RestoreRevisionHttpController } from '@modules/notes/presentation/http/commands/restore-revision/restore-revision.http.controller';
@@ -55,7 +53,7 @@ import { ListSharedWithMeHttpController } from '@modules/notes/presentation/http
 import { GetNoteByIdHttpController } from '@modules/notes/presentation/http/queries/get-note-by-id/get-note-by-id.http.controller';
 import { ListSharesHttpController } from '@modules/notes/presentation/http/queries/list-shares/list-shares.http.controller';
 import { GetProtectionStatusHttpController } from '@modules/notes/presentation/http/queries/get-protection-status/get-protection-status.http.controller';
-import { GetDraftHttpController } from '@modules/notes/presentation/http/queries/get-draft/get-draft.http.controller';
+
 import { GetNoteHistoryHttpController } from '@modules/notes/presentation/http/queries/get-note-history/get-note-history.http.controller';
 
 // ─── Ports & Adapters ────────────────────────────────────────────────────────
@@ -63,8 +61,7 @@ import { NOTE_UNIT_OF_WORK } from '@modules/notes/application/ports/unit-of-work
 import { PrismaNoteUnitOfWork } from '@modules/notes/infrastructure/persistence/prisma-note-unit-of-work';
 import { NOTE_REPOSITORY } from '@modules/notes/application/ports/note.repository.port';
 import { PrismaNoteRepository } from '@modules/notes/infrastructure/persistence/prisma-note.repository';
-import { DRAFT_CACHE_PORT } from '@modules/notes/application/ports/draft-cache.port';
-import { RedisDraftCacheAdapter } from '@modules/notes/infrastructure/cache/redis-draft-cache.adapter';
+
 import { DOCUMENT_SYNC_PORT } from '@modules/notes/application/ports/document-sync.port';
 import { RedisDocumentSyncAdapter } from '@modules/notes/infrastructure/cache/redis-document-sync.adapter';
 import { NOTE_PROTECTION_PORT } from '@modules/notes/application/ports/note-protection.port';
@@ -111,8 +108,7 @@ import { IdempotencyModule } from '@shared/infrastructure/idempotency/idempotenc
     SetPasswordHttpController,
     RemovePasswordHttpController,
     VerifyPasswordHttpController,
-    SaveDraftHttpController,
-    ClearDraftHttpController,
+
     RenameLabelHttpController,
     DeleteLabelHttpController,
     RestoreRevisionHttpController,
@@ -124,7 +120,7 @@ import { IdempotencyModule } from '@shared/infrastructure/idempotency/idempotenc
     GetNoteByIdHttpController,
     ListSharesHttpController,
     GetProtectionStatusHttpController,
-    GetDraftHttpController,
+
     GetNoteHistoryHttpController,
   ],
   providers: [
@@ -142,8 +138,7 @@ import { IdempotencyModule } from '@shared/infrastructure/idempotency/idempotenc
     SetPasswordHandler,
     RemovePasswordHandler,
     VerifyPasswordHandler,
-    SaveDraftHandler,
-    ClearDraftHandler,
+
     RenameLabelHandler,
     DeleteLabelHandler,
     RestoreRevisionHandler,
@@ -157,12 +152,12 @@ import { IdempotencyModule } from '@shared/infrastructure/idempotency/idempotenc
     GetNoteByIdQueryHandler,
     ListSharesQueryHandler,
     GetProtectionStatusQueryHandler,
-    GetDraftQueryHandler,
+
     GetNoteHistoryQueryHandler,
     // ── Port → Adapter Bindings ───────────────────────────────────────────
     { provide: NOTE_UNIT_OF_WORK, useClass: PrismaNoteUnitOfWork },
     { provide: NOTE_REPOSITORY, useClass: PrismaNoteRepository },
-    { provide: DRAFT_CACHE_PORT, useClass: RedisDraftCacheAdapter },
+
     { provide: DOCUMENT_SYNC_PORT, useClass: RedisDocumentSyncAdapter },
     { provide: NOTE_PROTECTION_PORT, useClass: PrismaNoteProtectionAdapter },
     { provide: NOTE_OUTBOX_PORT, useClass: PrismaOutboxAdapter },
