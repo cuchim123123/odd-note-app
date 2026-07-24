@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { IUserPreferencesRepository } from '@modules/notes/application/ports/user-preferences.repository.port';
+import type { IUserPreferencesRepository } from '@modules/notes/application/ports/repositories/user-preferences.repository.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
 

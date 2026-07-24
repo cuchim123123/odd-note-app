@@ -1,7 +1,7 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/note-query.dao.port';
-import { NOTE_REVISION_QUERY_DAO, type INoteRevisionQueryDao } from '@modules/notes/application/ports/note-revision-query.dao.port';
+import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/dao/note-query.dao.port';
+import { NOTE_REVISION_QUERY_DAO, type INoteRevisionQueryDao } from '@modules/notes/application/ports/dao/note-revision-query.dao.port';
 import { GetNoteHistoryQuery } from '@modules/notes/application/queries/get-note-history/get-note-history.query';
 import { NotePermissionDeniedError, NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import type { NoteRevisionSummaryDto } from '@modules/notes/presentation/http/dto/note-revision-summary.dto';

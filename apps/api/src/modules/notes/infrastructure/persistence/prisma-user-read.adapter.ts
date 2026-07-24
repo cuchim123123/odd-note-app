@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { IUserReadPort, UserBasicInfo, UserDisplayInfo } from '@modules/notes/application/ports/user-read.port';
+import type { IUserReadPort, UserBasicInfo, UserDisplayInfo } from '@modules/notes/application/ports/services/user-read.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
 

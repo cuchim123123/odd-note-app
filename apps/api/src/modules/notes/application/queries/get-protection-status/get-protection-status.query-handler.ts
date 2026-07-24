@@ -3,7 +3,7 @@ import type { IQueryHandler } from '@nestjs/cqrs';
 import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import { GetProtectionStatusQuery } from '@modules/notes/application/queries/get-protection-status/get-protection-status.query';
 import type { ProtectionStatusResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
-import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/note-query.dao.port';
+import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/dao/note-query.dao.port';
 import { Inject } from '@nestjs/common';
 
 @QueryHandler(GetProtectionStatusQuery)

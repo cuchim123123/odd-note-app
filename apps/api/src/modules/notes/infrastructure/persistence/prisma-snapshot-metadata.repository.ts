@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { ISnapshotMetadataRepository } from '@modules/notes/application/ports/snapshot-metadata.repository.port';
+import type { ISnapshotMetadataRepository } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
 import { NoteSnapshotMetadata } from '@modules/notes/domain/entities/note-snapshot-metadata.entity';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 

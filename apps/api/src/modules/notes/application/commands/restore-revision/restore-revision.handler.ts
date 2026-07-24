@@ -1,9 +1,9 @@
 import { CommandHandler, type ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
 import { RestoreRevisionCommand } from '@modules/notes/application/commands/restore-revision/restore-revision.command';
-import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
-import { NOTE_REPOSITORY, type INoteRepository } from '@modules/notes/application/ports/note.repository.port';
-import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/note-update.repository.port';
+import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/repositories/note-revision.repository.port';
+import { NOTE_REPOSITORY, type INoteRepository } from '@modules/notes/application/ports/repositories/note.repository.port';
+import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/repositories/note-update.repository.port';
 import { NoteNotFoundError, NotePermissionDeniedError, NoteLockedForRestoreError } from '@modules/notes/domain/errors/note.errors';
 import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
 import { RedisService } from '@shared/infrastructure/redis/redis.service';

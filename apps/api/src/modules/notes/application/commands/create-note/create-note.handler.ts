@@ -1,8 +1,8 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { CreateNoteCommand } from '@modules/notes/application/commands/create-note/create-note.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/repositories/unit-of-work.port';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/services/document-sync.port';
 
 import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
 import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';

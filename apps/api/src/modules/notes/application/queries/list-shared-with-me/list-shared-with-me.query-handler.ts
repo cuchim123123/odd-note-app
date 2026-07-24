@@ -3,9 +3,9 @@ import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { ListSharedWithMeQuery } from '@modules/notes/application/queries/list-shared-with-me/list-shared-with-me.query';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/services/document-sync.port';
 import type { SharedNoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
-import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/note-query.dao.port';
+import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/dao/note-query.dao.port';
 
 @QueryHandler(ListSharedWithMeQuery)
 export class ListSharedWithMeQueryHandler implements IQueryHandler<ListSharedWithMeQuery> {

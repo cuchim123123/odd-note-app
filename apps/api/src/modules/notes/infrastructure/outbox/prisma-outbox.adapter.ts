@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { INoteOutboxPort } from '@modules/notes/application/ports/note-outbox.port';
+import type { INoteOutboxPort } from '@modules/notes/application/ports/messaging/note-outbox.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
 /**

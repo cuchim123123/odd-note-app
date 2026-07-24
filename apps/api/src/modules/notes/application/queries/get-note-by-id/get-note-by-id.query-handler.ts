@@ -3,10 +3,10 @@ import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import { GetNoteByIdQuery } from '@modules/notes/application/queries/get-note-by-id/get-note-by-id.query';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/document-sync.port';
-import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/note-protection.port';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/services/document-sync.port';
+import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/services/note-protection.port';
 import type { NoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
-import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/note-query.dao.port';
+import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/dao/note-query.dao.port';
 
 @QueryHandler(GetNoteByIdQuery)
 export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> {

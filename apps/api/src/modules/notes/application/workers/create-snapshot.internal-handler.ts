@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { type IInternalCommandHandler } from '@shared/infrastructure/outbox/internal-command-handler.port';
-import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/snapshot-metadata.repository.port';
-import { SNAPSHOT_STORAGE_PORT, type ISnapshotStoragePort } from '@modules/notes/application/ports/snapshot-storage.port';
+import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
+import { SNAPSHOT_STORAGE_PORT, type ISnapshotStoragePort } from '@modules/notes/application/ports/services/snapshot-storage.port';
 import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
 import { NoteSnapshotMetadata } from '@modules/notes/domain/entities/note-snapshot-metadata.entity';
 import { uuidv7 } from 'uuidv7';

@@ -4,7 +4,7 @@ import type { IQueryHandler } from '@nestjs/cqrs';
 import { NotePermissionDeniedError } from '@modules/notes/domain/errors/note.errors';
 import { ListSharesQuery } from '@modules/notes/application/queries/list-shares/list-shares.query';
 import type { NoteShareResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
-import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/note-query.dao.port';
+import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/dao/note-query.dao.port';
 import { Inject } from '@nestjs/common';
 
 @QueryHandler(ListSharesQuery)

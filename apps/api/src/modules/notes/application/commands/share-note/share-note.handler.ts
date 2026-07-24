@@ -1,14 +1,14 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { ShareNoteCommand } from '@modules/notes/application/commands/share-note/share-note.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/unit-of-work.port';
-import { USER_READ_PORT, type IUserReadPort } from '@modules/notes/application/ports/user-read.port';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/repositories/unit-of-work.port';
+import { USER_READ_PORT, type IUserReadPort } from '@modules/notes/application/ports/services/user-read.port';
 import { SharePermission } from '@modules/notes/domain/value-objects/share-permission.vo';
 import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import { RecipientNotFoundError, SelfShareError } from '@modules/notes/domain/errors/share.errors';
-import { NOTE_MAIL_SENDER, type INoteMailSender } from '@modules/notes/application/ports/note-mail-sender.port';
+import { NOTE_MAIL_SENDER, type INoteMailSender } from '@modules/notes/application/ports/messaging/note-mail-sender.port';
 import type { NoteSharedIntegrationEvent } from '@modules/notes/application/integration-events/note-shared.integration-event';
-import { NOTE_INTEGRATION_EVENT_MAPPER, type INoteIntegrationEventMapper } from '@modules/notes/application/ports/integration-event-mapper.port';
+import { NOTE_INTEGRATION_EVENT_MAPPER, type INoteIntegrationEventMapper } from '@modules/notes/application/ports/messaging/integration-event-mapper.port';
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {

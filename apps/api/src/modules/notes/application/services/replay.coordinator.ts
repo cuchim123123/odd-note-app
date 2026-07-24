@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/snapshot-metadata.repository.port';
-import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/note-update.repository.port';
-import { SNAPSHOT_STORAGE_PORT, type ISnapshotStoragePort } from '@modules/notes/application/ports/snapshot-storage.port';
+import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
+import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/repositories/note-update.repository.port';
+import { SNAPSHOT_STORAGE_PORT, type ISnapshotStoragePort } from '@modules/notes/application/ports/services/snapshot-storage.port';
 // import * as Y from 'yjs'; // To be used in implementation
 
 @Injectable()

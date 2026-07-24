@@ -1,8 +1,8 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { EventsHandler, type IEventHandler } from '@nestjs/cqrs';
-import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/snapshot-metadata.repository.port';
-import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/note-update.repository.port';
-import { NOTE_OUTBOX_PORT, type INoteOutboxPort } from '@modules/notes/application/ports/note-outbox.port';
+import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
+import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/repositories/note-update.repository.port';
+import { NOTE_OUTBOX_PORT, type INoteOutboxPort } from '@modules/notes/application/ports/messaging/note-outbox.port';
 
 // Note: This event would typically be emitted by the Realtime Collaboration Gateway
 export class NoteUpdateAppendedEvent {

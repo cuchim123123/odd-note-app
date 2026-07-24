@@ -2,7 +2,7 @@ import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
 import { uuidv7 } from 'uuidv7';
 import { CreateRevisionCommand } from './create-revision.command';
-import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/note-revision.repository.port';
+import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/repositories/note-revision.repository.port';
 import { NoteRevisionEntity } from '@modules/notes/domain/entities/note-revision.entity';
 
 @CommandHandler(CreateRevisionCommand)

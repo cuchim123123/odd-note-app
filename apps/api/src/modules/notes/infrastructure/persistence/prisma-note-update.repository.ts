@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { INoteUpdateRepository } from '@modules/notes/application/ports/note-update.repository.port';
+import type { INoteUpdateRepository } from '@modules/notes/application/ports/repositories/note-update.repository.port';
 import { NoteUpdateLog } from '@modules/notes/domain/entities/note-update.entity';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 

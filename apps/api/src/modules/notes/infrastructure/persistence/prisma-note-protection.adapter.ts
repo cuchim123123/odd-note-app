@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
 import { JwtConfigService } from '@config/jwt-config.service';
-import type { INoteProtectionPort } from '@modules/notes/application/ports/note-protection.port';
+import type { INoteProtectionPort } from '@modules/notes/application/ports/services/note-protection.port';
 
 /**
  * Infrastructure adapter for note password protection.
