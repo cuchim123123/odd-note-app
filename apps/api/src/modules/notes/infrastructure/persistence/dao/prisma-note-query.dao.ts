@@ -18,29 +18,12 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       },
     });
 
-    const enriched = notes
-      .map((note) => ({
-        ...note,
-        isPinned: note.userPins[0]?.isPinned ?? false,
-        labels: note.userLabels[0]?.labels ?? [],
-      }))
+    return notes
+      .map((note) => this.mapToNoteView(note))
       .sort((a, b) => {
         if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        return b.updatedAt.getTime() - a.updatedAt.getTime();
       });
-
-    return enriched.map((note) => ({
-      id: note.id,
-      title: note.title,
-      content: note.content,
-      isPinned: note.isPinned,
-      isProtected: Boolean(note.protection),
-      isShared: note.isShared || note.shares.length > 0,
-      labels: note.labels,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      accessMode: 'owner',
-    }));
   }
 
   async findNoteById(noteId: string, userId: string): Promise<NoteView | null> {
@@ -66,26 +49,7 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       })
       : null;
 
-    const result: NoteView = {
-      id: note.id,
-      title: note.title,
-      content: note.content,
-      isPinned: note.userPins[0]?.isPinned ?? false,
-      isProtected: Boolean(note.protection),
-      isShared: note.isShared || note.shares.length > 0,
-      labels: note.userLabels[0]?.labels ?? [],
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      accessMode: sharedAccess ? 'shared' : 'owner',
-    };
-
-    if (sharedAccess) {
-      result.sharedPermission = sharedAccess.permission as 'READ' | 'EDIT';
-      result.sharedBy = sharedAccess.owner;
-      result.sharedAt = sharedAccess.createdAt;
-    }
-
-    return result;
+    return this.mapToNoteView(note, sharedAccess);
   }
 
   async findSharedWithMe(userId: string): Promise<SharedNoteView[]> {
@@ -105,35 +69,12 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       orderBy: { createdAt: 'desc' },
     });
 
-    const enriched = sharedNotes
-      .map((share) => ({
-        ...share,
-        note: {
-          ...share.note,
-          isPinned: share.note.userPins[0]?.isPinned ?? false,
-          labels: share.note.userLabels[0]?.labels ?? [],
-        },
-      }))
+    return sharedNotes
+      .map((share) => this.mapToNoteView(share.note, share) as SharedNoteView)
       .sort((a, b) => {
-        if (a.note.isPinned !== b.note.isPinned) return a.note.isPinned ? -1 : 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        return b.sharedAt.getTime() - a.sharedAt.getTime();
       });
-
-    return enriched.map((share) => ({
-      id: share.note.id,
-      title: share.note.title,
-      content: share.note.content,
-      isPinned: share.note.isPinned,
-      isProtected: Boolean(share.note.protection),
-      isShared: true,
-      labels: share.note.labels,
-      createdAt: share.note.createdAt,
-      updatedAt: share.note.updatedAt,
-      accessMode: 'shared',
-      sharedPermission: share.permission as 'READ' | 'EDIT',
-      sharedBy: share.owner,
-      sharedAt: share.createdAt,
-    }));
   }
 
   async findNoteShares(noteId: string, userId: string): Promise<NoteShareView[] | null> {
@@ -201,5 +142,46 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       select: { id: true },
     });
     return Boolean(protection);
+  }
+
+  private mapToNoteView(
+    note: {
+      id: string;
+      title: string;
+      content: string | null;
+      isShared: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+      protection?: { id: string } | null;
+      shares?: { id: string }[];
+      userPins?: { isPinned: boolean }[];
+      userLabels?: { labels: string[] }[];
+    },
+    sharedAccess?: {
+      permission: string;
+      createdAt: Date;
+      owner: { id: string; email: string; displayName: string };
+    } | null
+  ): NoteView {
+    const result: NoteView = {
+      id: note.id,
+      title: note.title,
+      content: note.content,
+      isPinned: note.userPins?.[0]?.isPinned ?? false,
+      isProtected: Boolean(note.protection),
+      isShared: note.isShared || (note.shares && note.shares.length > 0),
+      labels: note.userLabels?.[0]?.labels ?? [],
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
+      accessMode: sharedAccess ? 'shared' : 'owner',
+    };
+
+    if (sharedAccess) {
+      result.sharedPermission = sharedAccess.permission as 'READ' | 'EDIT';
+      result.sharedBy = sharedAccess.owner;
+      result.sharedAt = sharedAccess.createdAt;
+    }
+
+    return result;
   }
 }
