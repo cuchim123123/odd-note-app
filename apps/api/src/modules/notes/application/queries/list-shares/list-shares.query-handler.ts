@@ -20,6 +20,10 @@ export class ListSharesQueryHandler implements IQueryHandler<ListSharesQuery> {
     const shares = await this.noteQueryDao.findNoteShares(noteId, userId);
     if (!shares) throw new NotePermissionDeniedError('Note not found or you do not have permission to view its shares');
 
-    return shares;
+    return shares.map((s) => ({
+      ...s,
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+    }));
   }
 }

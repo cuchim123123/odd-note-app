@@ -1,13 +1,35 @@
-import type { NoteShareResponseDto, SharedNoteResponseDto, NoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
-
 export const NOTE_QUERY_DAO = Symbol('NOTE_QUERY_DAO');
 
-export interface NoteView extends Omit<NoteResponseDto, 'content'> {
+export interface NoteView {
+  id: string;
+  title: string;
   content: string | null;
+  isPinned: boolean;
+  isProtected: boolean;
+  isShared: boolean;
+  labels: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  accessMode: 'owner' | 'shared';
+  sharedPermission?: 'READ' | 'EDIT';
+  sharedBy?: { id: string; email: string; displayName: string };
+  sharedAt?: Date;
 }
 
-export interface SharedNoteView extends Omit<SharedNoteResponseDto, 'content'> {
-  content: string | null;
+export interface SharedNoteView extends NoteView {
+  accessMode: 'shared';
+  sharedPermission: 'READ' | 'EDIT';
+  sharedBy: { id: string; email: string; displayName: string };
+  sharedAt: Date;
+}
+
+export interface NoteShareView {
+  id: string;
+  recipientEmail: string;
+  recipientDisplayName?: string;
+  permission: 'READ' | 'EDIT';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface NoteAccessView {
@@ -15,7 +37,6 @@ export interface NoteAccessView {
   isOwner: boolean;
   permission?: 'READ' | 'EDIT';
   ownerId: string;
-  isProtected: boolean;
 }
 
 export interface INoteQueryDao {
@@ -29,8 +50,11 @@ export interface INoteQueryDao {
   findSharedWithMe(userId: string): Promise<SharedNoteView[]>;
 
   /** list-shares */
-  findNoteShares(noteId: string, userId: string): Promise<NoteShareResponseDto[] | null>;
+  findNoteShares(noteId: string, userId: string): Promise<NoteShareView[] | null>;
 
   /** check access for draft, protection status, history */
   checkAccess(noteId: string, userId: string): Promise<NoteAccessView | null>;
+
+  /** get protection status */
+  isProtected(noteId: string, ownerId: string): Promise<boolean>;
 }

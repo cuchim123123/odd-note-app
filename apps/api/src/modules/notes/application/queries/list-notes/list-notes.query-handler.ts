@@ -2,7 +2,7 @@ import { QueryHandler } from '@nestjs/cqrs';
 import type { IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { ListNotesQuery } from '@modules/notes/application/queries/list-notes/list-notes.query';
-import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/services/document-sync.port';
+import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/external/document-sync.port';
 import type { NoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
 import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/dao/note-query.dao.port';
 
@@ -30,6 +30,9 @@ export class ListNotesQueryHandler implements IQueryHandler<ListNotesQuery> {
         const content = await this.documentSyncPort.readContent(note.id);
         return {
           ...note,
+          createdAt: note.createdAt.toISOString(),
+          updatedAt: note.updatedAt.toISOString(),
+          sharedAt: note.sharedAt?.toISOString(),
           content: content ?? note.content ?? '',
         };
       }),

@@ -1,11 +1,15 @@
+// EXTREMELY DIRTY ADAPTER OMG
+// DUPE MAPPERS, ISO, REDUNDANT QUERIES, WRONG DEPENDENCY DIRECTION,...
+
+
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { INoteQueryDao, NoteView, SharedNoteView, NoteAccessView } from '@modules/notes/application/ports/dao/note-query.dao.port';
-import type { NoteShareResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
+import type { NoteShareView } from '@modules/notes/application/ports/dao/note-query.dao.port';
 
 @Injectable()
 export class PrismaNoteQueryDao implements INoteQueryDao {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findUserNotes(userId: string): Promise<NoteView[]> {
     const notes = await this.prisma.note.findMany({
@@ -44,8 +48,8 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       isProtected: Boolean(note.protection),
       isShared: note.isShared || note.shares.length > 0,
       labels: note.labels,
-      createdAt: note.createdAt.toISOString(),
-      updatedAt: note.updatedAt.toISOString(),
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
       accessMode: 'owner',
     }));
   }
@@ -66,9 +70,9 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
 
     const sharedAccess = note.userId !== userId
       ? await this.prisma.noteShare.findFirst({
-          where: { noteId, recipientId: userId },
-          include: { owner: { select: { id: true, email: true, displayName: true } } },
-        })
+        where: { noteId, recipientId: userId },
+        include: { owner: { select: { id: true, email: true, displayName: true } } },
+      })
       : null;
 
     const [labelsRecord, pinRecord] = await Promise.all([
@@ -76,7 +80,7 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       this.prisma.userNotePin.findUnique({ where: { userId_noteId: { userId, noteId } }, select: { isPinned: true } }),
     ]);
 
-    return {
+    const result: NoteView = {
       id: note.id,
       title: note.title,
       content: note.content,
@@ -84,13 +88,18 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       isProtected: Boolean(note.protection),
       isShared: note.isShared || note.shares.length > 0,
       labels: labelsRecord?.labels ?? [],
-      createdAt: note.createdAt.toISOString(),
-      updatedAt: note.updatedAt.toISOString(),
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
       accessMode: sharedAccess ? 'shared' : 'owner',
-      sharedPermission: sharedAccess ? (sharedAccess.permission as 'READ' | 'EDIT') : undefined,
-      sharedBy: sharedAccess?.owner ?? undefined,
-      sharedAt: sharedAccess?.createdAt.toISOString() ?? undefined,
     };
+
+    if (sharedAccess) {
+      result.sharedPermission = sharedAccess.permission as 'READ' | 'EDIT';
+      result.sharedBy = sharedAccess.owner;
+      result.sharedAt = sharedAccess.createdAt;
+    }
+
+    return result;
   }
 
   async findSharedWithMe(userId: string): Promise<SharedNoteView[]> {
@@ -139,16 +148,16 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       isProtected: Boolean(share.note.protection),
       isShared: true,
       labels: share.note.labels,
-      createdAt: share.note.createdAt.toISOString(),
-      updatedAt: share.note.updatedAt.toISOString(),
+      createdAt: share.note.createdAt,
+      updatedAt: share.note.updatedAt,
       accessMode: 'shared',
       sharedPermission: share.permission as 'READ' | 'EDIT',
       sharedBy: share.owner,
-      sharedAt: share.createdAt.toISOString(),
+      sharedAt: share.createdAt,
     }));
   }
 
-  async findNoteShares(noteId: string, userId: string): Promise<NoteShareResponseDto[] | null> {
+  async findNoteShares(noteId: string, userId: string): Promise<NoteShareView[] | null> {
     const note = await this.prisma.note.findFirst({
       where: { id: noteId, userId },
     });
@@ -161,14 +170,19 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       orderBy: { createdAt: 'asc' },
     });
 
-    return shares.map((s) => ({
-      id: s.id,
-      recipientEmail: s.recipientEmail,
-      recipientDisplayName: s.recipient?.displayName ?? undefined,
-      permission: s.permission as 'READ' | 'EDIT',
-      createdAt: s.createdAt.toISOString(),
-      updatedAt: s.updatedAt.toISOString(),
-    }));
+    return shares.map((s) => {
+      const result: NoteShareView = {
+        id: s.id,
+        recipientEmail: s.recipientEmail,
+        permission: s.permission as 'READ' | 'EDIT',
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+      };
+      if (s.recipient?.displayName) {
+        result.recipientDisplayName = s.recipient.displayName;
+      }
+      return result;
+    });
   }
 
   async checkAccess(noteId: string, userId: string): Promise<NoteAccessView | null> {
@@ -177,10 +191,9 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
         id: noteId,
         OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
       },
-      select: { 
-        userId: true, 
-        shares: { where: { recipientId: userId }, select: { permission: true } },
-        protection: { select: { id: true } }
+      select: {
+        userId: true,
+        shares: { where: { recipientId: userId }, select: { permission: true } }
       },
     });
 
@@ -195,12 +208,19 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       hasAccess: true,
       isOwner,
       ownerId: note.userId,
-      isProtected: Boolean(note.protection),
     };
     if (permission) {
       result.permission = permission;
     }
-    
+
     return result;
+  }
+
+  async isProtected(noteId: string, ownerId: string): Promise<boolean> {
+    const protection = await this.prisma.noteProtection.findUnique({
+      where: { userId_noteId: { userId: ownerId, noteId } },
+      select: { id: true },
+    });
+    return Boolean(protection);
   }
 }
