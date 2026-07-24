@@ -1,7 +1,3 @@
-// EXTREMELY DIRTY ADAPTER OMG
-// DUPE MAPPERS, ISO, REDUNDANT QUERIES, WRONG DEPENDENCY DIRECTION,...
-
-
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { INoteQueryDao, NoteView, SharedNoteView, NoteAccessView } from '@modules/notes/application/ports/dao/note-query.dao.port';
@@ -17,23 +13,16 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       include: {
         shares: { select: { id: true } },
         protection: { select: { id: true } },
+        userLabels: { where: { userId }, select: { labels: true } },
+        userPins: { where: { userId }, select: { isPinned: true } },
       },
     });
-
-    const noteIds = notes.map((n) => n.id);
-    const [labelsRecords, pinsRecords] = await Promise.all([
-      this.prisma.userNoteLabel.findMany({ where: { userId, noteId: { in: noteIds } }, select: { noteId: true, labels: true } }),
-      this.prisma.userNotePin.findMany({ where: { userId, noteId: { in: noteIds } }, select: { noteId: true, isPinned: true } }),
-    ]);
-
-    const labelsMap = Object.fromEntries(labelsRecords.map((r) => [r.noteId, r.labels]));
-    const pinsMap = Object.fromEntries(pinsRecords.map((r) => [r.noteId, r.isPinned]));
 
     const enriched = notes
       .map((note) => ({
         ...note,
-        isPinned: pinsMap[note.id] ?? false,
-        labels: labelsMap[note.id] ?? [],
+        isPinned: note.userPins[0]?.isPinned ?? false,
+        labels: note.userLabels[0]?.labels ?? [],
       }))
       .sort((a, b) => {
         if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
@@ -63,6 +52,8 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       include: {
         shares: { select: { id: true } },
         protection: { select: { id: true } },
+        userLabels: { where: { userId }, select: { labels: true } },
+        userPins: { where: { userId }, select: { isPinned: true } },
       },
     });
 
@@ -75,19 +66,14 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       })
       : null;
 
-    const [labelsRecord, pinRecord] = await Promise.all([
-      this.prisma.userNoteLabel.findUnique({ where: { userId_noteId: { userId, noteId } }, select: { labels: true } }),
-      this.prisma.userNotePin.findUnique({ where: { userId_noteId: { userId, noteId } }, select: { isPinned: true } }),
-    ]);
-
     const result: NoteView = {
       id: note.id,
       title: note.title,
       content: note.content,
-      isPinned: pinRecord?.isPinned ?? false,
+      isPinned: note.userPins[0]?.isPinned ?? false,
       isProtected: Boolean(note.protection),
       isShared: note.isShared || note.shares.length > 0,
-      labels: labelsRecord?.labels ?? [],
+      labels: note.userLabels[0]?.labels ?? [],
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
       accessMode: sharedAccess ? 'shared' : 'owner',
@@ -111,28 +97,21 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
           include: {
             shares: { select: { id: true } },
             protection: { select: { id: true } },
+            userLabels: { where: { userId }, select: { labels: true } },
+            userPins: { where: { userId }, select: { isPinned: true } },
           },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    const noteIds = sharedNotes.map((s) => s.note.id);
-    const [labelsRecords, pinsRecords] = await Promise.all([
-      this.prisma.userNoteLabel.findMany({ where: { userId, noteId: { in: noteIds } }, select: { noteId: true, labels: true } }),
-      this.prisma.userNotePin.findMany({ where: { userId, noteId: { in: noteIds } }, select: { noteId: true, isPinned: true } }),
-    ]);
-
-    const labelsMap = Object.fromEntries(labelsRecords.map((r) => [r.noteId, r.labels]));
-    const pinsMap = Object.fromEntries(pinsRecords.map((r) => [r.noteId, r.isPinned]));
-
     const enriched = sharedNotes
       .map((share) => ({
         ...share,
         note: {
           ...share.note,
-          isPinned: pinsMap[share.note.id] ?? false,
-          labels: labelsMap[share.note.id] ?? [],
+          isPinned: share.note.userPins[0]?.isPinned ?? false,
+          labels: share.note.userLabels[0]?.labels ?? [],
         },
       }))
       .sort((a, b) => {

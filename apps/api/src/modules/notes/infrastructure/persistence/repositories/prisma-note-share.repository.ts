@@ -5,7 +5,7 @@ import type {
   NoteShareRecord,
 } from '@modules/notes/application/ports/repositories/note-share.repository.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
-import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
 import { SharePermission } from '@prisma/client';
 
 /**

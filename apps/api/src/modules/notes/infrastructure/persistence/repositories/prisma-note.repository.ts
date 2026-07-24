@@ -1,9 +1,9 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import type { INoteRepository } from '@modules/notes/application/ports/repositories/note.repository.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
-import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
 import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
-import { NoteMapper } from '@modules/notes/infrastructure/persistence/note.mapper';
+import { NoteMapper } from '@modules/notes/infrastructure/persistence/mappers/note.mapper';
 import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 
 @Injectable()

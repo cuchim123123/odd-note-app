@@ -2,9 +2,9 @@ import { Injectable, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
-import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/prisma-client.type';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
 import { JwtConfigService } from '@config/jwt-config.service';
-import type { INoteProtectionPort } from '@modules/notes/application/ports/services/note-protection.port';
+import type { INoteProtectionPort } from '@modules/notes/application/ports/external/note-protection.port';
 
 /**
  * Infrastructure adapter for note password protection.
