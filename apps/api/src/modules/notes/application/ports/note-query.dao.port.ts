@@ -15,6 +15,7 @@ export interface NoteAccessView {
   isOwner: boolean;
   permission?: 'READ' | 'EDIT';
   ownerId: string;
+  isProtected: boolean;
 }
 
 export interface INoteQueryDao {
@@ -32,7 +33,4 @@ export interface INoteQueryDao {
 
   /** check access for draft, protection status, history */
   checkAccess(noteId: string, userId: string): Promise<NoteAccessView | null>;
-
-  /** get protection status */
-  isProtected(noteId: string, ownerId: string): Promise<boolean>;
 }

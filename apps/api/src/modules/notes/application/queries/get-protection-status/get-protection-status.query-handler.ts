@@ -19,8 +19,6 @@ export class GetProtectionStatusQueryHandler implements IQueryHandler<GetProtect
     const access = await this.noteQueryDao.checkAccess(noteId, userId);
     if (!access) throw new NoteNotFoundError(noteId);
 
-    const protection = await this.noteQueryDao.isProtected(noteId, access.ownerId);
-
-    return { isProtected: Boolean(protection) };
+    return { isProtected: access.isProtected };
   }
 }

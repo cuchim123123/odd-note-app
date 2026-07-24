@@ -179,7 +179,8 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       },
       select: { 
         userId: true, 
-        shares: { where: { recipientId: userId }, select: { permission: true } } 
+        shares: { where: { recipientId: userId }, select: { permission: true } },
+        protection: { select: { id: true } }
       },
     });
 
@@ -194,19 +195,12 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       hasAccess: true,
       isOwner,
       ownerId: note.userId,
+      isProtected: Boolean(note.protection),
     };
     if (permission) {
       result.permission = permission;
     }
     
     return result;
-  }
-
-  async isProtected(noteId: string, ownerId: string): Promise<boolean> {
-    const protection = await this.prisma.noteProtection.findUnique({
-      where: { userId_noteId: { userId: ownerId, noteId } },
-      select: { id: true },
-    });
-    return Boolean(protection);
   }
 }
