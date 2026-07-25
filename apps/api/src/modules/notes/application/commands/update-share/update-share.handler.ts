@@ -1,7 +1,7 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { UpdateShareCommand } from '@modules/notes/application/commands/update-share/update-share.command';
-import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/repositories/unit-of-work.port';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/transactions/unit-of-work.port';
 import { SharePermission } from '@modules/notes/domain/value-objects/share-permission.vo';
 import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import { ShareNotFoundError } from '@modules/notes/domain/errors/share.errors';

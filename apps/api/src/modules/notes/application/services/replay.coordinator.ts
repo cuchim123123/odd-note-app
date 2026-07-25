@@ -36,7 +36,7 @@ export class ReplayCoordinator {
     // Step 1 — find nearest snapshot
     const snapshotMeta = targetSeq
       ? await this.snapshotRepository.findNearestBefore(noteId, targetSeq)
-      : await this.snapshotRepository.findNearestBefore(noteId, BigInt(Number.MAX_SAFE_INTEGER));
+      : await this.snapshotRepository.findLatest(noteId); // no upper bound — use explicit method
 
     const fromSeq = snapshotMeta?.snapshotSeq ?? BigInt(0);
 

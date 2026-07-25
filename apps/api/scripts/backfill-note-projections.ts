@@ -2,22 +2,20 @@
  * Backfill Script: PostgreSQL → MongoDB note_projections
  * ────────────────────────────────────────────────────────
  * One-time migration to seed MongoDB with existing note data before
- * switching PROJECTION_STORE=mongo. Designed to be idempotent:
- * uses updateOne with upsert + $setOnInsert so re-running is always safe.
+ * switching PROJECTION_STORE=mongo. Idempotent: uses $setOnInsert upsert.
  *
  * Usage:
- *   npx tsx apps/api/scripts/backfill-note-projections.ts
+ *   pnpm --filter @odd-note-app/api backfill:notes
+ *   (reads DATABASE_URL and MONGO_URI from apps/api/.env via dotenv-cli)
  *
- * Required env vars (reads from apps/api/.env automatically):
+ * Required env vars:
  *   DATABASE_URL  — PostgreSQL connection string
  *   MONGO_URI     — MongoDB connection string
  *   MONGO_DB_NAME — (optional) defaults to odd_note_projections
  *
- * Progress: logs every BATCH_SIZE notes.
- * On completion: prints row counts for both Prisma and MongoDB to verify.
+ * Uses keyset pagination to avoid O(n²) OFFSET scans on large tables.
  */
 
-import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { MongoClient } from 'mongodb';
 
@@ -49,7 +47,7 @@ async function main() {
   console.log('  Backfill: PostgreSQL → MongoDB Projections  ');
   console.log('──────────────────────────────────────────────');
 
-  // ── 1. Backfill note_projections ──────────────────────────────────────────
+  // ── 1. Backfill note_projections (keyset pagination on id) ────────────────
 
   console.log('\n[1/2] Backfilling note_projections...');
 
@@ -57,13 +55,13 @@ async function main() {
   console.log(`  Total notes in PostgreSQL: ${totalNotes}`);
 
   let processedNotes = 0;
-  let cursor = 0;
+  let lastId: string | undefined = undefined;
 
-  while (processedNotes < totalNotes) {
+  while (true) {
     const notes = await prisma.note.findMany({
       take: BATCH_SIZE,
-      skip: cursor,
-      orderBy: { createdAt: 'asc' },
+      ...(lastId ? { skip: 1, cursor: { id: lastId } } : {}),
+      orderBy: { id: 'asc' },
       include: {
         protection: { select: { id: true } },
         shares: {
@@ -116,14 +114,14 @@ async function main() {
 
     await notesCol.bulkWrite(ops, { ordered: false });
 
+    lastId = notes[notes.length - 1]!.id;
     processedNotes += notes.length;
-    cursor += notes.length;
     process.stdout.write(`\r  Progress: ${processedNotes}/${totalNotes} notes`);
   }
 
   console.log(`\n  ✅ note_projections: ${processedNotes} documents written`);
 
-  // ── 2. Backfill note_revision_projections ─────────────────────────────────
+  // ── 2. Backfill note_revision_projections (keyset pagination on id) ────────
 
   console.log('\n[2/2] Backfilling note_revision_projections...');
 
@@ -131,13 +129,13 @@ async function main() {
   console.log(`  Total revisions in PostgreSQL: ${totalRevisions}`);
 
   let processedRevisions = 0;
-  cursor = 0;
+  let lastRevisionId: string | undefined = undefined;
 
-  while (processedRevisions < totalRevisions) {
+  while (true) {
     const revisions = await prisma.noteRevision.findMany({
       take: BATCH_SIZE,
-      skip: cursor,
-      orderBy: { createdAt: 'asc' },
+      ...(lastRevisionId ? { skip: 1, cursor: { id: lastRevisionId } } : {}),
+      orderBy: { id: 'asc' },
     });
 
     if (revisions.length === 0) break;
@@ -161,8 +159,8 @@ async function main() {
 
     await revisionsCol.bulkWrite(ops, { ordered: false });
 
+    lastRevisionId = revisions[revisions.length - 1]!.id;
     processedRevisions += revisions.length;
-    cursor += revisions.length;
     process.stdout.write(`\r  Progress: ${processedRevisions}/${totalRevisions} revisions`);
   }
 
@@ -190,7 +188,6 @@ async function main() {
   // ── 4. Create indexes (idempotent) ────────────────────────────────────────
 
   console.log('\n[Indexes] Ensuring MongoDB indexes...');
-  await notesCol.createIndex({ userId: 1 });
   await notesCol.createIndex({ userId: 1, updatedAt: -1 });
   await notesCol.createIndex({ userId: 1, isPinned: -1, updatedAt: -1 });
   await notesCol.createIndex({ 'shares.recipientId': 1 });

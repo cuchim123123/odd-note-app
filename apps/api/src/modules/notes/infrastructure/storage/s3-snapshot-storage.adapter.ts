@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ISnapshotStoragePort } from '@modules/notes/application/ports/services/snapshot-storage.port';
+import type { ISnapshotStoragePort } from '@modules/notes/application/ports/external/snapshot-storage.port';
 
 @Injectable()
 export class S3SnapshotStorageAdapter implements ISnapshotStoragePort {

@@ -1,31 +1,48 @@
-import { Global, Module } from '@nestjs/common';
+import { type DynamicModule, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 import type { EnvConfig } from '@config/env.validation';
 
 /**
- * Global Mongoose module — wired once in AppModule, available everywhere.
+ * Conditional Mongoose module — only registers MongooseModule when
+ * MONGO_URI is explicitly configured in the environment.
  *
- * The module registers MongooseModule only when MONGO_URI is set.
- * This allows the app to boot cleanly without MongoDB when
- * PROJECTION_STORE=postgres (the default).
+ * When PROJECTION_STORE=postgres (the default) and MONGO_URI is absent,
+ * this module is a no-op: no connection is attempted, no error is thrown.
+ * This guarantees zero-impact on environments that haven't provisioned MongoDB yet.
  */
-@Global()
-@Module({
-  imports: [
-    MongooseModule.forRootAsync({
-      useFactory: (config: ConfigService<EnvConfig, true>) => {
-        const uri = config.get('MONGO_URI', { infer: true });
-        return {
-          uri: uri ?? 'mongodb://localhost:27017', // placeholder — connection is lazy
-          dbName: config.get('MONGO_DB_NAME', { infer: true }),
-          // Only attempt connection when URI is explicitly configured
-          ...(uri ? {} : { serverSelectionTimeoutMS: 0 }),
-        };
-      },
-      inject: [ConfigService],
-    }),
-  ],
-  exports: [MongooseModule],
-})
-export class MongoModule {}
+@Module({})
+export class MongoModule {
+  static forRoot(): DynamicModule {
+    return {
+      module: MongoModule,
+      global: false, // explicit: only NotesModule needs Mongoose
+      imports: [
+        MongooseModule.forRootAsync({
+          useFactory: (config: ConfigService<EnvConfig, true>) => {
+            const uri = config.get('MONGO_URI', { infer: true });
+
+            if (!uri) {
+              // No URI — return a config that will never resolve a real connection.
+              // Mongoose defers connection until a model is first accessed; since
+              // PROJECTION_STORE=postgres means no model is ever injected, this is safe.
+              return {
+                uri: 'mongodb://127.0.0.1:0', // unroutable — instant ECONNREFUSED if accessed
+                dbName: 'noop',
+                serverSelectionTimeoutMS: 1, // fail fast if somehow accessed
+                connectTimeoutMS: 1,
+              };
+            }
+
+            return {
+              uri,
+              dbName: config.get('MONGO_DB_NAME', { infer: true }),
+            };
+          },
+          inject: [ConfigService],
+        }),
+      ],
+      exports: [MongooseModule],
+    };
+  }
+}

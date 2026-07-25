@@ -8,7 +8,7 @@ export class NoteProjection {
   @Prop({ type: String, required: true })
   declare _id: string;
 
-  @Prop({ type: String, required: true, index: true })
+  @Prop({ type: String, required: true })
   declare userId: string;
 
   @Prop({ type: String, required: true })

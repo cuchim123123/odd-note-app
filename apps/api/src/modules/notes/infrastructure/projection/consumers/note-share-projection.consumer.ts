@@ -105,27 +105,34 @@ export class NoteShareProjectionConsumer {
   }
 
   private async onShareRevoked(event: ShareRevokedProjectionEvent): Promise<void> {
-    // Remove the share subdoc then recompute isShared flag
+    // Atomic: remove the share AND recompute isShared in one pipeline update
     await this.noteModel.updateOne(
       {
         _id: event.aggregateId,
         aggregateVersion: { $lt: event.aggregateVersion },
         lastEventId: { $ne: event.eventId },
       },
-      {
-        $pull: { shares: { shareId: event.shareId } },
-        $set: {
-          aggregateVersion: event.aggregateVersion,
-          lastEventId: event.eventId,
-          projectionUpdatedAt: new Date(),
+      [
+        {
+          $set: {
+            shares: {
+              $filter: {
+                input: '$shares',
+                as: 's',
+                cond: { $ne: ['$$s.shareId', event.shareId] },
+              },
+            },
+            aggregateVersion: event.aggregateVersion,
+            lastEventId: event.eventId,
+            projectionUpdatedAt: new Date(),
+          },
         },
-      },
-    );
-
-    // Recompute isShared based on remaining shares count
-    await this.noteModel.updateOne(
-      { _id: event.aggregateId },
-      [{ $set: { isShared: { $gt: [{ $size: '$shares' }, 0] } } }],
+        {
+          $set: {
+            isShared: { $gt: [{ $size: '$shares' }, 0] },
+          },
+        },
+      ],
     );
   }
 }

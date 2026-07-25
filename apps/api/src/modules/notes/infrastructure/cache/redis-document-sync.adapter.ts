@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { IDocumentSyncPort } from '@modules/notes/application/ports/services/document-sync.port';
+import type { IDocumentSyncPort } from '@modules/notes/application/ports/external/document-sync.port';
 import { NotesCrdtService } from '@modules/notes/infrastructure/crdt/notes-crdt.service';
 
 @Injectable()

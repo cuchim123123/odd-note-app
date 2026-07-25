@@ -102,7 +102,17 @@ export class NoteProjectionConsumer {
   }
 
   private async onDelete(event: NoteProjectionEvent): Promise<void> {
-    await this.noteModel.deleteOne({ _id: event.aggregateId });
+    // Guard against out-of-order or redelivered NoteDeleted events
+    const result = await this.noteModel.deleteOne({
+      _id: event.aggregateId,
+      aggregateVersion: { $lt: event.aggregateVersion },
+    });
+
+    if (result.deletedCount === 0) {
+      this.logger.debug(
+        `Skipped NoteDeleted v${event.aggregateVersion} for note ${event.aggregateId} (stale or already deleted)`,
+      );
+    }
   }
 
   private async onTitleUpdated(event: NoteTitleUpdatedProjectionEvent): Promise<void> {

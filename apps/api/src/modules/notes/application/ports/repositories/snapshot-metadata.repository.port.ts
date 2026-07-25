@@ -12,4 +12,10 @@ export interface ISnapshotMetadataRepository {
    * Finds the latest snapshot metadata for a note that is <= targetSeq.
    */
   findNearestBefore(noteId: string, targetSeq: bigint): Promise<NoteSnapshotMetadata | null>;
+
+  /**
+   * Finds the most recent snapshot for a note with no upper bound.
+   * Use this instead of passing BigInt(MAX_SAFE_INTEGER) as a ceiling.
+   */
+  findLatest(noteId: string): Promise<NoteSnapshotMetadata | null>;
 }

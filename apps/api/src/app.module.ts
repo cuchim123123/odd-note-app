@@ -13,6 +13,6 @@ import { UploadsModule } from '@modules/uploads/uploads.module';
 import { OutboxModule } from '@shared/infrastructure/outbox/outbox.module';
 
 @Module({
-  imports: [ConfigModule, JwtConfigModule, HealthModule, PrismaModule, RedisModule, MongoModule, AuthModule, UploadsModule, NotesModule, NotificationsModule, CollaborationModule, OutboxModule],
+  imports: [ConfigModule, JwtConfigModule, HealthModule, PrismaModule, RedisModule, MongoModule.forRoot(), AuthModule, UploadsModule, NotesModule, NotificationsModule, CollaborationModule, OutboxModule],
 })
 export class AppModule {}

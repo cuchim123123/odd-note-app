@@ -1,7 +1,7 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { VerifyPasswordCommand } from '@modules/notes/application/commands/verify-password/verify-password.command';
-import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/services/note-protection.port';
+import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/external/note-protection.port';
 import { NOTE_REPOSITORY, type INoteRepository } from '@modules/notes/application/ports/repositories/note.repository.port';
 import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 

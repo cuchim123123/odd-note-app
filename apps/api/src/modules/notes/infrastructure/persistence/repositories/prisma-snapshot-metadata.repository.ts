@@ -32,4 +32,15 @@ export class PrismaSnapshotMetadataRepository implements ISnapshotMetadataReposi
 
     return NoteSnapshotMetadata.create(row);
   }
+
+  async findLatest(noteId: string): Promise<NoteSnapshotMetadata | null> {
+    const row = await this.prisma.noteSnapshotMetadata.findFirst({
+      where: { noteId },
+      orderBy: { snapshotSeq: 'desc' },
+    });
+
+    if (!row) return null;
+
+    return NoteSnapshotMetadata.create(row);
+  }
 }
