@@ -57,43 +57,45 @@ import { GetProtectionStatusHttpController } from '@modules/notes/presentation/h
 import { GetNoteHistoryHttpController } from '@modules/notes/presentation/http/queries/get-note-history/get-note-history.http.controller';
 
 // ─── Ports & Adapters ────────────────────────────────────────────────────────
-import { NOTE_UNIT_OF_WORK } from '@modules/notes/application/ports/repositories/unit-of-work.port';
-import { PrismaNoteUnitOfWork } from '@modules/notes/infrastructure/persistence/prisma-note-unit-of-work';
+import { NOTE_UNIT_OF_WORK } from '@modules/notes/application/ports/transactions/unit-of-work.port';
+import { PrismaNoteUnitOfWork } from '@modules/notes/infrastructure/persistence/transactions/prisma-note-unit-of-work';
 import { NOTE_REPOSITORY } from '@modules/notes/application/ports/repositories/note.repository.port';
-import { PrismaNoteRepository } from '@modules/notes/infrastructure/persistence/prisma-note.repository';
+import { PrismaNoteRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note.repository';
 
-import { DOCUMENT_SYNC_PORT } from '@modules/notes/application/ports/services/document-sync.port';
+import { DOCUMENT_SYNC_PORT } from '@modules/notes/application/ports/external/document-sync.port';
 import { RedisDocumentSyncAdapter } from '@modules/notes/infrastructure/cache/redis-document-sync.adapter';
-import { NOTE_PROTECTION_PORT } from '@modules/notes/application/ports/services/note-protection.port';
-import { PrismaNoteProtectionAdapter } from '@modules/notes/infrastructure/persistence/prisma-note-protection.adapter';
+import { NOTE_PROTECTION_PORT } from '@modules/notes/application/ports/external/note-protection.port';
+import { PrismaNoteProtectionAdapter } from '@modules/notes/infrastructure/persistence/security/prisma-note-protection.adapter';
 import { NOTE_OUTBOX_PORT } from '@modules/notes/application/ports/messaging/note-outbox.port';
 import { NOTE_INTEGRATION_EVENT_MAPPER } from '@modules/notes/application/ports/messaging/integration-event-mapper.port';
 import { DefaultNoteIntegrationEventMapper } from '@modules/notes/application/mappers/integration-event.mapper';
 import { PrismaOutboxAdapter } from '@modules/notes/infrastructure/outbox/prisma-outbox.adapter';
 import { NOTE_SHARE_REPOSITORY } from '@modules/notes/application/ports/repositories/note-share.repository.port';
-import { PrismaNoteShareRepository } from '@modules/notes/infrastructure/persistence/prisma-note-share.repository';
+import { PrismaNoteShareRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note-share.repository';
 import { USER_PREFERENCES_REPOSITORY } from '@modules/notes/application/ports/repositories/user-preferences.repository.port';
-import { PrismaUserPreferencesRepository } from '@modules/notes/infrastructure/persistence/prisma-user-preferences.repository';
-import { USER_READ_PORT } from '@modules/notes/application/ports/services/user-read.port';
-import { PrismaUserReadAdapter } from '@modules/notes/infrastructure/persistence/prisma-user-read.adapter';
+import { PrismaUserPreferencesRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-user-preferences.repository';
+import { USER_READ_PORT } from '@modules/notes/application/ports/dao/user-read.port';
+import { PrismaUserReadAdapter } from '@modules/notes/infrastructure/persistence/dao/prisma-user-read.adapter';
 import { NOTE_REVISION_REPOSITORY } from '@modules/notes/application/ports/repositories/note-revision.repository.port';
-import { PrismaNoteRevisionRepository } from '@modules/notes/infrastructure/persistence/prisma-note-revision.repository';
+import { PrismaNoteRevisionRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note-revision.repository';
 import { NOTE_MAIL_SENDER } from '@modules/notes/application/ports/messaging/note-mail-sender.port';
 import { NOTE_QUERY_DAO } from '@modules/notes/application/ports/dao/note-query.dao.port';
-import { PrismaNoteQueryDao } from '@modules/notes/infrastructure/persistence/prisma-note-query.dao';
+import { PrismaNoteQueryDao } from '@modules/notes/infrastructure/persistence/dao/prisma-note-query.dao';
 import { NOTE_REVISION_QUERY_DAO } from '@modules/notes/application/ports/dao/note-revision-query.dao.port';
-import { PrismaNoteRevisionQueryDao } from '@modules/notes/infrastructure/persistence/prisma-note-revision-query.dao';
+import { PrismaNoteRevisionQueryDao } from '@modules/notes/infrastructure/persistence/dao/prisma-note-revision-query.dao';
 import { NOTE_UPDATE_REPOSITORY } from '@modules/notes/application/ports/repositories/note-update.repository.port';
-import { PrismaNoteUpdateRepository } from '@modules/notes/infrastructure/persistence/prisma-note-update.repository';
+import { PrismaNoteUpdateRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note-update.repository';
 import { SNAPSHOT_METADATA_REPOSITORY } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
-import { PrismaSnapshotMetadataRepository } from '@modules/notes/infrastructure/persistence/prisma-snapshot-metadata.repository';
-import { SNAPSHOT_STORAGE_PORT } from '@modules/notes/application/ports/services/snapshot-storage.port';
+import { PrismaSnapshotMetadataRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-snapshot-metadata.repository';
+import { SNAPSHOT_STORAGE_PORT } from '@modules/notes/application/ports/external/snapshot-storage.port';
 import { S3SnapshotStorageAdapter } from '@modules/notes/infrastructure/storage/s3-snapshot-storage.adapter';
 import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
 import { SnapshotThresholdMonitor } from '@modules/notes/application/workers/snapshot.worker';
 import { CreateSnapshotInternalCommandHandler } from '@modules/notes/application/workers/create-snapshot.internal-handler';
 import { INTERNAL_COMMAND_HANDLERS } from '@shared/infrastructure/outbox/internal-command-handler.port';
 import { IdempotencyModule } from '@shared/infrastructure/idempotency/idempotency.module';
+import { NOTE_ACCESS_PORT } from '@modules/notes/application/ports/security/note-access.port';
+import { PrismaNoteAccessAdapter } from '@modules/notes/infrastructure/persistence/security/prisma-note-access.adapter';
 
 @Module({
   imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule, IdempotencyModule],
@@ -172,6 +174,7 @@ import { IdempotencyModule } from '@shared/infrastructure/idempotency/idempotenc
     { provide: NOTE_UPDATE_REPOSITORY, useClass: PrismaNoteUpdateRepository },
     { provide: SNAPSHOT_METADATA_REPOSITORY, useClass: PrismaSnapshotMetadataRepository },
     { provide: SNAPSHOT_STORAGE_PORT, useClass: S3SnapshotStorageAdapter },
+    { provide: NOTE_ACCESS_PORT, useClass: PrismaNoteAccessAdapter },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { provide: INTERNAL_COMMAND_HANDLERS, useClass: CreateSnapshotInternalCommandHandler, multi: true } as any,
   ],

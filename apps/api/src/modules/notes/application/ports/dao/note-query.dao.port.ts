@@ -32,12 +32,6 @@ export interface NoteShareView {
   updatedAt: Date;
 }
 
-export interface NoteAccessView {
-  hasAccess: boolean;
-  isOwner: boolean;
-  permission?: 'READ' | 'EDIT';
-  ownerId: string;
-}
 
 export interface INoteQueryDao {
   /** list-notes */
@@ -51,10 +45,4 @@ export interface INoteQueryDao {
 
   /** list-shares */
   findNoteShares(noteId: string, userId: string): Promise<NoteShareView[] | null>;
-
-  /** check access for draft, protection status, history */
-  checkAccess(noteId: string, userId: string): Promise<NoteAccessView | null>;
-
-  /** get protection status */
-  isProtected(noteId: string, ownerId: string): Promise<boolean>;
 }
