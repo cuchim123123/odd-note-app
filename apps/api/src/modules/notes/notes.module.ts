@@ -96,9 +96,22 @@ import { INTERNAL_COMMAND_HANDLERS } from '@shared/infrastructure/outbox/interna
 import { IdempotencyModule } from '@shared/infrastructure/idempotency/idempotency.module';
 import { NOTE_ACCESS_PORT } from '@modules/notes/application/ports/security/note-access.port';
 import { PrismaNoteAccessAdapter } from '@modules/notes/infrastructure/persistence/security/prisma-note-access.adapter';
+import { MongoNoteQueryDao } from '@modules/notes/infrastructure/projection/dao/mongo-note-query.dao';
+import { MongoNoteRevisionQueryDao } from '@modules/notes/infrastructure/projection/dao/mongo-note-revision-query.dao';
+import { NoteProjection, NoteProjectionSchema } from '@modules/notes/infrastructure/projection/schemas/note-projection.schema';
+import { NoteRevisionProjection, NoteRevisionProjectionSchema } from '@modules/notes/infrastructure/projection/schemas/note-revision-projection.schema';
+import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
+import type { EnvConfig } from '@config/env.validation';
 
 @Module({
-  imports: [CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule, IdempotencyModule],
+  imports: [
+    CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule, IdempotencyModule,
+    MongooseModule.forFeature([
+      { name: NoteProjection.name, schema: NoteProjectionSchema },
+      { name: NoteRevisionProjection.name, schema: NoteRevisionProjectionSchema },
+    ]),
+  ],
   controllers: [
     // ── Presentation: Commands ────────────────────────────────────────────
     CreateNoteHttpController,
@@ -169,8 +182,28 @@ import { PrismaNoteAccessAdapter } from '@modules/notes/infrastructure/persisten
     { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },
     { provide: NOTE_REVISION_REPOSITORY, useClass: PrismaNoteRevisionRepository },
     { provide: NOTE_MAIL_SENDER, useClass: NoteMailerAdapter },
-    { provide: NOTE_QUERY_DAO, useClass: PrismaNoteQueryDao },
-    { provide: NOTE_REVISION_QUERY_DAO, useClass: PrismaNoteRevisionQueryDao },
+    PrismaNoteQueryDao,
+    MongoNoteQueryDao,
+    PrismaNoteRevisionQueryDao,
+    MongoNoteRevisionQueryDao,
+    {
+      provide: NOTE_QUERY_DAO,
+      useFactory: (
+        cfg: ConfigService<EnvConfig, true>,
+        prisma: PrismaNoteQueryDao,
+        mongo: MongoNoteQueryDao,
+      ) => (cfg.get('PROJECTION_STORE', { infer: true }) === 'mongo' ? mongo : prisma),
+      inject: [ConfigService, PrismaNoteQueryDao, MongoNoteQueryDao],
+    },
+    {
+      provide: NOTE_REVISION_QUERY_DAO,
+      useFactory: (
+        cfg: ConfigService<EnvConfig, true>,
+        prisma: PrismaNoteRevisionQueryDao,
+        mongo: MongoNoteRevisionQueryDao,
+      ) => (cfg.get('PROJECTION_STORE', { infer: true }) === 'mongo' ? mongo : prisma),
+      inject: [ConfigService, PrismaNoteRevisionQueryDao, MongoNoteRevisionQueryDao],
+    },
     { provide: NOTE_UPDATE_REPOSITORY, useClass: PrismaNoteUpdateRepository },
     { provide: SNAPSHOT_METADATA_REPOSITORY, useClass: PrismaSnapshotMetadataRepository },
     { provide: SNAPSHOT_STORAGE_PORT, useClass: S3SnapshotStorageAdapter },
