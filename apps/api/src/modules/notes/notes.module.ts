@@ -103,6 +103,9 @@ import { NoteRevisionProjection, NoteRevisionProjectionSchema } from '@modules/n
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 import type { EnvConfig } from '@config/env.validation';
+import { NoteProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-projection.consumer';
+import { NoteShareProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-share-projection.consumer';
+import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-revision-projection.consumer';
 
 @Module({
   imports: [
@@ -143,6 +146,10 @@ import type { EnvConfig } from '@config/env.validation';
     NotesCrdtService,
     MailerService,
     NoteMailerAdapter,
+    // ── Projection Consumers (MongoDB write side) ─────────────────────────
+    NoteProjectionConsumer,
+    NoteShareProjectionConsumer,
+    NoteRevisionProjectionConsumer,
     // ── Application: Command Handlers ─────────────────────────────────────
     CreateNoteHandler,
     UpdateNoteHandler,
