@@ -64,8 +64,8 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
       const targetStateBlob = await this.replayCoordinator.rebuildDocument(noteId, revision.targetSeq);
       const currentStateBlob = await this.replayCoordinator.getCurrentDocument(noteId);
 
-      // 4. Compute structural diff (Implementation detail delegated to coordinator/domain service)
-      const revertingUpdateBlob = await this.replayCoordinator.computeRevertingUpdate(
+      // 4. Compute structural diff (revert = minimal update to go from current → target)
+      const revertingUpdateBlob = this.replayCoordinator.computeRevertingUpdate(
         currentStateBlob,
         targetStateBlob
       );
