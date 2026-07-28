@@ -4,48 +4,30 @@ import type { UnitOfWork, TransactionContext } from '@modules/auth/application/p
 import { PrismaUserRepository } from '@modules/auth/infrastructure/persistence/prisma-user.repository';
 import { PrismaTokenRepository } from '@modules/auth/infrastructure/persistence/prisma-token.repository';
 import { PrismaOutboxRepository } from '@modules/auth/infrastructure/persistence/prisma-outbox.repository';
-import type { AggregateRoot } from '@shared/domain/ddd/aggregate-root';
+
 import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 import { INTEGRATION_EVENT_MAPPER } from '@modules/auth/application/ports/integration-event-mapper.port';
 import type { IntegrationEventMapper } from '@modules/auth/application/ports/integration-event-mapper.port';
 
 import type { PrismaTransactionClient } from '@modules/auth/infrastructure/persistence/prisma-client.type';
+import { BasePrismaUnitOfWork } from '@shared/infrastructure/persistence/base-prisma-unit-of-work';
 
 @Injectable()
-export class PrismaUnitOfWork implements UnitOfWork {
+export class PrismaUnitOfWork extends BasePrismaUnitOfWork<TransactionContext> implements UnitOfWork {
   constructor(
-    private readonly prisma: PrismaService,
-    @Inject(INTEGRATION_EVENT_MAPPER) private readonly integrationEventMapper: IntegrationEventMapper
-  ) {}
+    prisma: PrismaService,
+    @Inject(INTEGRATION_EVENT_MAPPER) integrationEventMapper: IntegrationEventMapper
+  ) {
+    super(prisma, integrationEventMapper);
+  }
 
-  async execute<T>(work: (ctx: TransactionContext) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(async (tx: PrismaTransactionClient) => {
-      const trackedAggregates: AggregateRoot[] = [];
-      const tracker: AggregateTracker = { track: (a) => trackedAggregates.push(a) };
-
-      const ctx: TransactionContext = {
-        userRepository: new PrismaUserRepository(tx, tracker),
-        tokenRepository: new PrismaTokenRepository(tx),
-        outbox: new PrismaOutboxRepository(tx),
-      };
-      
-      const result = await work(ctx);
-
-      // Collect all domain events
-      const domainEvents = [];
-      for (const agg of trackedAggregates) {
-        domainEvents.push(...agg.domainEvents);
-        agg.clearDomainEvents();
-      }
-
-      // Step 5: Map and persist events
-      const outboxMessages = this.integrationEventMapper.map(domainEvents);
-      
-      for (const msg of outboxMessages) {
-        await ctx.outbox.scheduleIntegrationEvent(msg.topic, msg.payload);
-      }
-
-      return result;
-    });
+  protected createTransactionContext(tx: PrismaTransactionClient, tracker: AggregateTracker): TransactionContext {
+    return {
+      repos: {
+        user: new PrismaUserRepository(tx, tracker),
+        token: new PrismaTokenRepository(tx),
+      },
+      outbox: new PrismaOutboxRepository(tx),
+    };
   }
 }

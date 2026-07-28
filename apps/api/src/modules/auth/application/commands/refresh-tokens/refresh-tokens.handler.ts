@@ -28,16 +28,16 @@ export class RefreshTokensHandler implements ICommandHandler<RefreshTokensComman
     const tokenHash = this.tokenProvider.hashToken(command.refreshToken);
 
     return this.unitOfWork.execute(async (ctx) => {
-      const tokenRecord = await ctx.tokenRepository.findRefreshToken(tokenHash);
+      const tokenRecord = await ctx.repos.token.findRefreshToken(tokenHash);
 
       if (!tokenRecord || tokenRecord.userId !== userId) {
         throw new InvalidTokenError();
       }
 
       const consumedToken = tokenRecord.consume();
-      await ctx.tokenRepository.saveRefreshToken(consumedToken);
+      await ctx.repos.token.saveRefreshToken(consumedToken);
 
-      const user = await ctx.userRepository.findById(consumedToken.userId);
+      const user = await ctx.repos.user.findById(consumedToken.userId);
       if (!user) {
         throw new InvalidTokenError();
       }
@@ -47,7 +47,7 @@ export class RefreshTokensHandler implements ICommandHandler<RefreshTokensComman
 
       const newRefreshTokenEntity = RefreshToken.create(newRefresh.tokenHash, user.id, newRefresh.expiresAt);
 
-      await ctx.tokenRepository.saveRefreshToken(newRefreshTokenEntity);
+      await ctx.repos.token.saveRefreshToken(newRefreshTokenEntity);
 
       return { accessToken, refreshToken: newRefresh.rawToken };
     });

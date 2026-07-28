@@ -30,7 +30,7 @@ export class ForgotPasswordHandler implements ICommandHandler<ForgotPasswordComm
     const token = PasswordResetToken.create(tokenHash, user.id, expiresAt);
 
     await this.unitOfWork.execute(async (ctx) => {
-      await ctx.tokenRepository.saveResetToken(token);
+      await ctx.repos.token.saveResetToken(token);
       
       await ctx.outbox.scheduleInternalCommand('SendPasswordResetEmail', {
         email: user.email.value,

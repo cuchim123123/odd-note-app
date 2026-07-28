@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserAlreadyExistsError, InvalidCredentialsError } from '@modules/auth/domain/errors/auth-error';
 import { RegisterCommand } from '@modules/auth/application/commands/register/register.command';
 import { User } from '@modules/auth/domain/entities/user.entity';
@@ -87,8 +87,8 @@ function createMocks() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const unitOfWork: any = {
-    execute: vi.fn(async (callback: (ctx: { userRepository: typeof userRepo; tokenRepository: typeof tokenRepo; outbox: typeof outbox }) => Promise<unknown>) => {
-      return callback({ userRepository: userRepo, tokenRepository: tokenRepo, outbox });
+    execute: vi.fn(async (callback: (ctx: { repos: { user: typeof userRepo; token: typeof tokenRepo }; outbox: typeof outbox }) => Promise<unknown>) => {
+      return callback({ repos: { user: userRepo, token: tokenRepo }, outbox });
     }),
   };
 

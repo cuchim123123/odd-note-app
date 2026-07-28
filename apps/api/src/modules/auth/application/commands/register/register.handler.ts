@@ -36,16 +36,16 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
 
     const { user, tokens } = await this.unitOfWork.execute(async (ctx) => {
       const newUser = User.create(command.input.email, command.input.displayName, passwordHash);
-      await ctx.userRepository.save(newUser);
+      await ctx.repos.user.save(newUser);
 
       const { rawToken, tokenHash, expiresAt } = this.tokenProvider.generateVerificationToken();
       const tokenEntity = VerificationToken.create(tokenHash, newUser.id, expiresAt);
-      await ctx.tokenRepository.saveVerificationToken(tokenEntity);
+      await ctx.repos.token.saveVerificationToken(tokenEntity);
 
       const accessToken = this.tokenProvider.signAccessToken({ sub: newUser.id, displayName: newUser.displayName });
       const refresh = this.tokenProvider.generateRefreshToken(newUser.id);
       const refreshTokenEntity = RefreshToken.create(refresh.tokenHash, newUser.id, refresh.expiresAt);
-      await ctx.tokenRepository.saveRefreshToken(refreshTokenEntity);
+      await ctx.repos.token.saveRefreshToken(refreshTokenEntity);
 
       // Schedule email sending as an internal command
       await ctx.outbox.scheduleInternalCommand('SendVerificationEmail', {

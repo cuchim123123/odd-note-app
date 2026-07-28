@@ -3,8 +3,10 @@ import type { TokenRepository } from '@modules/auth/application/ports/token.repo
 import type { OutboxPort } from '@modules/auth/application/ports/outbox.port';
 
 export interface TransactionContext {
-  userRepository: UserRepository;
-  tokenRepository: TokenRepository;
+  repos: {
+    user: UserRepository;
+    token: TokenRepository;
+  };
   outbox: OutboxPort;
 }
 

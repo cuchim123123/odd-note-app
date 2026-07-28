@@ -23,16 +23,16 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
     const tokenHash = this.tokenProvider.hashToken(command.token);
 
     await this.unitOfWork.execute(async (ctx) => {
-      const resetToken = await ctx.tokenRepository.findResetToken(tokenHash);
+      const resetToken = await ctx.repos.token.findResetToken(tokenHash);
 
       if (!resetToken) {
         throw new InvalidTokenError('Invalid password reset token');
       }
 
       const consumedToken = resetToken.consume();
-      await ctx.tokenRepository.saveResetToken(consumedToken);
+      await ctx.repos.token.saveResetToken(consumedToken);
 
-      const user = await ctx.userRepository.findById(consumedToken.userId);
+      const user = await ctx.repos.user.findById(consumedToken.userId);
       if (!user) {
         throw new UserNotFoundError();
       }
@@ -40,7 +40,7 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
       const hashedPassword = await this.passwordHasher.hash(command.passwordHash);
       const updatedUser = user.changePassword(hashedPassword);
       
-      await ctx.userRepository.save(updatedUser);
+      await ctx.repos.user.save(updatedUser);
     });
   }
 }

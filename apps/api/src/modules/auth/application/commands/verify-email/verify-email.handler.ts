@@ -21,22 +21,22 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand> {
     const tokenHash = this.tokenProvider.hashToken(command.token);
 
     const updatedUser = await this.unitOfWork.execute(async (ctx) => {
-      const verificationToken = await ctx.tokenRepository.findVerificationToken(tokenHash);
+      const verificationToken = await ctx.repos.token.findVerificationToken(tokenHash);
 
       if (!verificationToken) {
         throw new InvalidTokenError();
       }
 
       const consumedToken = verificationToken.consume();
-      await ctx.tokenRepository.saveVerificationToken(consumedToken);
+      await ctx.repos.token.saveVerificationToken(consumedToken);
 
-      const user = await ctx.userRepository.findById(consumedToken.userId);
+      const user = await ctx.repos.user.findById(consumedToken.userId);
       if (!user) {
         throw new UserNotFoundError();
       }
 
       const verifiedUser = user.verifyEmail();
-      await ctx.userRepository.save(verifiedUser);
+      await ctx.repos.user.save(verifiedUser);
 
       return verifiedUser;
     });

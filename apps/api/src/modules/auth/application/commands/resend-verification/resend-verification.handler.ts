@@ -30,7 +30,7 @@ export class ResendVerificationHandler implements ICommandHandler<ResendVerifica
     const token = VerificationToken.create(tokenHash, user.id, expiresAt);
 
     await this.unitOfWork.execute(async (ctx) => {
-      await ctx.tokenRepository.saveVerificationToken(token);
+      await ctx.repos.token.saveVerificationToken(token);
       
       await ctx.outbox.scheduleInternalCommand('SendVerificationEmail', {
         email: user.email.value,
