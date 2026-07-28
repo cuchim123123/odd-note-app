@@ -37,28 +37,18 @@ function createMocks(overrides: { noteToReturn?: NoteEntity | null } = {}) {
     findById: vi.fn().mockResolvedValue({ id: 'owner-1', displayName: 'Owner One' }),
   };
 
-  const mailer = {
-    sendNoteSharedEmail: vi.fn().mockResolvedValue(undefined),
-  };
-
-  const integrationEventMapper = {
-    serialize: vi.fn().mockReturnValue({ topic: 'note-shared', payload: {} }),
-  };
-
   const unitOfWork = {
     execute: vi.fn(async (work) => {
-      return work({ noteRepository, noteShareRepository, outbox });
+      return work({ repos: { note: noteRepository, noteShare: noteShareRepository }, outbox });
     }),
   };
 
   const handler = new ShareNoteHandler(
     unitOfWork as never,
     userReadPort as never,
-    mailer as never,
-    integrationEventMapper as never,
   );
 
-  return { handler, noteRepository, noteShareRepository, outbox, userReadPort, mailer, integrationEventMapper, note, unitOfWork };
+  return { handler, noteRepository, noteShareRepository, outbox, userReadPort, note, unitOfWork };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -146,21 +136,7 @@ describe('ShareNoteHandler', () => {
     expect(event).toMatchObject({
       ownerId: 'owner-1',
       recipientId: 'recipient-1',
-      recipientEmail: 'recipient@example.com',
       permission: 'EDIT',
-    });
-  });
-
-  it('sends the notification email', async () => {
-    const { handler, mailer } = createMocks();
-
-    await handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'recipient@example.com', 'READ'));
-
-    expect(mailer.sendNoteSharedEmail).toHaveBeenCalledTimes(1);
-     
-    expect(mailer.sendNoteSharedEmail.mock.calls[0]![0]).toMatchObject({
-      to: 'recipient@example.com',
-      senderName: 'Owner One',
     });
   });
 });

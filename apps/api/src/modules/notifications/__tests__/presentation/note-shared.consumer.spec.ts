@@ -9,9 +9,14 @@ function createMocks() {
     execute: vi.fn().mockResolvedValue(undefined),
   };
 
-  const controller = new NoteSharedConsumer(commandBus as never);
+  const prisma = {
+    note: { findUnique: vi.fn().mockResolvedValue({ title: 'My Secret Project' }) },
+    user: { findUnique: vi.fn().mockResolvedValue({ email: 'recipient@example.com' }) },
+  };
 
-  return { controller, commandBus };
+  const controller = new NoteSharedConsumer(commandBus as never, prisma as never);
+
+  return { controller, commandBus, prisma };
 }
 
 const validPayload = {
@@ -19,9 +24,7 @@ const validPayload = {
   shareId: 'share-abc',
   ownerId: 'owner-1',
   recipientId: 'recipient-1',
-  recipientEmail: 'recipient@example.com',
   permission: 'READ',
-  noteTitle: 'My Secret Project',
 };
 
 // Helper: gets the command dispatched on a given call (default first call)

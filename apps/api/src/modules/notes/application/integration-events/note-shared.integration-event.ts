@@ -22,7 +22,5 @@ export interface NoteSharedIntegrationEvent {
   readonly shareId: string;
   readonly ownerId: string;
   readonly recipientId: string;
-  readonly recipientEmail: string;
   readonly permission: string;    // 'READ' | 'EDIT'
-  readonly noteTitle: string;
 }

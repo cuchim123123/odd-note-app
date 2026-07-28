@@ -6,9 +6,7 @@ import { USER_READ_PORT, type IUserReadPort } from '@modules/notes/application/p
 import { SharePermission } from '@modules/notes/domain/value-objects/share-permission.vo';
 import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import { RecipientNotFoundError, SelfShareError } from '@modules/notes/domain/errors/share.errors';
-import { NOTE_MAIL_SENDER, type INoteMailSender } from '@modules/notes/application/ports/messaging/note-mail-sender.port';
-import type { NoteSharedIntegrationEvent } from '@modules/notes/application/integration-events/note-shared.integration-event';
-import { NOTE_INTEGRATION_EVENT_MAPPER, type INoteIntegrationEventMapper } from '@modules/notes/application/ports/messaging/integration-event-mapper.port';
+
 
 @CommandHandler(ShareNoteCommand)
 export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
@@ -17,10 +15,6 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     private readonly unitOfWork: INoteUnitOfWork,
     @Inject(USER_READ_PORT)
     private readonly userReadPort: IUserReadPort,
-    @Inject(NOTE_MAIL_SENDER)
-    private readonly mailSender: INoteMailSender,
-    @Inject(NOTE_INTEGRATION_EVENT_MAPPER)
-    private readonly integrationEventMapper: INoteIntegrationEventMapper,
   ) {}
 
   async execute(command: ShareNoteCommand): Promise<{ id: string }> {
@@ -29,22 +23,20 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
     const recipient = await this.userReadPort.findByEmail(recipientEmail);
     if (!recipient) throw new RecipientNotFoundError(recipientEmail);
     if (recipient.id === userId) throw new SelfShareError();
-    const owner = await this.userReadPort.findById(userId);
 
-    let noteTitle = 'Note';
 
     const shareId = await this.unitOfWork.execute(async (ctx) => {
-      const note = await ctx.noteRepository.findById(noteId);
+      const note = await ctx.repos.note.findById(noteId);
       if (!note) throw new NoteNotFoundError(noteId);
 
-      noteTitle = note.title;
+
 
       const permissionVO = SharePermission.create(permission);
       note.shareWith(recipient.id, permissionVO, userId);
 
-      await ctx.noteRepository.save(note);
+      await ctx.repos.note.save(note);
 
-      const share = await ctx.noteShareRepository.create({
+      const share = await ctx.repos.noteShare.create({
         noteId,
         ownerId: userId,
         recipientId: recipient.id,
@@ -52,32 +44,7 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
         permission,
       });
 
-      const outboxPayload: NoteSharedIntegrationEvent = {
-        eventId: share.id,
-        occurredOn: new Date().toISOString(),
-        noteId,
-        shareId: share.id,
-        ownerId: userId,
-        recipientId: recipient.id,
-        recipientEmail: recipient.email,
-        permission,
-        noteTitle,
-      };
-
-      const draft = this.integrationEventMapper.serialize('NoteShared', outboxPayload);
-      await ctx.outbox.scheduleIntegrationEvent(draft.topic, draft.payload);
-
       return share.id;
-    });
-
-    // Send email AFTER transaction commits successfully
-    await this.mailSender.sendNoteSharedEmail({
-      to: recipient.email,
-      recipientName: recipient.email.split('@')[0] ?? 'User',
-      senderName: owner?.displayName ?? 'A user',
-      noteTitle,
-      noteId: noteId,
-      permission,
     });
 
     return { id: shareId };
