@@ -29,6 +29,14 @@ export class PrismaNoteRevisionRepository implements INoteRevisionRepository {
     return NoteRevisionEntity.create(row);
   }
 
+  async findByTargetSeq(noteId: string, targetSeq: bigint): Promise<NoteRevisionEntity | null> {
+    const row = await this.prisma.noteRevision.findUnique({
+      where: { noteId_targetSeq: { noteId, targetSeq } },
+    });
+    if (!row) return null;
+    return NoteRevisionEntity.create(row);
+  }
+
   async findManyByNoteId(noteId: string, limit: number = 50): Promise<NoteRevisionEntity[]> {
     const rows = await this.prisma.noteRevision.findMany({
       where: { noteId },

@@ -19,6 +19,13 @@ export class CreateRevisionHandler implements ICommandHandler<CreateRevisionComm
 
     this.logger.log(`Creating revision for note ${noteId} at targetSeq ${targetSeq}`);
 
+    // Idempotency guard: If a revision for this targetSeq already exists, just return it.
+    const existingRevision = await this.revisionRepository.findByTargetSeq(noteId, targetSeq);
+    if (existingRevision) {
+      this.logger.log(`Revision for note ${noteId} at targetSeq ${targetSeq} already exists (Idempotent).`);
+      return { id: existingRevision.id };
+    }
+
     const revision = NoteRevisionEntity.create({
       id: uuidv7(),
       noteId,

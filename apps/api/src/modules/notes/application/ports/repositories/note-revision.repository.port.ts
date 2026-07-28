@@ -14,6 +14,11 @@ export interface INoteRevisionRepository {
   findById(revisionId: string): Promise<NoteRevisionEntity | null>;
 
   /**
+   * Finds a revision by noteId and targetSeq (idempotency guard).
+   */
+  findByTargetSeq(noteId: string, targetSeq: bigint): Promise<NoteRevisionEntity | null>;
+
+  /**
    * Lists revisions for a specific note (ordered by date desc).
    */
   findManyByNoteId(noteId: string, limit?: number): Promise<NoteRevisionEntity[]>;

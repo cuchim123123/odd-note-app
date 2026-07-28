@@ -24,26 +24,32 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
 
     await this.unitOfWork.execute(async (ctx) => {
       // Save aggregate
-      await ctx.noteRepository.save(note);
+      await ctx.repos.note.save(note);
       
       // Dispatch domain events while inside the UOW
 
       // Labels are user-scoped personal data — persisted via preferences port
       if (command.labels && command.labels.length > 0) {
-        await ctx.userPreferencesRepository.createLabel(command.userId, note.id, command.labels);
+        await ctx.repos.userPreferences.createLabel(command.userId, note.id, command.labels);
       }
     });
 
     // Save initial content to document sync port (Yjs) if provided.
     // Document sync relies on Redis, so we keep it outside the SQL UOW.
     if (command.content) {
-      await this.documentSyncPort.persistSnapshot(
-        note.id,
-        note.title,
-        command.content,
-        false,
-        note.updatedAt,
-      );
+      try {
+        await this.documentSyncPort.persistSnapshot(
+          note.id,
+          note.title,
+          command.content,
+          false,
+          note.updatedAt,
+        );
+      } catch (error) {
+        // Log the error but don't fail the request. The Note exists in SQL.
+        // A retry mechanism or background sync can recover this later.
+        console.error(`[CreateNoteHandler] Failed to persist initial Yjs snapshot to Redis for note ${note.id}`, error);
+      }
     }
 
     // Removed draft cache invalidation as it is deprecated
