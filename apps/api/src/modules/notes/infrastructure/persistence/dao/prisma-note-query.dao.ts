@@ -33,7 +33,10 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
         OR: [{ userId }, { shares: { some: { recipientId: userId } } }],
       },
       include: {
-        shares: { select: { id: true } },
+        shares: {
+          where: { recipientId: userId },
+          include: { owner: { select: { id: true, email: true, displayName: true } } },
+        },
         protection: { select: { id: true } },
         userLabels: { where: { userId }, select: { labels: true } },
         userPins: { where: { userId }, select: { isPinned: true } },
@@ -42,11 +45,12 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
 
     if (!note) return null;
 
-    const sharedAccess = note.userId !== userId
-      ? await this.prisma.noteShare.findFirst({
-        where: { noteId, recipientId: userId },
-        include: { owner: { select: { id: true, email: true, displayName: true } } },
-      })
+    const sharedAccess = note.userId !== userId && note.shares[0]
+      ? {
+          permission: note.shares[0].permission,
+          createdAt: note.shares[0].createdAt,
+          owner: note.shares[0].owner,
+        }
       : null;
 
     return this.mapToNoteView(note, sharedAccess);
@@ -80,15 +84,17 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
   async findNoteShares(noteId: string, userId: string): Promise<NoteShareView[] | null> {
     const note = await this.prisma.note.findFirst({
       where: { id: noteId, userId },
+      include: {
+        shares: {
+          include: { recipient: { select: { displayName: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
 
     if (!note) return null;
 
-    const shares = await this.prisma.noteShare.findMany({
-      where: { noteId },
-      include: { recipient: { select: { displayName: true } } },
-      orderBy: { createdAt: 'asc' },
-    });
+    const shares = note.shares;
 
     return shares.map((s) => {
       const result: NoteShareView = {
