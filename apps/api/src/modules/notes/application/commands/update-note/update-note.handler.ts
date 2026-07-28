@@ -22,7 +22,7 @@ export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
     const { userId, noteId, title, content, isPinned, labels } = command;
 
     const { note } = await this.unitOfWork.execute(async (ctx) => {
-      const note = await ctx.noteRepository.findById(noteId);
+      const note = await ctx.repos.note.findById(noteId);
       if (!note) throw new NoteNotFoundError(noteId);
 
       if (!note.canEdit(userId)) throw new NotePermissionDeniedError();
@@ -31,18 +31,18 @@ export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
         note.rename(NoteTitle.create(title), userId);
       }
 
-      await ctx.noteRepository.save(note);
+      await ctx.repos.note.save(note);
 
       let personalIsPinnedResult = false;
       if (isPinned !== undefined) {
-        const result = await ctx.userPreferencesRepository.upsertPin(userId, noteId, isPinned);
+        const result = await ctx.repos.userPreferences.upsertPin(userId, noteId, isPinned);
         personalIsPinnedResult = result.isPinned;
       } else {
-        personalIsPinnedResult = await ctx.userPreferencesRepository.getPin(userId, noteId);
+        personalIsPinnedResult = await ctx.repos.userPreferences.getPin(userId, noteId);
       }
 
       if (labels !== undefined) {
-        await ctx.userPreferencesRepository.upsertLabel(userId, noteId, labels);
+        await ctx.repos.userPreferences.upsertLabel(userId, noteId, labels);
       }
       
       return { note, personalIsPinned: personalIsPinnedResult };

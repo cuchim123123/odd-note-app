@@ -23,7 +23,7 @@ function createMocks() {
 
   const unitOfWork = {
     execute: vi.fn(async (work) => {
-      return work({ noteRepository, userPreferencesRepository });
+      return work({ repos: { note: noteRepository, userPreferences: userPreferencesRepository } });
     }),
   };
 

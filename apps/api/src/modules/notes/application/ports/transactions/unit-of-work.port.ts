@@ -6,12 +6,14 @@ import type { IUserPreferencesRepository } from '@modules/notes/application/port
 import type { INoteRevisionRepository } from '@modules/notes/application/ports/repositories/note-revision.repository.port';
 
 export interface NoteTransactionContext {
-  noteRepository: INoteRepository;
-  noteShareRepository: INoteShareRepository;
+  repos: {
+    note: INoteRepository;
+    noteShare: INoteShareRepository;
+    userPreferences: IUserPreferencesRepository;
+    revision: INoteRevisionRepository;
+  };
   outbox: INoteOutboxPort;
   protectionPort: INoteProtectionPort;
-  userPreferencesRepository: IUserPreferencesRepository;
-  revisionRepository: INoteRevisionRepository;
 }
 
 export interface INoteUnitOfWork {

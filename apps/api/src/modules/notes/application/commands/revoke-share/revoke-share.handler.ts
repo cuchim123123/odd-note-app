@@ -16,7 +16,7 @@ export class RevokeShareHandler implements ICommandHandler<RevokeShareCommand> {
     const { userId, noteId, shareId } = command;
 
     await this.unitOfWork.execute(async (ctx) => {
-      const note = await ctx.noteRepository.findById(noteId);
+      const note = await ctx.repos.note.findById(noteId);
       if (!note) throw new NoteNotFoundError(noteId);
 
       const shareExists = note.shares.some((s) => s.id === shareId);
@@ -24,8 +24,8 @@ export class RevokeShareHandler implements ICommandHandler<RevokeShareCommand> {
 
       note.revokeShare(shareId, userId);
 
-      await ctx.noteRepository.save(note);
-      await ctx.noteShareRepository.delete(shareId);
+      await ctx.repos.note.save(note);
+      await ctx.repos.noteShare.delete(shareId);
     });
   }
 }

@@ -15,14 +15,14 @@ export class SetPasswordHandler implements ICommandHandler<SetPasswordCommand> {
     const { userId, noteId, password } = command;
 
     await this.unitOfWork.execute(async (ctx) => {
-      const note = await ctx.noteRepository.findById(noteId);
+      const note = await ctx.repos.note.findById(noteId);
       if (!note) throw new NoteNotFoundError(noteId);
 
       // markAsProtected() verifies ownership and raises NotePasswordSetDomainEvent
       note.markAsProtected(userId);
 
       // Persist aggregate state changes (isProtected flag)
-      await ctx.noteRepository.save(note);
+      await ctx.repos.note.save(note);
 
       // Delegate bcrypt hashing to the infrastructure port
       await ctx.protectionPort.setPassword(userId, noteId, password);

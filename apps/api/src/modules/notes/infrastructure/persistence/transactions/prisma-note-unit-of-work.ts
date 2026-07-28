@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { INoteUnitOfWork, NoteTransactionContext } from '@modules/notes/application/ports/transactions/unit-of-work.port';
 import { PrismaNoteRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note.repository';
@@ -10,28 +10,32 @@ import { PrismaNoteRevisionRepository } from '@modules/notes/infrastructure/pers
 import { JwtConfigService } from '@config/jwt-config.service';
 import { JwtService } from '@nestjs/jwt';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
+import { BasePrismaUnitOfWork } from '@shared/infrastructure/persistence/base-prisma-unit-of-work';
+import { NOTE_INTEGRATION_EVENT_MAPPER } from '@modules/notes/application/ports/messaging/integration-event-mapper.port';
+import type { NoteIntegrationEventMapper } from '@modules/notes/application/mappers/integration-event.mapper';
+import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 
 @Injectable()
-export class PrismaNoteUnitOfWork implements INoteUnitOfWork {
+export class PrismaNoteUnitOfWork extends BasePrismaUnitOfWork<NoteTransactionContext> implements INoteUnitOfWork {
   constructor(
-    private readonly prisma: PrismaService,
+    prisma: PrismaService,
     private readonly jwtConfigService: JwtConfigService,
     private readonly jwtService: JwtService,
-  ) {}
+    @Inject(NOTE_INTEGRATION_EVENT_MAPPER) integrationEventMapper: NoteIntegrationEventMapper,
+  ) {
+    super(prisma, integrationEventMapper);
+  }
 
-  async execute<T>(work: (ctx: NoteTransactionContext) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(async (tx: PrismaTransactionClient) => {
-      const ctx: NoteTransactionContext = {
-        noteRepository: new PrismaNoteRepository(tx),
-        noteShareRepository: new PrismaNoteShareRepository(tx),
-        outbox: new PrismaOutboxAdapter(tx),
-        protectionPort: new PrismaNoteProtectionAdapter(tx, this.jwtService, this.jwtConfigService),
-        userPreferencesRepository: new PrismaUserPreferencesRepository(tx),
-        revisionRepository: new PrismaNoteRevisionRepository(tx),
-      };
-      
-      return work(ctx);
-    });
+  protected createTransactionContext(tx: PrismaTransactionClient, tracker: AggregateTracker): NoteTransactionContext {
+    return {
+      repos: {
+        note: new PrismaNoteRepository(tx, tracker), // Tracker injected! Fixes the critical bug
+        noteShare: new PrismaNoteShareRepository(tx),
+        userPreferences: new PrismaUserPreferencesRepository(tx),
+        revision: new PrismaNoteRevisionRepository(tx),
+      },
+      outbox: new PrismaOutboxAdapter(tx), // Keep for legacy/manual events if needed
+      protectionPort: new PrismaNoteProtectionAdapter(tx, this.jwtService, this.jwtConfigService),
+    };
   }
 }
-

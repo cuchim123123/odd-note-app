@@ -17,7 +17,7 @@ export class UpdateShareHandler implements ICommandHandler<UpdateShareCommand> {
     const { userId, noteId, shareId, permission } = command;
 
     return this.unitOfWork.execute(async (ctx) => {
-      const note = await ctx.noteRepository.findById(noteId);
+      const note = await ctx.repos.note.findById(noteId);
       if (!note) throw new NoteNotFoundError(noteId);
 
       const shareExists = note.shares.some((s) => s.id === shareId);
@@ -26,8 +26,8 @@ export class UpdateShareHandler implements ICommandHandler<UpdateShareCommand> {
       const newPermissionVO = SharePermission.create(permission);
       note.updateShare(shareId, newPermissionVO, userId);
 
-      await ctx.noteRepository.save(note);
-      const updatedShare = await ctx.noteShareRepository.updatePermission(shareId, permission);
+      await ctx.repos.note.save(note);
+      const updatedShare = await ctx.repos.noteShare.updatePermission(shareId, permission);
       return { id: updatedShare.id };
     });
   }

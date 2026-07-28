@@ -18,13 +18,13 @@ export class DeleteNoteHandler implements ICommandHandler<DeleteNoteCommand> {
     const { userId, noteId } = command;
 
     await this.unitOfWork.execute(async (ctx) => {
-      const note = await ctx.noteRepository.findById(noteId);
+      const note = await ctx.repos.note.findById(noteId);
       if (!note) throw new NoteNotFoundError(noteId);
 
       // Aggregate enforces: only owner can delete (throws NotePermissionDeniedError)
       note.delete(userId);
 
-      await ctx.noteRepository.delete(noteId);
+      await ctx.repos.note.delete(noteId);
       
       // TODO Phase 4: NoteDeletedDomainEvent → Outbox → Kafka → Collaboration Gateway cleanup
     });

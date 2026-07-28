@@ -15,7 +15,7 @@ export class RemovePasswordHandler implements ICommandHandler<RemovePasswordComm
     const { userId, noteId, password } = command;
 
     await this.unitOfWork.execute(async (ctx) => {
-      const note = await ctx.noteRepository.findById(noteId);
+      const note = await ctx.repos.note.findById(noteId);
       if (!note || !note.isOwner(userId)) {
         throw new NoteNotFoundError(noteId); // 404 to avoid oracle attack
       }
