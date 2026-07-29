@@ -7,7 +7,7 @@ import { PrismaOutboxRepository } from '@modules/auth/infrastructure/persistence
 
 import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 import { INTEGRATION_EVENT_MAPPER } from '@modules/auth/application/ports/integration-event-mapper.port';
-import type { IntegrationEventMapper } from '@modules/auth/application/ports/integration-event-mapper.port';
+import type { AuthIntegrationEventMapper } from '@modules/auth/application/ports/integration-event-mapper.port';
 
 import type { PrismaTransactionClient } from '@modules/auth/infrastructure/persistence/prisma-client.type';
 import { BasePrismaUnitOfWork } from '@shared/infrastructure/persistence/base-prisma-unit-of-work';
@@ -16,7 +16,7 @@ import { BasePrismaUnitOfWork } from '@shared/infrastructure/persistence/base-pr
 export class PrismaUnitOfWork extends BasePrismaUnitOfWork<TransactionContext> implements UnitOfWork {
   constructor(
     prisma: PrismaService,
-    @Inject(INTEGRATION_EVENT_MAPPER) integrationEventMapper: IntegrationEventMapper
+    @Inject(INTEGRATION_EVENT_MAPPER) integrationEventMapper: AuthIntegrationEventMapper
   ) {
     super(prisma, integrationEventMapper);
   }

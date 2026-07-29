@@ -8,6 +8,8 @@ import { NOTIFICATION_REPOSITORY } from '@modules/notifications/application/port
 import { PrismaNotificationRepository } from '@modules/notifications/infrastructure/persistence/prisma-notification.repository';
 import { NOTIFICATION_QUERY_DAO } from '@modules/notifications/application/ports/notification-query.dao.port';
 import { PrismaNotificationQueryDao } from '@modules/notifications/infrastructure/persistence/prisma-notification-query.dao';
+import { NOTIFICATION_UNIT_OF_WORK } from '@modules/notifications/application/ports/transactions/unit-of-work.port';
+import { PrismaNotificationUnitOfWork } from '@modules/notifications/infrastructure/persistence/transactions/prisma-notification-unit-of-work';
 
 // ─── Application: Command Handlers ──────────────────────────────────────────
 import { CreateNotificationHandler } from '@modules/notifications/application/commands/create-notification/create-notification.handler';
@@ -36,6 +38,7 @@ import { NoteSharedConsumer } from '@modules/notifications/presentation/kafka/no
     // ── Port → Adapter Bindings ───────────────────────────────────────────
     { provide: NOTIFICATION_REPOSITORY, useClass: PrismaNotificationRepository },
     { provide: NOTIFICATION_QUERY_DAO, useClass: PrismaNotificationQueryDao },
+    { provide: NOTIFICATION_UNIT_OF_WORK, useClass: PrismaNotificationUnitOfWork },
     // ── Application: Command Handlers ─────────────────────────────────────
     CreateNotificationHandler,
     MarkAsReadHandler,

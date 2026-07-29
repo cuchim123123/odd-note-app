@@ -1,4 +1,4 @@
-import { Entity } from '@shared/domain/ddd/entity';
+import { AggregateRoot } from '@shared/domain/ddd/aggregate-root';
 import { uuidv7 } from 'uuidv7';
 
 export interface NotificationProps {
@@ -17,7 +17,15 @@ export interface NotificationProps {
   createdAt: Date;
 }
 
-export class NotificationEntity extends Entity<NotificationProps> {
+export class NotificationEntity extends AggregateRoot {
+  public readonly id: string;
+  protected readonly props: NotificationProps;
+
+  constructor(props: NotificationProps, id?: string) {
+    super();
+    this.id = id ?? uuidv7();
+    this.props = props;
+  }
   get userId(): string { return this.props.userId; }
   get type(): string { return this.props.type; }
   get title(): string { return this.props.title; }

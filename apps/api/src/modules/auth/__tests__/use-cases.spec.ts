@@ -18,6 +18,8 @@ import { RegisterHandler } from '@modules/auth/application/commands/register/reg
 import { LoginHandler } from '@modules/auth/application/commands/login/login.handler';
 import { ChangePasswordHandler } from '@modules/auth/application/commands/change-password/change-password.handler';
 import { RefreshTokensHandler } from '@modules/auth/application/commands/refresh-tokens/refresh-tokens.handler';
+import { LogoutHandler } from '@modules/auth/application/commands/logout/logout.handler';
+import { UpdateProfileHandler } from '@modules/auth/application/commands/update-profile/update-profile.handler';
 
 function createMocks() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,21 +102,27 @@ function createMocks() {
   );
 
   const loginHandler = new LoginHandler(
-    userRepo as never,
+    unitOfWork as never,
     passwordHasher as never,
     tokenProvider as never,
-    tokenRepo as never,
   );
 
   const changePasswordHandler = new ChangePasswordHandler(
-    userRepo as never,
+    unitOfWork as never,
     passwordHasher as never,
+  );
+
+  const logoutHandler = new LogoutHandler(
+    tokenProvider as never,
+    unitOfWork as never,
+  );
+
+  const updateProfileHandler = new UpdateProfileHandler(
+    unitOfWork as never,
   );
 
   const refreshTokensHandler = new RefreshTokensHandler(
     tokenProvider as never,
-    tokenRepo as never,
-    userRepo as never,
     unitOfWork as never,
   );
 
@@ -123,6 +131,8 @@ function createMocks() {
     loginHandler,
     changePasswordHandler,
     refreshTokensHandler,
+    logoutHandler,
+    updateProfileHandler,
     prisma,
     unitOfWork,
     authConfig,

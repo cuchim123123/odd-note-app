@@ -1,14 +1,14 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { BadRequestException } from '@nestjs/common';
 import { DeleteLabelCommand } from '@modules/notes/application/commands/delete-label/delete-label.command';
-import { USER_PREFERENCES_REPOSITORY, type IUserPreferencesRepository } from '@modules/notes/application/ports/repositories/user-preferences.repository.port';
+import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/transactions/unit-of-work.port';
 import { Inject } from '@nestjs/common';
 
 @CommandHandler(DeleteLabelCommand)
 export class DeleteLabelHandler implements ICommandHandler<DeleteLabelCommand> {
   constructor(
-    @Inject(USER_PREFERENCES_REPOSITORY)
-    private readonly userPreferencesRepository: IUserPreferencesRepository,
+    @Inject(NOTE_UNIT_OF_WORK)
+    private readonly unitOfWork: INoteUnitOfWork,
   ) {}
 
   async execute(command: DeleteLabelCommand): Promise<{ updatedCount: number }> {
@@ -17,7 +17,9 @@ export class DeleteLabelHandler implements ICommandHandler<DeleteLabelCommand> {
 
     if (!label) throw new BadRequestException('Label name cannot be empty');
 
-    const updatedCount = await this.userPreferencesRepository.deleteLabel(userId, label);
-    return { updatedCount };
+    return this.unitOfWork.execute(async ({ repos }) => {
+      const updatedCount = await repos.userPreferences.deleteLabel(userId, label);
+      return { updatedCount };
+    });
   }
 }

@@ -4,10 +4,7 @@ import type { ICommandHandler } from '@nestjs/cqrs';
 import type { AuthTokens } from '@modules/auth/application/shared/auth.types';
 import { TOKEN_PROVIDER } from '@modules/auth/application/ports/token-provider.port';
 import type { TokenProvider } from '@modules/auth/application/ports/token-provider.port';
-import { TOKEN_REPOSITORY } from '@modules/auth/application/ports/token.repository.port';
-import type { TokenRepository } from '@modules/auth/application/ports/token.repository.port';
-import { USER_REPOSITORY } from '@modules/auth/application/ports/user.repository.port';
-import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+
 import { UNIT_OF_WORK } from '@modules/auth/application/ports/unit-of-work.port';
 import type { UnitOfWork } from '@modules/auth/application/ports/unit-of-work.port';
 import { InvalidTokenError } from '@modules/auth/domain/errors/auth-error';
@@ -18,8 +15,6 @@ import { RefreshToken } from '@modules/auth/domain/entities/token.entity';
 export class RefreshTokensHandler implements ICommandHandler<RefreshTokensCommand> {
   constructor(
     @Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenProvider,
-    @Inject(TOKEN_REPOSITORY) private readonly tokenRepo: TokenRepository,
-    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
   ) {}
 

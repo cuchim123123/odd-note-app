@@ -1,12 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import type { INotificationRepository } from '@modules/notifications/application/ports/notification.repository.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
+import type { PrismaTransactionClient } from '@modules/auth/infrastructure/persistence/prisma-client.type';
 import { NotificationEntity } from '@modules/notifications/domain/entities/notification.entity';
 import type { Notification } from '@prisma/client';
+import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 
 @Injectable()
 export class PrismaNotificationRepository implements INotificationRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaTransactionClient,
+    @Optional() @Inject('AGGREGATE_TRACKER') private readonly tracker?: AggregateTracker
+  ) {}
 
   private toDomain(record: Notification): NotificationEntity {
     return NotificationEntity.reconstitute(record.id, {
@@ -22,6 +27,9 @@ export class PrismaNotificationRepository implements INotificationRepository {
   }
 
   async save(notification: NotificationEntity): Promise<void> {
+    if (this.tracker) {
+      this.tracker.track(notification);
+    }
     // Idempotent insert, wont return anything on duplicate.
     const result = await this.prisma.notification.createMany({
       data: [{

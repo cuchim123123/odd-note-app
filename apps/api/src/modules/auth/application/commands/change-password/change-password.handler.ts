@@ -4,29 +4,30 @@ import type { ICommandHandler } from '@nestjs/cqrs';
 import { UserNotFoundError } from '@modules/auth/domain/errors/auth-error';
 import { PASSWORD_HASHER } from '@modules/auth/application/ports/password-hasher.port';
 import type { PasswordHasher } from '@modules/auth/application/ports/password-hasher.port';
-import { USER_REPOSITORY } from '@modules/auth/application/ports/user.repository.port';
-import type { UserRepository } from '@modules/auth/application/ports/user.repository.port';
+import { UNIT_OF_WORK, type UnitOfWork } from '@modules/auth/application/ports/unit-of-work.port';
 import { ChangePasswordCommand } from '@modules/auth/application/commands/change-password/change-password.command';
 
 @CommandHandler(ChangePasswordCommand)
 export class ChangePasswordHandler implements ICommandHandler<ChangePasswordCommand> {
   constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
   ) {}
 
   async execute(command: ChangePasswordCommand): Promise<void> {
-    const user = await this.userRepo.findById(command.userId);
+    await this.unitOfWork.execute(async ({ repos }) => {
+      const user = await repos.user.findById(command.userId);
 
-    if (!user) {
-      throw new UserNotFoundError();
-    }
+      if (!user) {
+        throw new UserNotFoundError();
+      }
 
-    await user.verifyCurrentPassword(command.input.oldPassword!, this.passwordHasher);
+      await user.verifyCurrentPassword(command.input.oldPassword!, this.passwordHasher);
 
-    const passwordHash = await this.passwordHasher.hash(command.input.newPassword!);
-    const updatedUser = user.changePassword(passwordHash);
-    
-    await this.userRepo.save(updatedUser);
+      const passwordHash = await this.passwordHasher.hash(command.input.newPassword!);
+      const updatedUser = user.changePassword(passwordHash);
+      
+      await repos.user.save(updatedUser);
+    });
   }
 }
