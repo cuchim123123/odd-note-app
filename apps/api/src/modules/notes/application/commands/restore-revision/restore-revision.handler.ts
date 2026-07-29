@@ -3,7 +3,7 @@ import { Inject, Logger } from '@nestjs/common';
 import { RestoreRevisionCommand } from '@modules/notes/application/commands/restore-revision/restore-revision.command';
 import { NOTE_REVISION_REPOSITORY, type INoteRevisionRepository } from '@modules/notes/application/ports/repositories/note-revision.repository.port';
 import { NOTE_REPOSITORY, type INoteRepository } from '@modules/notes/application/ports/repositories/note.repository.port';
-import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/repositories/note-update.repository.port';
+import { DOCUMENT_UPDATE_STORE, type IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { NoteNotFoundError, NotePermissionDeniedError, NoteLockedForRestoreError } from '@modules/notes/domain/errors/note.errors';
 import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
 import { RedisService } from '@shared/infrastructure/redis/redis.service';
@@ -25,8 +25,8 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
     private readonly revisionRepository: INoteRevisionRepository,
     @Inject(NOTE_REPOSITORY)
     private readonly noteRepository: INoteRepository,
-    @Inject(NOTE_UPDATE_REPOSITORY)
-    private readonly updateRepository: INoteUpdateRepository,
+    @Inject(DOCUMENT_UPDATE_STORE)
+    private readonly updateStore: IDocumentUpdateStore,
     private readonly replayCoordinator: ReplayCoordinator,
     private readonly redisService: RedisService,
     private readonly idempotencyService: IdempotencyService,
@@ -71,7 +71,7 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
       );
 
       // 5. Append the resulting CRDT update to the update log (Source of Truth)
-      await this.updateRepository.append({
+      await this.updateStore.append({
         noteId,
         authorId: userId,
         updateBlob: revertingUpdateBlob,

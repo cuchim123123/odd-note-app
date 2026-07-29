@@ -1,13 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { INoteUpdateRepository } from '@modules/notes/application/ports/repositories/note-update.repository.port';
-import { NoteUpdateLog } from '@modules/notes/domain/entities/note-update.entity';
+import type { IDocumentUpdateStore, AppendDocumentUpdateDto, StoredDocumentUpdate } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 
 @Injectable()
-export class PrismaNoteUpdateRepository implements INoteUpdateRepository {
+export class PrismaDocumentUpdateStore implements IDocumentUpdateStore {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async append(update: Omit<NoteUpdateLog, 'seq'>): Promise<NoteUpdateLog> {
+  async append(update: AppendDocumentUpdateDto): Promise<StoredDocumentUpdate> {
     const row = await this.prisma.noteUpdate.create({
       data: {
         noteId: update.noteId,
@@ -18,17 +17,17 @@ export class PrismaNoteUpdateRepository implements INoteUpdateRepository {
       },
     });
 
-    return NoteUpdateLog.create({
+    return {
       seq: row.seq,
       noteId: row.noteId,
       updateBlob: new Uint8Array(row.updateBlob),
       sizeBytes: row.sizeBytes,
       authorId: row.authorId,
       createdAt: row.createdAt,
-    });
+    };
   }
 
-  async getUpdatesInRange(noteId: string, fromSeqExclusive: bigint, toSeqInclusive: bigint): Promise<NoteUpdateLog[]> {
+  async getUpdatesInRange(noteId: string, fromSeqExclusive: bigint, toSeqInclusive: bigint): Promise<StoredDocumentUpdate[]> {
     const rows = await this.prisma.noteUpdate.findMany({
       where: {
         noteId,
@@ -40,7 +39,7 @@ export class PrismaNoteUpdateRepository implements INoteUpdateRepository {
       orderBy: { seq: 'asc' },
     });
 
-    return rows.map((row) => NoteUpdateLog.create({
+    return rows.map((row) => ({
       seq: row.seq,
       noteId: row.noteId,
       updateBlob: new Uint8Array(row.updateBlob),
@@ -50,7 +49,7 @@ export class PrismaNoteUpdateRepository implements INoteUpdateRepository {
     }));
   }
 
-  async getUpdatesSince(noteId: string, fromSeqExclusive: bigint): Promise<NoteUpdateLog[]> {
+  async getUpdatesSince(noteId: string, fromSeqExclusive: bigint): Promise<StoredDocumentUpdate[]> {
     const rows = await this.prisma.noteUpdate.findMany({
       where: {
         noteId,
@@ -59,7 +58,7 @@ export class PrismaNoteUpdateRepository implements INoteUpdateRepository {
       orderBy: { seq: 'asc' },
     });
 
-    return rows.map((row) => NoteUpdateLog.create({
+    return rows.map((row) => ({
       seq: row.seq,
       noteId: row.noteId,
       updateBlob: new Uint8Array(row.updateBlob),

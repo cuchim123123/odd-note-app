@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { EventsHandler, type IEventHandler } from '@nestjs/cqrs';
 import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
-import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/repositories/note-update.repository.port';
+import { DOCUMENT_UPDATE_STORE, type IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { NOTE_OUTBOX_PORT, type INoteOutboxPort } from '@modules/notes/application/ports/messaging/note-outbox.port';
 
 // Note: This event would typically be emitted by the Realtime Collaboration Gateway
@@ -22,8 +22,8 @@ export class SnapshotThresholdMonitor implements IEventHandler<NoteUpdateAppende
   private readonly logger = new Logger(SnapshotThresholdMonitor.name);
 
   constructor(
-    @Inject(NOTE_UPDATE_REPOSITORY)
-    private readonly updateRepository: INoteUpdateRepository,
+    @Inject(DOCUMENT_UPDATE_STORE)
+    private readonly updateStore: IDocumentUpdateStore,
     @Inject(SNAPSHOT_METADATA_REPOSITORY)
     private readonly snapshotMetadataRepository: ISnapshotMetadataRepository,
     @Inject(NOTE_OUTBOX_PORT)
@@ -38,7 +38,7 @@ export class SnapshotThresholdMonitor implements IEventHandler<NoteUpdateAppende
     const startSeq = latestSnapshot ? latestSnapshot.snapshotSeq : 0n;
 
     // 2. Query updates since that snapshot
-    const recentUpdates = await this.updateRepository.getUpdatesInRange(noteId, startSeq, seq);
+    const recentUpdates = await this.updateStore.getUpdatesInRange(noteId, startSeq, seq);
     
     // 3. Calculate metrics
     const updateCount = recentUpdates.length;

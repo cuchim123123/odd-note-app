@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as Y from 'yjs';
 import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
-import { NOTE_UPDATE_REPOSITORY, type INoteUpdateRepository } from '@modules/notes/application/ports/repositories/note-update.repository.port';
+import { DOCUMENT_UPDATE_STORE, type IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { SNAPSHOT_STORAGE_PORT, type ISnapshotStoragePort } from '@modules/notes/application/ports/external/snapshot-storage.port';
 
 @Injectable()
@@ -11,8 +11,8 @@ export class ReplayCoordinator {
   constructor(
     @Inject(SNAPSHOT_METADATA_REPOSITORY)
     private readonly snapshotRepository: ISnapshotMetadataRepository,
-    @Inject(NOTE_UPDATE_REPOSITORY)
-    private readonly updateRepository: INoteUpdateRepository,
+    @Inject(DOCUMENT_UPDATE_STORE)
+    private readonly updateStore: IDocumentUpdateStore,
     @Inject(SNAPSHOT_STORAGE_PORT)
     private readonly snapshotStoragePort: ISnapshotStoragePort,
   ) {}
@@ -53,8 +53,8 @@ export class ReplayCoordinator {
 
     // Step 3 — fetch delta updates after the snapshot
     const updates = targetSeq
-      ? await this.updateRepository.getUpdatesInRange(noteId, fromSeq, targetSeq)
-      : await this.updateRepository.getUpdatesSince(noteId, fromSeq);
+      ? await this.updateStore.getUpdatesInRange(noteId, fromSeq, targetSeq)
+      : await this.updateStore.getUpdatesSince(noteId, fromSeq);
 
     this.logger.debug(`[${noteId}] Applying ${updates.length} updates on top of snapshot`);
 

@@ -83,8 +83,8 @@ import { NOTE_QUERY_DAO } from '@modules/notes/application/ports/dao/note-query.
 import { PrismaNoteQueryDao } from '@modules/notes/infrastructure/persistence/dao/prisma-note-query.dao';
 import { NOTE_REVISION_QUERY_DAO } from '@modules/notes/application/ports/dao/note-revision-query.dao.port';
 import { PrismaNoteRevisionQueryDao } from '@modules/notes/infrastructure/persistence/dao/prisma-note-revision-query.dao';
-import { NOTE_UPDATE_REPOSITORY } from '@modules/notes/application/ports/repositories/note-update.repository.port';
-import { PrismaNoteUpdateRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note-update.repository';
+import { DOCUMENT_UPDATE_STORE } from '@modules/notes/application/ports/stores/document-update.store.port';
+import { PrismaDocumentUpdateStore } from '@modules/notes/infrastructure/persistence/stores/prisma-document-update.store';
 import { SNAPSHOT_METADATA_REPOSITORY } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
 import { PrismaSnapshotMetadataRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-snapshot-metadata.repository';
 import { SNAPSHOT_STORAGE_PORT } from '@modules/notes/application/ports/external/snapshot-storage.port';
@@ -211,7 +211,7 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
       ) => (cfg.get('PROJECTION_STORE', { infer: true }) === 'mongo' ? mongo : prisma),
       inject: [ConfigService, PrismaNoteRevisionQueryDao, MongoNoteRevisionQueryDao],
     },
-    { provide: NOTE_UPDATE_REPOSITORY, useClass: PrismaNoteUpdateRepository },
+    { provide: DOCUMENT_UPDATE_STORE, useClass: PrismaDocumentUpdateStore },
     { provide: SNAPSHOT_METADATA_REPOSITORY, useClass: PrismaSnapshotMetadataRepository },
     { provide: SNAPSHOT_STORAGE_PORT, useClass: S3SnapshotStorageAdapter },
     { provide: NOTE_ACCESS_PORT, useClass: PrismaNoteAccessAdapter },
