@@ -1,12 +1,11 @@
 import { NoteId, UserId } from '@shared/domain/ddd/id-types';
-import { AggregateRoot } from '@shared/domain/ddd/aggregate-root';
 
 /**
  * NoteRevisionEntity — a logical checkpoint in the note's history.
  * It contains NO document state. It acts strictly as a pointer (targetSeq)
  * to a specific point in the append-only NoteUpdate log.
  */
-export class NoteRevisionEntity extends AggregateRoot {
+export class NoteRevisionEntity {
   private readonly _id: string;
   private readonly _noteId: NoteId;
   private readonly _createdBy: UserId;
@@ -20,7 +19,6 @@ export class NoteRevisionEntity extends AggregateRoot {
     createdBy: UserId,
     public readonly label: string | null,
   ) {
-    super();
     this._id = id;
     this._noteId = noteId;
     this._targetSeq = targetSeq;

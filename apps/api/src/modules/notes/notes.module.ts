@@ -76,8 +76,8 @@ import { USER_PREFERENCES_REPOSITORY } from '@modules/notes/application/ports/re
 import { PrismaUserPreferencesRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-user-preferences.repository';
 import { USER_READ_PORT } from '@modules/notes/application/ports/dao/user-read.port';
 import { PrismaUserReadAdapter } from '@modules/notes/infrastructure/persistence/dao/prisma-user-read.adapter';
-import { NOTE_REVISION_REPOSITORY } from '@modules/notes/application/ports/repositories/note-revision.repository.port';
-import { PrismaNoteRevisionRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note-revision.repository';
+import { VERSION_HISTORY_REPOSITORY } from '@modules/notes/application/ports/repositories/version-history.repository.port';
+import { PrismaVersionHistoryRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-version-history.repository';
 import { NOTE_MAIL_SENDER } from '@modules/notes/application/ports/messaging/note-mail-sender.port';
 import { NOTE_QUERY_DAO } from '@modules/notes/application/ports/dao/note-query.dao.port';
 import { PrismaNoteQueryDao } from '@modules/notes/infrastructure/persistence/dao/prisma-note-query.dao';
@@ -187,7 +187,7 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     { provide: NOTE_SHARE_REPOSITORY, useClass: PrismaNoteShareRepository },
     { provide: USER_PREFERENCES_REPOSITORY, useClass: PrismaUserPreferencesRepository },
     { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },
-    { provide: NOTE_REVISION_REPOSITORY, useClass: PrismaNoteRevisionRepository },
+    { provide: VERSION_HISTORY_REPOSITORY, useClass: PrismaVersionHistoryRepository },
     { provide: NOTE_MAIL_SENDER, useClass: NoteMailerAdapter },
     PrismaNoteQueryDao,
     MongoNoteQueryDao,

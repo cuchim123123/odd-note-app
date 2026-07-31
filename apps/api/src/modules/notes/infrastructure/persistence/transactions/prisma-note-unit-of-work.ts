@@ -6,7 +6,7 @@ import { PrismaNoteShareRepository } from '@modules/notes/infrastructure/persist
 import { PrismaOutboxAdapter } from '@modules/notes/infrastructure/outbox/prisma-outbox.adapter';
 import { PrismaNoteProtectionAdapter } from '@modules/notes/infrastructure/persistence/security/prisma-note-protection.adapter';
 import { PrismaUserPreferencesRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-user-preferences.repository';
-import { PrismaNoteRevisionRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note-revision.repository';
+import { PrismaVersionHistoryRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-version-history.repository';
 import { JwtConfigService } from '@config/jwt-config.service';
 import { JwtService } from '@nestjs/jwt';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
@@ -32,7 +32,7 @@ export class PrismaNoteUnitOfWork extends BasePrismaUnitOfWork<NoteTransactionCo
         note: new PrismaNoteRepository(tx, tracker), // Tracker injected! Fixes the critical bug
         noteShare: new PrismaNoteShareRepository(tx),
         userPreferences: new PrismaUserPreferencesRepository(tx),
-        revision: new PrismaNoteRevisionRepository(tx),
+        versionHistory: new PrismaVersionHistoryRepository(tx),
       },
       outbox: new PrismaOutboxAdapter(tx), // Keep for legacy/manual events if needed
       protectionPort: new PrismaNoteProtectionAdapter(tx, this.jwtService, this.jwtConfigService),
