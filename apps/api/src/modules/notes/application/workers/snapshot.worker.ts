@@ -46,7 +46,7 @@ export class SnapshotThresholdMonitor implements IEventHandler<NoteUpdateAppende
 
     // 4. Evaluate Threshold Rules
     if (updateCount >= MAX_UPDATES_THRESHOLD || accumulatedBytes >= MAX_BYTES_THRESHOLD) {
-      this.logger.log(`Threshold reached for note ${noteId} [Updates: ${updateCount}, Size: ${accumulatedBytes}b]. Triggering Snapshot.`);
+      this.logger.log(`Threshold reached for note ${noteId} [Updates: ${updateCount}, Size: ${accumulatedBytes} bytes]. Triggering Snapshot.`);
       
       // Push to Outbox Queue instead of executing in-memory!
       // This delegates the execution to a reliable queue with Retry and DLQ.
