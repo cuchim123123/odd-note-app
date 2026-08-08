@@ -8,10 +8,14 @@ import { ConfigModule } from '@config/config.module';
 import { BILLING_UNIT_OF_WORK } from '@modules/billing/application/ports/transactions/billing-unit-of-work.port';
 import { PLAN_CATALOG_REPOSITORY } from '@modules/billing/application/ports/repositories/plan-catalog.repository.port';
 import { ENTITLEMENT_QUERY_DAO } from '@modules/billing/application/ports/dao/entitlement-query.dao.port';
+import { PAYMENT_GATEWAY } from '@modules/billing/application/ports/payment-gateway.port';
 import { BILLING_INTEGRATION_EVENT_MAPPER } from '@modules/billing/application/mappers/billing-integration-event.mapper';
 
 // ─── Application: Domain Services ────────────────────────────────────────────
 import { PricingService } from '@modules/billing/domain/services/pricing.service';
+
+// ─── Application: Command Handlers ───────────────────────────────────────────
+import { InitiatePaymentHandler } from '@modules/billing/application/commands/initiate-payment/initiate-payment.handler';
 
 // ─── Application: Mappers ─────────────────────────────────────────────────────
 import { BillingDefaultIntegrationEventMapper } from '@modules/billing/application/mappers/billing-integration-event.mapper';
@@ -20,23 +24,33 @@ import { BillingDefaultIntegrationEventMapper } from '@modules/billing/applicati
 import { PrismaBillingUnitOfWork } from '@modules/billing/infrastructure/persistence/transactions/prisma-billing-unit-of-work';
 import { PrismaPlanCatalogRepository } from '@modules/billing/infrastructure/persistence/prisma-plan-catalog.repository';
 import { PrismaEntitlementQueryDao } from '@modules/billing/infrastructure/persistence/dao/prisma-entitlement-query.dao';
+import { MockPaymentGatewayAdapter } from '@modules/billing/infrastructure/gateways/mock-payment-gateway.adapter';
 import { PlanCatalogSeeder } from '@modules/billing/infrastructure/seeders/plan-catalog.seeder';
 
-// TODO Phase 2: Add command handlers
-// TODO Phase 3: Add webhook handler, gateway adapter
-// TODO Phase 4: Add entitlement query handler, controllers
+// ─── Presentation: HTTP Controllers ──────────────────────────────────────────
+import { InitiatePaymentHttpController } from '@modules/billing/presentation/http/commands/initiate-payment/initiate-payment.http.controller';
+
+// TODO Phase 3: Add webhook handler, StripePaymentGatewayAdapter
+// TODO Phase 4: Add entitlement query handler, get-entitlement controller
 
 @Module({
   imports: [CqrsModule, PrismaModule, RedisModule, ConfigModule],
+  controllers: [
+    InitiatePaymentHttpController,
+  ],
   providers: [
     // ── Domain Services ────────────────────────────────────────────────────
     PricingService,
+
+    // ── Application: Command Handlers ─────────────────────────────────────
+    InitiatePaymentHandler,
 
     // ── Port → Adapter Bindings ───────────────────────────────────────────
     { provide: BILLING_UNIT_OF_WORK, useClass: PrismaBillingUnitOfWork },
     { provide: PLAN_CATALOG_REPOSITORY, useClass: PrismaPlanCatalogRepository },
     { provide: BILLING_INTEGRATION_EVENT_MAPPER, useClass: BillingDefaultIntegrationEventMapper },
     { provide: ENTITLEMENT_QUERY_DAO, useClass: PrismaEntitlementQueryDao },
+    { provide: PAYMENT_GATEWAY, useClass: MockPaymentGatewayAdapter },
 
     // ── Infrastructure ────────────────────────────────────────────────────
     PlanCatalogSeeder,
