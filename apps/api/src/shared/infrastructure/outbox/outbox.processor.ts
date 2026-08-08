@@ -119,6 +119,9 @@ export class OutboxProcessor implements OnModuleInit {
         where: { id: msg.id },
         data: { status: 'PROCESSED', processedAt: new Date() },
       });
+
+      const lagMs = Date.now() - msg.createdAt.getTime();
+      this.logger.debug(`[Outbox] Message ${msg.id} [${msg.topic}] processed successfully (lag: ${lagMs}ms)`);
     } catch (error) {
       await this.handleFailure(msg, error);
     }
