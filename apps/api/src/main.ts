@@ -6,7 +6,7 @@ import { DomainExceptionFilter } from '@shared/presentation/http/filters/domain-
 import { Transport, type MicroserviceOptions } from '@nestjs/microservices';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());
 

@@ -2,6 +2,7 @@ import type { IPaymentRepository } from '@modules/billing/application/ports/repo
 import type { ISubscriptionRepository } from '@modules/billing/application/ports/repositories/subscription.repository.port';
 import type { IPlanCatalogRepository } from '@modules/billing/application/ports/repositories/plan-catalog.repository.port';
 import type { IEntitlementRepository } from '@modules/billing/application/ports/repositories/entitlement.repository.port';
+import type { IProcessedWebhookEventRepository } from '@modules/billing/application/ports/repositories/processed-webhook-event.repository.port';
 
 export const BILLING_UNIT_OF_WORK = Symbol('BILLING_UNIT_OF_WORK');
 
@@ -11,6 +12,7 @@ export interface BillingTransactionContext {
     subscription: ISubscriptionRepository;
     planCatalog: IPlanCatalogRepository;
     entitlement: IEntitlementRepository;
+    processedWebhookEvent: IProcessedWebhookEventRepository;
   };
 }
 

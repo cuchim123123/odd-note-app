@@ -16,6 +16,11 @@ import { PricingService } from '@modules/billing/domain/services/pricing.service
 
 // ─── Application: Command Handlers ───────────────────────────────────────────
 import { InitiatePaymentHandler } from '@modules/billing/application/commands/initiate-payment/initiate-payment.handler';
+import { HandlePaymentSucceededHandler } from '@modules/billing/application/commands/handle-payment-succeeded/handle-payment-succeeded.handler';
+import { HandlePaymentFailedHandler } from '@modules/billing/application/commands/handle-payment-failed/handle-payment-failed.handler';
+import { HandleSubscriptionRenewedHandler } from '@modules/billing/application/commands/handle-subscription-renewed/handle-subscription-renewed.handler';
+import { HandleSubscriptionPaymentFailedHandler } from '@modules/billing/application/commands/handle-subscription-payment-failed/handle-subscription-payment-failed.handler';
+import { HandleSubscriptionCancelledHandler } from '@modules/billing/application/commands/handle-subscription-cancelled/handle-subscription-cancelled.handler';
 
 // ─── Application: Mappers ─────────────────────────────────────────────────────
 import { BillingDefaultIntegrationEventMapper } from '@modules/billing/application/mappers/billing-integration-event.mapper';
@@ -29,14 +34,15 @@ import { PlanCatalogSeeder } from '@modules/billing/infrastructure/seeders/plan-
 
 // ─── Presentation: HTTP Controllers ──────────────────────────────────────────
 import { InitiatePaymentHttpController } from '@modules/billing/presentation/http/commands/initiate-payment/initiate-payment.http.controller';
+import { StripeWebhookHttpController } from '@modules/billing/presentation/http/webhooks/stripe-webhook.http.controller';
 
-// TODO Phase 3: Add webhook handler, StripePaymentGatewayAdapter
-// TODO Phase 4: Add entitlement query handler, get-entitlement controller
+// TODO Phase 4: EntitlementQueryDao cross-module wiring
 
 @Module({
   imports: [CqrsModule, PrismaModule, RedisModule, ConfigModule],
   controllers: [
     InitiatePaymentHttpController,
+    StripeWebhookHttpController,
   ],
   providers: [
     // ── Domain Services ────────────────────────────────────────────────────
@@ -44,6 +50,11 @@ import { InitiatePaymentHttpController } from '@modules/billing/presentation/htt
 
     // ── Application: Command Handlers ─────────────────────────────────────
     InitiatePaymentHandler,
+    HandlePaymentSucceededHandler,
+    HandlePaymentFailedHandler,
+    HandleSubscriptionRenewedHandler,
+    HandleSubscriptionPaymentFailedHandler,
+    HandleSubscriptionCancelledHandler,
 
     // ── Port → Adapter Bindings ───────────────────────────────────────────
     { provide: BILLING_UNIT_OF_WORK, useClass: PrismaBillingUnitOfWork },
@@ -61,3 +72,4 @@ import { InitiatePaymentHttpController } from '@modules/billing/presentation/htt
   ],
 })
 export class BillingModule {}
+

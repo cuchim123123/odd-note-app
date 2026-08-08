@@ -6,6 +6,7 @@ import { PrismaPaymentRepository } from '@modules/billing/infrastructure/persist
 import { PrismaSubscriptionRepository } from '@modules/billing/infrastructure/persistence/prisma-subscription.repository';
 import { PrismaPlanCatalogRepository } from '@modules/billing/infrastructure/persistence/prisma-plan-catalog.repository';
 import { PrismaEntitlementRepository } from '@modules/billing/infrastructure/persistence/prisma-entitlement.repository';
+import { PrismaProcessedWebhookEventRepository } from '@modules/billing/infrastructure/persistence/prisma-processed-webhook-event.repository';
 import { BILLING_INTEGRATION_EVENT_MAPPER } from '@modules/billing/application/mappers/billing-integration-event.mapper';
 import type { BillingIntegrationEventMapper } from '@modules/billing/application/mappers/billing-integration-event.mapper';
 import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
@@ -31,6 +32,7 @@ export class PrismaBillingUnitOfWork
         subscription: new PrismaSubscriptionRepository(tx, tracker),
         planCatalog: new PrismaPlanCatalogRepository(tx),
         entitlement: new PrismaEntitlementRepository(tx),
+        processedWebhookEvent: new PrismaProcessedWebhookEventRepository(tx),
       },
     };
   }
