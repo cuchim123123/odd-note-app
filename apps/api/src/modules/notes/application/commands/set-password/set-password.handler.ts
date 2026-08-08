@@ -22,7 +22,7 @@ export class SetPasswordHandler implements ICommandHandler<SetPasswordCommand> {
       note.markAsProtected(userId);
 
       // Persist aggregate state changes (isProtected flag)
-      await ctx.repos.note.save(note);
+      await ctx.repos.note.update(note);
 
       // Delegate bcrypt hashing to the infrastructure port
       await ctx.protectionPort.setPassword(userId, noteId, password);

@@ -24,7 +24,7 @@ export class RevokeShareHandler implements ICommandHandler<RevokeShareCommand> {
 
       note.revokeShare(shareId, userId);
 
-      await ctx.repos.note.save(note);
+      await ctx.repos.note.update(note);
       await ctx.repos.noteShare.delete(shareId);
     });
   }

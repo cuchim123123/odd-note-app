@@ -20,11 +20,10 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
     const title = NoteTitle.create(command.title);
 
     // Create Note aggregate root
-    const note = NoteEntity.create(command.userId, title, command.id);
+    const note = NoteEntity.create(command.userId, title);
 
     await this.unitOfWork.execute(async (ctx) => {
-      // Save aggregate
-      await ctx.repos.note.save(note);
+      await ctx.repos.note.create(note);
       
       // Dispatch domain events while inside the UOW
 

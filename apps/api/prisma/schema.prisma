@@ -233,3 +233,99 @@ model NoteRevision {
   @@unique([noteId, targetSeq])
   @@index([noteId, createdAt(sort: Desc)])
 }
+
+// ─── Billing ──────────────────────────────────────────────────────────────────
+
+enum PaymentStatus {
+  PENDING
+  AWAITING_ACTION
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+/// Immutable product catalog. Plans are never deleted — only deprecated.
+model Plan {
+  id           String    @id // e.g. 'premium_monthly_v1'
+  version      Int       @default(1)
+  displayName  String
+  amountCents  Int // authoritative server-side price — never trust client
+  currency     String    @default("USD")
+  intervalDays Int? // null = one-time / lifetime
+  features     String[] // e.g. ['premium_notes']
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  deprecatedAt DateTime?
+
+  @@unique([id, version])
+  @@index([isActive])
+}
+
+/// One record per checkout/payment attempt. Immutable once in a terminal state.
+model Payment {
+  id              String        @id @default(uuid(7))
+  billingEntityId String // userId or orgId — no FK to User (cross-BC)
+  planId          String
+  planVersion     Int
+  amountCents     Int // server-authoritative price at time of initiation
+  currency        String        @default("USD")
+  status          PaymentStatus @default(PENDING)
+  provider        String? // 'stripe' | 'momo' | 'mock'
+  externalId      String?       @unique // provider session/transaction ID
+  failureReason   String?
+  correlationId   String // original HTTP request ID
+  idempotencyKey  String // client-provided for deduplication
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([billingEntityId, idempotencyKey])
+  @@index([billingEntityId])
+  @@index([status])
+  @@index([provider, externalId])
+}
+
+/// Entitlement lifecycle for a billing entity. Each renewal creates a new record period.
+model Subscription {
+  id                   String             @id @default(uuid(7))
+  billingEntityId      String
+  planId               String
+  planVersion          Int
+  paymentId            String             @unique // idempotency: one subscription per initiating payment
+  status               SubscriptionStatus @default(ACTIVE)
+  features             String[] // snapshotted at activation from plan definition
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  stripeSubscriptionId String?            @unique // for recurring webhook correlation
+  cancelledAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([billingEntityId, status])
+  @@index([currentPeriodEnd])
+  @@index([stripeSubscriptionId])
+}
+
+/// Read model: fast-path entitlement resolution. Updated atomically in the same TX as Subscription.
+model EntitlementRecord {
+  billingEntityId String    @id
+  features        String[]
+  expiresAt       DateTime? // null = non-expiring
+  updatedAt       DateTime  @updatedAt
+}
+
+/// Deduplication table for webhook events. Inserted in the same TX as payment/subscription updates.
+model ProcessedWebhookEvent {
+  webhookEventId String   @id // provider Event-Id (e.g. Stripe evt_xxx)
+  provider       String
+  processedAt    DateTime @default(now())
+
+  @@index([processedAt])
+}

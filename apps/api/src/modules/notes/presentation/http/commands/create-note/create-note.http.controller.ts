@@ -17,7 +17,7 @@ export class CreateNoteHttpController {
     @Body(new ZodValidationPipe(createNoteSchema)) body: CreateNoteInput,
   ) {
     const result = (await this.commandBus.execute(
-      new CreateNoteCommand(userId, body.title!, body.content, body.labels, body.id)
+      new CreateNoteCommand(userId, body.title!, body.content, body.labels)
     )) as { id: string };
 
     return { id: result.id };

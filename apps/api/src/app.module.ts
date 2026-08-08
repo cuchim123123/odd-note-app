@@ -11,8 +11,9 @@ import { RedisModule } from '@shared/infrastructure/redis/redis.module';
 import { MongoModule } from '@shared/infrastructure/mongo/mongo.module';
 import { UploadsModule } from '@modules/uploads/uploads.module';
 import { OutboxModule } from '@shared/infrastructure/outbox/outbox.module';
+import { BillingModule } from '@modules/billing/billing.module';
 
 @Module({
-  imports: [ConfigModule, JwtConfigModule, HealthModule, PrismaModule, RedisModule, MongoModule.forRoot(), AuthModule, UploadsModule, NotesModule, NotificationsModule, CollaborationModule, OutboxModule],
+  imports: [ConfigModule, JwtConfigModule, HealthModule, PrismaModule, RedisModule, MongoModule.forRoot(), AuthModule, UploadsModule, NotesModule, NotificationsModule, CollaborationModule, OutboxModule, BillingModule],
 })
 export class AppModule {}

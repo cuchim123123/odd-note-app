@@ -18,7 +18,8 @@ function createMocks(overrides: { noteToReturn?: NoteEntity | null } = {}) {
 
   const noteRepository = {
     findById: vi.fn().mockResolvedValue(note),
-    save: vi.fn().mockResolvedValue(undefined),
+    create: vi.fn(),
+    update: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn(),
   };
 
@@ -113,14 +114,14 @@ describe('ShareNoteHandler', () => {
     ).rejects.toBeInstanceOf(NoteAlreadySharedError);
   });
 
-  it('saves the aggregate after shareWith mutates it', async () => {
+  it('updates the aggregate after shareWith mutates it', async () => {
     const { handler, noteRepository } = createMocks();
 
     await handler.execute(new ShareNoteCommand('owner-1', 'note-1', 'recipient@example.com', 'READ'));
 
-    expect(noteRepository.save).toHaveBeenCalledTimes(1);
+    expect(noteRepository.update).toHaveBeenCalledTimes(1);
      
-    const savedNote: NoteEntity = noteRepository.save.mock.calls[0]![0];
+    const savedNote: NoteEntity = noteRepository.update.mock.calls[0]![0];
     expect(savedNote.isShared).toBe(true);
     expect(savedNote.shares).toHaveLength(1);
   });

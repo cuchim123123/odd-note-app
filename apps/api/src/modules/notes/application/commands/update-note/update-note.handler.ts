@@ -31,7 +31,7 @@ export class UpdateNoteHandler implements ICommandHandler<UpdateNoteCommand> {
         note.rename(NoteTitle.create(title), userId);
       }
 
-      await ctx.repos.note.save(note);
+      await ctx.repos.note.update(note);
 
       let personalIsPinnedResult = false;
       if (isPinned !== undefined) {

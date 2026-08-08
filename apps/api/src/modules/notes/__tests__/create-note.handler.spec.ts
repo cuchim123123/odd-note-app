@@ -8,7 +8,8 @@ import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
 function createMocks() {
   const noteRepository = {
     findById: vi.fn(),
-    save: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
     delete: vi.fn(),
   };
   
@@ -52,10 +53,11 @@ describe('CreateNoteHandler', () => {
 
     const result = await handler.execute(new CreateNoteCommand('user-1', 'My Note'));
 
-    expect(noteRepository.save).toHaveBeenCalledTimes(1);
+    expect(noteRepository.create).toHaveBeenCalledTimes(1);
+    expect(noteRepository.update).not.toHaveBeenCalled();
 
      
-    const savedNote: NoteEntity = noteRepository.save.mock.calls[0]![0];
+    const savedNote: NoteEntity = noteRepository.create.mock.calls[0]![0];
     expect(savedNote).toBeInstanceOf(NoteEntity);
     expect(savedNote.title).toBe('My Note');
     expect(savedNote.ownerId).toBe('user-1');

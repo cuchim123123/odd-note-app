@@ -51,9 +51,9 @@ export class NoteEntity extends AggregateRoot {
 
   // ─── Factory methods ───────────────────────────────────────────────────────
 
-  public static create(ownerId: string, title: NoteTitle, id?: string): NoteEntity {
+  public static create(ownerId: string, title: NoteTitle): NoteEntity {
     const typedOwnerId = UserId.from(ownerId);
-    const noteId = id ? NoteId.from(id) : NoteId.from(uuidv7());
+    const noteId = NoteId.from(uuidv7());
     
     const note = new NoteEntity({
       ownerId: typedOwnerId,

@@ -10,15 +10,14 @@ import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 export class PrismaNoteRepository implements INoteRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient, @Optional() @Inject('AGGREGATE_TRACKER') private readonly tracker?: AggregateTracker) {}
 
-  async save(note: NoteEntity): Promise<void> {
+  async create(note: NoteEntity): Promise<void> {
     if (this.tracker) {
       this.tracker.track(note);
     }
     const data = NoteMapper.toPersistence(note);
 
-    await this.prisma.note.upsert({
-      where: { id: data.id },
-      create: {
+    await this.prisma.note.create({
+      data: {
         id: data.id,
         userId: data.userId,
         title: data.title,
@@ -27,7 +26,18 @@ export class PrismaNoteRepository implements INoteRepository {
         createdAt: note.createdAt,
         updatedAt: data.updatedAt,
       },
-      update: {
+    });
+  }
+
+  async update(note: NoteEntity): Promise<void> {
+    if (this.tracker) {
+      this.tracker.track(note);
+    }
+    const data = NoteMapper.toPersistence(note);
+
+    await this.prisma.note.update({
+      where: { id: data.id },
+      data: {
         title: data.title,
         isShared: data.isShared,
         updatedAt: data.updatedAt,
