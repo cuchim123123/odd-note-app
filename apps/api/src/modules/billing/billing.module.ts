@@ -31,6 +31,7 @@ import { PrismaPlanCatalogRepository } from '@modules/billing/infrastructure/per
 import { PrismaEntitlementQueryDao } from '@modules/billing/infrastructure/persistence/dao/prisma-entitlement-query.dao';
 import { MockPaymentGatewayAdapter } from '@modules/billing/infrastructure/gateways/mock-payment-gateway.adapter';
 import { PlanCatalogSeeder } from '@modules/billing/infrastructure/seeders/plan-catalog.seeder';
+import { PaymentReconciliationJob } from '@modules/billing/infrastructure/jobs/payment-reconciliation.job';
 
 // ─── Presentation: HTTP Controllers ──────────────────────────────────────────
 import { InitiatePaymentHttpController } from '@modules/billing/presentation/http/commands/initiate-payment/initiate-payment.http.controller';
@@ -65,6 +66,7 @@ import { StripeWebhookHttpController } from '@modules/billing/presentation/http/
 
     // ── Infrastructure ────────────────────────────────────────────────────
     PlanCatalogSeeder,
+    PaymentReconciliationJob,
   ],
   exports: [
     // Exported for cross-module entitlement checks (Notes, Collaboration, etc.)

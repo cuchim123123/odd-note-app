@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import type { NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AuthModule } from '@modules/auth/auth.module';
 import { CollaborationModule } from '@modules/collaboration/collaboration.module';
 import { ConfigModule } from '@config/config.module';
@@ -12,8 +13,13 @@ import { MongoModule } from '@shared/infrastructure/mongo/mongo.module';
 import { UploadsModule } from '@modules/uploads/uploads.module';
 import { OutboxModule } from '@shared/infrastructure/outbox/outbox.module';
 import { BillingModule } from '@modules/billing/billing.module';
+import { CorrelationIdMiddleware } from '@shared/presentation/http/middleware/correlation-id.middleware';
 
 @Module({
   imports: [ConfigModule, JwtConfigModule, HealthModule, PrismaModule, RedisModule, MongoModule.forRoot(), AuthModule, UploadsModule, NotesModule, NotificationsModule, CollaborationModule, OutboxModule, BillingModule],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}
