@@ -21,6 +21,7 @@ import { HandlePaymentFailedHandler } from '@modules/billing/application/command
 import { HandleSubscriptionRenewedHandler } from '@modules/billing/application/commands/handle-subscription-renewed/handle-subscription-renewed.handler';
 import { HandleSubscriptionPaymentFailedHandler } from '@modules/billing/application/commands/handle-subscription-payment-failed/handle-subscription-payment-failed.handler';
 import { HandleSubscriptionCancelledHandler } from '@modules/billing/application/commands/handle-subscription-cancelled/handle-subscription-cancelled.handler';
+import { AssignFreeEntitlementHandler } from '@modules/billing/application/commands/assign-free-entitlement/assign-free-entitlement.handler';
 
 // ─── Application: Mappers ─────────────────────────────────────────────────────
 import { BillingDefaultIntegrationEventMapper } from '@modules/billing/application/mappers/billing-integration-event.mapper';
@@ -36,6 +37,10 @@ import { PaymentReconciliationJob } from '@modules/billing/infrastructure/jobs/p
 // ─── Presentation: HTTP Controllers ──────────────────────────────────────────
 import { InitiatePaymentHttpController } from '@modules/billing/presentation/http/commands/initiate-payment/initiate-payment.http.controller';
 import { StripeWebhookHttpController } from '@modules/billing/presentation/http/webhooks/stripe-webhook.http.controller';
+import { GetEntitlementHttpController } from '@modules/billing/presentation/http/queries/get-entitlement/get-entitlement.http.controller';
+
+// ─── Presentation: Kafka Consumers ───────────────────────────────────────────
+import { UserRegisteredConsumer } from '@modules/billing/presentation/kafka/user-registered.consumer';
 
 // TODO Phase 4: EntitlementQueryDao cross-module wiring
 
@@ -44,6 +49,8 @@ import { StripeWebhookHttpController } from '@modules/billing/presentation/http/
   controllers: [
     InitiatePaymentHttpController,
     StripeWebhookHttpController,
+    GetEntitlementHttpController,
+    UserRegisteredConsumer,
   ],
   providers: [
     // ── Domain Services ────────────────────────────────────────────────────
@@ -56,6 +63,7 @@ import { StripeWebhookHttpController } from '@modules/billing/presentation/http/
     HandleSubscriptionRenewedHandler,
     HandleSubscriptionPaymentFailedHandler,
     HandleSubscriptionCancelledHandler,
+    AssignFreeEntitlementHandler,
 
     // ── Port → Adapter Bindings ───────────────────────────────────────────
     { provide: BILLING_UNIT_OF_WORK, useClass: PrismaBillingUnitOfWork },
