@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaModule } from '@shared/infrastructure/prisma/prisma.module';
+import { RedisModule } from '@shared/infrastructure/redis/redis.module';
 import { ConfigModule } from '@config/config.module';
 
 // ─── Application: Ports ───────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ import { PlanCatalogSeeder } from '@modules/billing/infrastructure/seeders/plan-
 // TODO Phase 4: Add entitlement query handler, controllers
 
 @Module({
-  imports: [CqrsModule, PrismaModule, ConfigModule],
+  imports: [CqrsModule, PrismaModule, RedisModule, ConfigModule],
   providers: [
     // ── Domain Services ────────────────────────────────────────────────────
     PricingService,

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional, Inject } from '@nestjs/common';
 import type { IPaymentRepository } from '@modules/billing/application/ports/repositories/payment.repository.port';
 import { Payment } from '@modules/billing/domain/aggregates/payment.aggregate';
 import type { PaymentStatus } from '@modules/billing/domain/aggregates/payment.aggregate';
@@ -9,12 +9,17 @@ import { ProviderReference } from '@modules/billing/domain/value-objects/provide
 import type { PaymentProvider } from '@modules/billing/domain/value-objects/provider-reference.vo';
 import type { SupportedCurrency } from '@modules/billing/domain/value-objects/money.vo';
 import type { PrismaTransactionClient } from '@modules/billing/infrastructure/persistence/prisma-client.type';
+import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 
 @Injectable()
 export class PrismaPaymentRepository implements IPaymentRepository {
-  constructor(private readonly prisma: PrismaTransactionClient) {}
+  constructor(
+    private readonly prisma: PrismaTransactionClient,
+    @Optional() @Inject('AGGREGATE_TRACKER') private readonly tracker?: AggregateTracker,
+  ) {}
 
   async save(payment: Payment): Promise<void> {
+    if (this.tracker) this.tracker.track(payment);
     await this.prisma.payment.upsert({
       where: { id: payment.id },
       create: {

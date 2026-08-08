@@ -27,8 +27,8 @@ export class PrismaBillingUnitOfWork
   protected createTransactionContext(tx: any, tracker: AggregateTracker): BillingTransactionContext {
     return {
       repos: {
-        payment: new PrismaPaymentRepository(tx),
-        subscription: new PrismaSubscriptionRepository(tx),
+        payment: new PrismaPaymentRepository(tx, tracker),
+        subscription: new PrismaSubscriptionRepository(tx, tracker),
         planCatalog: new PrismaPlanCatalogRepository(tx),
         entitlement: new PrismaEntitlementRepository(tx),
       },

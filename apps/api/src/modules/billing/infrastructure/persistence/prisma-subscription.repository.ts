@@ -1,16 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional, Inject } from '@nestjs/common';
 import type { ISubscriptionRepository } from '@modules/billing/application/ports/repositories/subscription.repository.port';
 import { Subscription } from '@modules/billing/domain/aggregates/subscription.aggregate';
 import type { SubscriptionStatus } from '@modules/billing/domain/aggregates/subscription.aggregate';
 import { BillingEntityId } from '@modules/billing/domain/value-objects/billing-entity-id.vo';
 import { PlanVersion } from '@modules/billing/domain/value-objects/plan-version.vo';
 import type { PrismaTransactionClient } from '@modules/billing/infrastructure/persistence/prisma-client.type';
+import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 
 @Injectable()
 export class PrismaSubscriptionRepository implements ISubscriptionRepository {
-  constructor(private readonly prisma: PrismaTransactionClient) {}
+  constructor(
+    private readonly prisma: PrismaTransactionClient,
+    @Optional() @Inject('AGGREGATE_TRACKER') private readonly tracker?: AggregateTracker,
+  ) {}
 
   async save(sub: Subscription): Promise<void> {
+    if (this.tracker) this.tracker.track(sub);
     await this.prisma.subscription.upsert({
       where: { id: sub.id },
       create: {
