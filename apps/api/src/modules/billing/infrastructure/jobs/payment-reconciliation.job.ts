@@ -4,7 +4,8 @@ import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { PAYMENT_GATEWAY } from '@modules/billing/application/ports/payment-gateway.port';
 import type { IPaymentGatewayPort } from '@modules/billing/application/ports/payment-gateway.port';
 
-
+import { CommandBus } from '@nestjs/cqrs';
+import { HandlePaymentFailedCommand } from '@modules/billing/application/commands/handle-payment-failed/handle-payment-failed.command';
 /**
  * PaymentReconciliationJob — runs every 15 minutes.
  *
@@ -31,6 +32,7 @@ export class PaymentReconciliationJob {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly commandBus: CommandBus,
     @Inject(PAYMENT_GATEWAY) private readonly gateway: IPaymentGatewayPort,
   ) {}
 
@@ -65,7 +67,16 @@ export class PaymentReconciliationJob {
         this.logger.warn(
           `[Reconciliation] Payment ${payment.id} timed out after 24h — marking FAILED`,
         );
-        // TODO: dispatch HandlePaymentFailedCommand with reason='reconciliation_timeout'
+        const reconciliationEventId = `recon_timeout_${payment.id}`;
+        await this.commandBus.execute(
+          new HandlePaymentFailedCommand(
+            reconciliationEventId,
+            payment.externalId,
+            payment.provider,
+            'reconciliation_timeout',
+            reconciliationEventId,
+          ),
+        );
         continue;
       }
 
