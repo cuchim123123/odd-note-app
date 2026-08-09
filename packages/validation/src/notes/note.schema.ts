@@ -22,16 +22,16 @@ export const createNoteSchema = z.object({
 
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 
-export const updateNoteSchema = z.object({
+export const updateNoteMetadataSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(255).optional(),
-  content: z.string().optional(),
   isPinned: z.boolean().optional(),
-  isShared: z.boolean().optional(),
   labels: z.array(z.string()).optional(),
-  isProtected: z.boolean().optional(),
 });
 
-export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
+export type UpdateNoteMetadataInput = z.infer<typeof updateNoteMetadataSchema>;
+// Aliases for backwards compatibility during refactor
+export const updateNoteSchema = updateNoteMetadataSchema;
+export type UpdateNoteInput = UpdateNoteMetadataInput;
 
 export const renameLabelSchema = z.object({
   oldName: z.string().trim().min(1, 'Current label name is required'),

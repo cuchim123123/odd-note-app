@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
 import { RedisService } from '@shared/infrastructure/redis/redis.service';
 import type { EnvConfig } from '@config/env.validation';
+import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
 
 type YDocState = {
   stateVector: number[];
@@ -19,6 +20,7 @@ export class YjsDocumentAdapter implements IYjsDocumentPort {
   constructor(
     private readonly redisService: RedisService,
     @Inject('ENV_CONFIG') private readonly env: EnvConfig,
+    private readonly replayCoordinator: ReplayCoordinator,
   ) {}
 
   private get client() {
@@ -42,6 +44,16 @@ export class YjsDocumentAdapter implements IYjsDocumentPort {
         Y.applyUpdate(yDoc, new Uint8Array(persistedState.updates.flat()));
       } catch (error) {
         this.logger.warn(`Failed to apply persisted Yjs state for note ${noteId}: ${String(error)}`);
+      }
+    } else {
+      try {
+        const durableState = await this.replayCoordinator.getCurrentDocument(noteId);
+        if (durableState.length > 0) {
+          Y.applyUpdate(yDoc, durableState);
+          await this.persistYDoc(noteId, yDoc);
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to rebuild durable Yjs state for note ${noteId}: ${String(error)}`);
       }
     }
 

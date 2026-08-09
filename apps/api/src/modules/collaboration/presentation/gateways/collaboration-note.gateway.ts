@@ -6,16 +6,16 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Logger, Inject } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
 import { Server, Socket } from 'socket.io';
 import { COLLABORATION_NAMESPACE } from '@modules/collaboration/collaboration.constants';
 import { COLLABORATION_STATE_PORT } from '@modules/collaboration/application/ports/collaboration-state.port';
 import type { ICollaborationStatePort } from '@modules/collaboration/application/ports/collaboration-state.port';
-import { YJS_DOCUMENT_PORT } from '@modules/collaboration/application/ports/yjs-document.port';
-import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
 import { NOTE_ACCESS_PORT } from '@modules/collaboration/application/ports/note-access.port';
 import type { INoteAccessPort } from '@modules/collaboration/application/ports/note-access.port';
 import { RedisService } from '@shared/infrastructure/redis/redis.service';
 import type { EnvConfig } from '@config/env.validation';
+import { DeleteNoteCommand } from '@modules/notes/application/commands/delete-note/delete-note.command';
 
 @WebSocketGateway({
   namespace: COLLABORATION_NAMESPACE,
@@ -29,12 +29,11 @@ export class CollaborationNoteGateway {
   constructor(
     @Inject(COLLABORATION_STATE_PORT)
     private readonly statePort: ICollaborationStatePort,
-    @Inject(YJS_DOCUMENT_PORT)
-    private readonly yjsPort: IYjsDocumentPort,
     @Inject(NOTE_ACCESS_PORT)
     private readonly accessPort: INoteAccessPort,
     private readonly redis: RedisService,
     @Inject('ENV_CONFIG') private readonly env: EnvConfig,
+    private readonly commandBus: CommandBus,
   ) {}
 
   @SubscribeMessage('note:update')
@@ -98,16 +97,14 @@ export class CollaborationNoteGateway {
       return;
     }
 
-    this.logger.log(`User ${client.data.userId} deleted note ${data.noteId} - broadcasting globally`);
-    this.server.emit('note:deleted', { noteId: data.noteId });
-
-    // Cleanup note presence, snapshot and yjs states
-    await Promise.all([
-      this.redis.getClient().del(`collab:note:${data.noteId}:participants`),
-      this.redis.getClient().del(`collab:note:${data.noteId}:typing`),
-      this.redis.getClient().del(`collab:note:${data.noteId}:snapshot`),
-      this.yjsPort.destroyDocument(data.noteId),
-    ]);
+    try {
+      await this.commandBus.execute(new DeleteNoteCommand(client.data.userId, data.noteId));
+    } catch (error) {
+      this.logger.warn(
+        `Failed to delete note ${data.noteId} for user ${client.data.userId}: ${String(error)}`,
+      );
+      client.emit('error', { message: 'Failed to delete note' });
+    }
   }
 
   @SubscribeMessage('note:typing')

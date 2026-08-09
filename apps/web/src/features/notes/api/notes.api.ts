@@ -662,7 +662,6 @@ export const useUpdateNote = (id: string) => {
             ? ({
                 ...note,
                 title: input.title ?? note.title,
-                content: input.content ?? note.content,
                 isPinned: input.isPinned ?? note.isPinned,
                 isProtected: input.isProtected ?? note.isProtected,
                 labels: input.labels ?? note.labels,
@@ -677,7 +676,6 @@ export const useUpdateNote = (id: string) => {
           ? ({
               ...currentNote,
               title: input.title ?? currentNote.title,
-              content: input.content ?? currentNote.content,
               isPinned: input.isPinned ?? currentNote.isPinned,
               isProtected: input.isProtected ?? currentNote.isProtected,
               labels: input.labels ?? currentNote.labels,

@@ -1,4 +1,4 @@
-import type { Note, CreateNoteInput, UpdateNoteInput } from '@odd-note-app/validation';
+import type { Note, CreateNoteInput } from '@odd-note-app/validation';
 import type { NoteShareRecord, NoteDraft, SharedByProfile, SharePermission, SharedNoteItem } from './notes.api';
 
 const createId = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
@@ -119,7 +119,7 @@ export function createNote(input: CreateNoteInput): Note {
   return cloneNote(note);
 }
 
-export function updateNote(id: string, input: UpdateNoteInput): Note {
+export const updateNote = (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt' | 'updatedAt'>>): Note => {
   const existing = mockNotes.find((entry) => entry.id === id);
 
   if (!existing) {
@@ -128,11 +128,11 @@ export function updateNote(id: string, input: UpdateNoteInput): Note {
 
   const updated: Note = {
     ...existing,
-    title: input.title ?? existing.title,
-    content: input.content ?? existing.content,
-    isPinned: input.isPinned ?? existing.isPinned,
-    isProtected: input.isProtected ?? existing.isProtected,
-    labels: input.labels ?? existing.labels,
+    title: updates.title ?? existing.title,
+    content: updates.content ?? existing.content,
+    isPinned: updates.isPinned ?? existing.isPinned,
+    isProtected: updates.isProtected ?? existing.isProtected,
+    labels: updates.labels ?? existing.labels,
     updatedAt: now(),
   } as Note;
 

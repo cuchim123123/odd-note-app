@@ -13,6 +13,8 @@ import type Redis from 'ioredis';
 import { COLLABORATION_NAMESPACE, REDIS_EVENT_TYPES } from '@modules/collaboration/collaboration.constants';
 import { COLLABORATION_STATE_PORT } from '@modules/collaboration/application/ports/collaboration-state.port';
 import type { ICollaborationStatePort } from '@modules/collaboration/application/ports/collaboration-state.port';
+import { YJS_DOCUMENT_PORT } from '@modules/collaboration/application/ports/yjs-document.port';
+import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
 
 @WebSocketGateway({
   namespace: COLLABORATION_NAMESPACE,
@@ -32,6 +34,8 @@ export class CollaborationConnectionGateway implements OnGatewayConnection, OnGa
     private readonly redis: RedisService,
     @Inject(COLLABORATION_STATE_PORT)
     private readonly statePort: ICollaborationStatePort,
+    @Inject(YJS_DOCUMENT_PORT)
+    private readonly yjsPort: IYjsDocumentPort,
   ) {}
 
   afterInit(server: Server): void {
@@ -71,7 +75,15 @@ export class CollaborationConnectionGateway implements OnGatewayConnection, OnGa
               if (event.type === 'permissions_updated' && event.noteId) {
                 this.server.emit('note:permissions_updated', { noteId: event.noteId });
               } else if (event.type === 'note_deleted' && event.noteId) {
-                this.server.emit('note:deleted', { noteId: event.noteId });
+                void (async () => {
+                  await Promise.all([
+                    this.redis.getClient().del(`collab:note:${event.noteId}:participants`),
+                    this.redis.getClient().del(`collab:note:${event.noteId}:typing`),
+                    this.redis.getClient().del(`collab:note:${event.noteId}:snapshot`),
+                    this.yjsPort.destroyDocument(event.noteId!),
+                  ]);
+                  this.server.emit('note:deleted', { noteId: event.noteId });
+                })();
               } else if (event.type === REDIS_EVENT_TYPES.NOTIFICATION_CREATED) {
                 const notifEvent = JSON.parse(message) as { userId: string; notification: unknown };
                 this.server.to(`user:${notifEvent.userId}`).emit('notification:new', notifEvent.notification);

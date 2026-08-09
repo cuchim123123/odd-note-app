@@ -10,7 +10,7 @@ import { NoteMailerAdapter } from '@modules/notes/infrastructure/messaging/note-
 
 // ─── Application Command Handlers ───────────────────────────────────────────
 import { CreateNoteHandler } from '@modules/notes/application/commands/create-note/create-note.handler';
-import { UpdateNoteHandler } from '@modules/notes/application/commands/update-note/update-note.handler';
+import { UpdateNoteMetadataHandler } from '@modules/notes/application/commands/update-note-metadata/update-note-metadata.handler';
 import { DeleteNoteHandler } from '@modules/notes/application/commands/delete-note/delete-note.handler';
 import { ShareNoteHandler } from '@modules/notes/application/commands/share-note/share-note.handler';
 import { UpdateShareHandler } from '@modules/notes/application/commands/update-share/update-share.handler';
@@ -36,7 +36,7 @@ import { GetNoteHistoryQueryHandler } from '@modules/notes/application/queries/g
 
 // ─── Presentation (HTTP Controllers) ────────────────────────────────────────
 import { CreateNoteHttpController } from '@modules/notes/presentation/http/commands/create-note/create-note.http.controller';
-import { UpdateNoteHttpController } from '@modules/notes/presentation/http/commands/update-note/update-note.http.controller';
+import { UpdateNoteMetadataHttpController } from '@modules/notes/presentation/http/commands/update-note-metadata/update-note-metadata.http.controller';
 import { DeleteNoteHttpController } from '@modules/notes/presentation/http/commands/delete-note/delete-note.http.controller';
 import { ShareNoteHttpController } from '@modules/notes/presentation/http/commands/share-note/share-note.http.controller';
 import { UpdateShareHttpController } from '@modules/notes/presentation/http/commands/update-share/update-share.http.controller';
@@ -118,7 +118,7 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
   controllers: [
     // ── Presentation: Commands ────────────────────────────────────────────
     CreateNoteHttpController,
-    UpdateNoteHttpController,
+    UpdateNoteMetadataHttpController,
     DeleteNoteHttpController,
     ShareNoteHttpController,
     UpdateShareHttpController,
@@ -152,7 +152,7 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     NoteRevisionProjectionConsumer,
     // ── Application: Command Handlers ─────────────────────────────────────
     CreateNoteHandler,
-    UpdateNoteHandler,
+    UpdateNoteMetadataHandler,
     DeleteNoteHandler,
     ShareNoteHandler,
     UpdateShareHandler,

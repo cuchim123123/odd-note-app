@@ -1,33 +1,29 @@
-﻿import { Body, Controller, Headers, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
 import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
-import { UpdateNoteCommand } from '@modules/notes/application/commands/update-note/update-note.command';
+import { UpdateNoteMetadataCommand } from '@modules/notes/application/commands/update-note-metadata/update-note-metadata.command';
 import { ZodValidationPipe } from '@shared/presentation/http/pipes/zod-validation.pipe';
-import { updateNoteSchema, type UpdateNoteInput } from '@odd-note-app/validation';
+import { updateNoteMetadataSchema, type UpdateNoteMetadataInput } from '@odd-note-app/validation';
 
 @Controller('notes')
 @UseGuards(AccessTokenGuard)
-export class UpdateNoteHttpController {
+export class UpdateNoteMetadataHttpController {
   constructor(private readonly commandBus: CommandBus) {}
 
   @Patch(':noteId')
   async update(
     @CurrentUser() userId: string,
     @Param('noteId') noteId: string,
-    @Headers('x-note-unlock-token') unlockToken: string | undefined,
-    @Body(new ZodValidationPipe(updateNoteSchema)) body: UpdateNoteInput,
+    @Body(new ZodValidationPipe(updateNoteMetadataSchema)) body: UpdateNoteMetadataInput,
   ) {
     const result = (await this.commandBus.execute(
-      new UpdateNoteCommand(
+      new UpdateNoteMetadataCommand(
         userId,
         noteId,
         body.title,
-        body.content,
         body.isPinned,
-        body.isShared,
         body.labels,
-        unlockToken,
       )
     )) as { id: string };
 

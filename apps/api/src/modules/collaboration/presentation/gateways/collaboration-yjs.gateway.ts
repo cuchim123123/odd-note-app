@@ -5,6 +5,7 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Logger, Inject } from '@nestjs/common';
+import { EventBus } from '@nestjs/cqrs';
 import { Socket } from 'socket.io';
 import { COLLABORATION_NAMESPACE } from '@modules/collaboration/collaboration.constants';
 import { COLLABORATION_STATE_PORT } from '@modules/collaboration/application/ports/collaboration-state.port';
@@ -13,6 +14,9 @@ import { YJS_DOCUMENT_PORT } from '@modules/collaboration/application/ports/yjs-
 import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
 import { NOTE_ACCESS_PORT } from '@modules/collaboration/application/ports/note-access.port';
 import type { INoteAccessPort } from '@modules/collaboration/application/ports/note-access.port';
+import { DOCUMENT_UPDATE_STORE } from '@modules/notes/application/ports/stores/document-update.store.port';
+import type { IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
+import { NoteUpdateAppendedEvent } from '@modules/notes/application/workers/snapshot.worker';
 
 @WebSocketGateway({
   namespace: COLLABORATION_NAMESPACE,
@@ -27,7 +31,23 @@ export class CollaborationYjsGateway {
     private readonly yjsPort: IYjsDocumentPort,
     @Inject(NOTE_ACCESS_PORT)
     private readonly accessPort: INoteAccessPort,
+    @Inject(DOCUMENT_UPDATE_STORE)
+    private readonly updateStore: IDocumentUpdateStore,
+    private readonly eventBus: EventBus,
   ) {}
+
+  private async persistUpdate(noteId: string, authorId: string, update: number[]): Promise<void> {
+    const stored = await this.updateStore.append({
+      noteId,
+      authorId,
+      updateBlob: new Uint8Array(update),
+      sizeBytes: update.length,
+      createdAt: new Date(),
+    });
+
+    await this.yjsPort.applyUpdate(noteId, new Uint8Array(update));
+    await this.eventBus.publish(new NoteUpdateAppendedEvent(noteId, stored.seq, stored.sizeBytes));
+  }
 
   @SubscribeMessage('yjs:sync-step-1')
   async handleYjsSyncStep1(
@@ -81,7 +101,7 @@ export class CollaborationYjsGateway {
 
     this.logger.log(`[Yjs] recv yjs:sync-step-3 note=${data.noteId} from=${client.data.userId} bytes=${data.update?.length ?? 0}`);
 
-    await this.yjsPort.applyUpdate(data.noteId, new Uint8Array(data.update));
+    await this.persistUpdate(data.noteId, client.data.userId, data.update);
 
     client.to(data.noteId).emit('yjs:update', {
       noteId: data.noteId,
@@ -111,7 +131,7 @@ export class CollaborationYjsGateway {
       return;
     }
 
-    await this.yjsPort.applyUpdate(data.noteId, new Uint8Array(data.update));
+    await this.persistUpdate(data.noteId, client.data.userId, data.update);
 
     client.to(data.noteId).emit('yjs:update', {
       noteId: data.noteId,
