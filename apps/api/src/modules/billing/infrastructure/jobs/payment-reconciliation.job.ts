@@ -6,6 +6,7 @@ import type { IPaymentGatewayPort } from '@modules/billing/application/ports/pay
 
 import { CommandBus } from '@nestjs/cqrs';
 import { HandlePaymentFailedCommand } from '@modules/billing/application/commands/handle-payment-failed/handle-payment-failed.command';
+import { HandlePaymentSucceededCommand } from '@modules/billing/application/commands/handle-payment-succeeded/handle-payment-succeeded.command';
 /**
  * PaymentReconciliationJob — runs every 15 minutes.
  *
@@ -80,11 +81,39 @@ export class PaymentReconciliationJob {
         continue;
       }
 
-      // TODO (Phase 6): Query gateway.getSessionStatus(payment.externalId)
-      // and dispatch HandlePaymentSucceededCommand or HandlePaymentFailedCommand
-      this.logger.debug(
-        `[Reconciliation] Payment ${payment.id} (${payment.provider}:${payment.externalId}) is stuck — provider check pending implementation`,
-      );
+      try {
+        const status = await this.gateway.getSessionStatus(payment.externalId);
+        
+        if (status === 'COMPLETED') {
+          this.logger.log(`[Reconciliation] Payment ${payment.id} is COMPLETED at provider — reconciling`);
+          const reconEventId = `recon_success_${payment.id}`;
+          await this.commandBus.execute(
+            new HandlePaymentSucceededCommand(
+              reconEventId,
+              payment.externalId,
+              payment.provider,
+              reconEventId, // correlationId
+            ),
+          );
+        } else if (status === 'FAILED' || status === 'EXPIRED') {
+          this.logger.log(`[Reconciliation] Payment ${payment.id} is ${status} at provider — reconciling`);
+          const reconEventId = `recon_fail_${payment.id}`;
+          await this.commandBus.execute(
+            new HandlePaymentFailedCommand(
+              reconEventId,
+              payment.externalId,
+              payment.provider,
+              `reconciliation_${status.toLowerCase()}`,
+              reconEventId, // correlationId
+            ),
+          );
+        } else {
+          this.logger.debug(`[Reconciliation] Payment ${payment.id} is still PENDING at provider — skipping`);
+        }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        this.logger.error(`[Reconciliation] Failed to check status for payment ${payment.id}: ${err.message}`);
+      }
     }
   }
 }
