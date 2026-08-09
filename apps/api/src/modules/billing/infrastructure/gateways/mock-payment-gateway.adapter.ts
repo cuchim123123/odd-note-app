@@ -53,4 +53,11 @@ export class MockPaymentGatewayAdapter implements IPaymentGatewayPort {
       metadata: payload.metadata ?? {},
     };
   }
+
+  async getSessionStatus(externalId: string): Promise<'PENDING' | 'COMPLETED' | 'FAILED' | 'EXPIRED'> {
+    this.logger.debug(`[Mock] getSessionStatus called for ${externalId} — returning PENDING`);
+    // By default, the mock just returns PENDING so reconciliation skips it
+    // In advanced mock testing, you could make it return based on memory state or externalId prefix
+    return 'PENDING';
+  }
 }

@@ -59,4 +59,10 @@ export interface IPaymentGatewayPort {
    * Throws if signature is invalid.
    */
   parseWebhookEvent(rawBody: Buffer, signature: string): VerifiedWebhookEvent;
+
+  /**
+   * Used by the reconciliation job to query the current status of a session
+   * when webhooks have not arrived.
+   */
+  getSessionStatus(externalId: string): Promise<'PENDING' | 'COMPLETED' | 'FAILED' | 'EXPIRED'>;
 }

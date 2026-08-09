@@ -42,6 +42,9 @@ const envSchema = z.object({
   MONGO_DB_NAME: z.string().min(1).default('odd_note_projections'),
   /** 'postgres' | 'mongo' — feature flag for DAO swap. Defaults to postgres. */
   PROJECTION_STORE: z.enum(['postgres', 'mongo']).default('postgres'),
+  // ── Stripe ──────────────────────────────────────────────────────────────
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

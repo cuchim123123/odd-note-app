@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { PrismaModule } from '@shared/infrastructure/prisma/prisma.module';
 import { RedisModule } from '@shared/infrastructure/redis/redis.module';
 import { ConfigModule } from '@config/config.module';
+import type { EnvConfig } from '@config/config.module';
 
 // ─── Application: Ports ───────────────────────────────────────────────────────
 import { BILLING_UNIT_OF_WORK } from '@modules/billing/application/ports/transactions/billing-unit-of-work.port';
@@ -31,6 +32,7 @@ import { PrismaBillingUnitOfWork } from '@modules/billing/infrastructure/persist
 import { PrismaPlanCatalogRepository } from '@modules/billing/infrastructure/persistence/prisma-plan-catalog.repository';
 import { PrismaEntitlementQueryDao } from '@modules/billing/infrastructure/persistence/dao/prisma-entitlement-query.dao';
 import { MockPaymentGatewayAdapter } from '@modules/billing/infrastructure/gateways/mock-payment-gateway.adapter';
+import { StripePaymentGatewayAdapter } from '@modules/billing/infrastructure/gateways/stripe-payment-gateway.adapter';
 import { PlanCatalogSeeder } from '@modules/billing/infrastructure/seeders/plan-catalog.seeder';
 import { PaymentReconciliationJob } from '@modules/billing/infrastructure/jobs/payment-reconciliation.job';
 
@@ -70,7 +72,15 @@ import { UserRegisteredConsumer } from '@modules/billing/presentation/kafka/user
     { provide: PLAN_CATALOG_REPOSITORY, useClass: PrismaPlanCatalogRepository },
     { provide: BILLING_INTEGRATION_EVENT_MAPPER, useClass: BillingDefaultIntegrationEventMapper },
     { provide: ENTITLEMENT_QUERY_DAO, useClass: PrismaEntitlementQueryDao },
-    { provide: PAYMENT_GATEWAY, useClass: MockPaymentGatewayAdapter },
+    { 
+      provide: PAYMENT_GATEWAY,
+      useFactory: (config: EnvConfig) => {
+        return config.STRIPE_SECRET_KEY
+          ? new StripePaymentGatewayAdapter(config)
+          : new MockPaymentGatewayAdapter();
+      },
+      inject: ['ENV_CONFIG'],
+    },
 
     // ── Infrastructure ────────────────────────────────────────────────────
     PlanCatalogSeeder,
