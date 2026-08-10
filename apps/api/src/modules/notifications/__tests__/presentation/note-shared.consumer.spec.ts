@@ -20,11 +20,16 @@ function createMocks() {
 }
 
 const validPayload = {
-  noteId: 'note-1',
-  shareId: 'share-abc',
-  ownerId: 'owner-1',
-  recipientId: 'recipient-1',
-  permission: 'READ',
+  eventId: 'event-123',
+  aggregateId: 'note-1',
+  eventType: 'NoteShared',
+  occurredAt: '2023-01-01T00:00:00Z',
+  payload: {
+    shareId: 'share-abc',
+    ownerId: 'owner-1',
+    recipientId: 'recipient-1',
+    permission: 'READ',
+  }
 };
 
 // Helper: gets the command dispatched on a given call (default first call)
@@ -92,7 +97,10 @@ describe('NoteSharedConsumer', () => {
   it('correctly handles EDIT permission in message and data', async () => {
     const { controller, commandBus } = createMocks();
 
-    await controller.handleNoteSharedEvent({ ...validPayload, permission: 'EDIT' });
+    await controller.handleNoteSharedEvent({
+      ...validPayload,
+      payload: { ...validPayload.payload, permission: 'EDIT' }
+    } as unknown as IntegrationEventEnvelope<NoteSharedPayload>);
 
     const cmd = getCmd(commandBus);
     expect(cmd.message).toContain('EDIT');

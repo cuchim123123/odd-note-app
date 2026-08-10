@@ -138,18 +138,18 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     GetNoteByIdHttpController,
     ListSharesHttpController,
     GetProtectionStatusHttpController,
-
     GetNoteHistoryHttpController,
+
+    // ── Projection Consumers (Kafka) ──────────────────────────────────────
+    NoteProjectionConsumer,
+    NoteShareProjectionConsumer,
+    NoteRevisionProjectionConsumer,
   ],
   providers: [
     // ── Infrastructure Services ───────────────────────────────────────────
     NotesCrdtService,
     MailerService,
     NoteMailerAdapter,
-    // ── Projection Consumers (MongoDB write side) ─────────────────────────
-    NoteProjectionConsumer,
-    NoteShareProjectionConsumer,
-    NoteRevisionProjectionConsumer,
     // ── Application: Command Handlers ─────────────────────────────────────
     CreateNoteHandler,
     UpdateNoteMetadataHandler,

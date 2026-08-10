@@ -1,24 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Controller, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import type { Model } from 'mongoose';
 import { NoteProjection, type NoteProjectionDocument } from '@modules/notes/infrastructure/projection/schemas/note-projection.schema';
-import type {
-  ShareProjectionEvent,
-  NoteSharedProjectionEvent,
-  ShareUpdatedProjectionEvent,
-  ShareRevokedProjectionEvent,
-} from '@modules/notes/infrastructure/projection/events/projection-events';
+import type { IntegrationEventEnvelope } from '@shared/application/ports/integration-event';
 
-/**
- * Consumes note share events from Kafka and updates the embedded shares[]
- * subdocument inside note_projections.
- *
- * Topics handled: NoteShared, ShareUpdated, ShareRevoked
- * Consumer group: note-share-projection-cg
- *
- * Also keeps isShared flag in sync with the presence of any shares.
- */
-@Injectable()
+@Controller()
 export class NoteShareProjectionConsumer {
   private readonly logger = new Logger(NoteShareProjectionConsumer.name);
 
@@ -27,112 +14,110 @@ export class NoteShareProjectionConsumer {
     private readonly noteModel: Model<NoteProjectionDocument>,
   ) {}
 
-  async handle(event: ShareProjectionEvent): Promise<void> {
+  @EventPattern('NoteShared')
+  async handleNoteShared(@Payload() event: IntegrationEventEnvelope<{
+    shareId: string;
+    recipientId: string | null;
+    recipientEmail?: string;
+    recipientDisplayName?: string | null;
+    permission: 'READ' | 'EDIT';
+  }>): Promise<void> {
     try {
-      switch (event.type) {
-        case 'NoteShared':
-          await this.onShared(event);
-          break;
-        case 'ShareUpdated':
-          await this.onShareUpdated(event);
-          break;
-        case 'ShareRevoked':
-          await this.onShareRevoked(event);
-          break;
-      }
-    } catch (err) {
-      this.logger.error(`Failed to handle ${event.type} for note ${event.aggregateId}`, err);
-      throw err;
-    }
-  }
-
-  // ── Handlers ─────────────────────────────────────────────────────────────
-
-  private async onShared(event: NoteSharedProjectionEvent): Promise<void> {
-    const result = await this.noteModel.updateOne(
-      {
-        _id: event.aggregateId,
-        aggregateVersion: { $lt: event.aggregateVersion },
-        lastEventId: { $ne: event.eventId },
-        'shares.shareId': { $ne: event.shareId }, // prevent duplicate push
-      },
-      {
-        $push: {
-          shares: {
-            shareId: event.shareId,
-            recipientId: event.recipientId,
-            recipientEmail: event.recipientEmail,
-            recipientDisplayName: event.recipientDisplayName,
-            permission: event.permission,
-            sharedAt: new Date(event.sharedAt),
-          },
-        },
-        $set: {
-          isShared: true,
-          aggregateVersion: event.aggregateVersion,
-          lastEventId: event.eventId,
-          projectionUpdatedAt: new Date(),
-        },
-      },
-    );
-
-    if (result.matchedCount === 0) {
-      this.logger.debug(`Skipped NoteShared ${event.shareId} (stale or duplicate)`);
-    }
-  }
-
-  private async onShareUpdated(event: ShareUpdatedProjectionEvent): Promise<void> {
-    const result = await this.noteModel.updateOne(
-      {
-        _id: event.aggregateId,
-        aggregateVersion: { $lt: event.aggregateVersion },
-        lastEventId: { $ne: event.eventId },
-        'shares.shareId': event.shareId,
-      },
-      {
-        $set: {
-          'shares.$.permission': event.permission,
-          aggregateVersion: event.aggregateVersion,
-          lastEventId: event.eventId,
-          projectionUpdatedAt: new Date(),
-        },
-      },
-    );
-
-    if (result.matchedCount === 0) {
-      this.logger.debug(`Skipped ShareUpdated ${event.shareId} (stale, duplicate, or share not found)`);
-    }
-  }
-
-  private async onShareRevoked(event: ShareRevokedProjectionEvent): Promise<void> {
-    // Atomic: remove the share AND recompute isShared in one pipeline update
-    await this.noteModel.updateOne(
-      {
-        _id: event.aggregateId,
-        aggregateVersion: { $lt: event.aggregateVersion },
-        lastEventId: { $ne: event.eventId },
-      },
-      [
+      const result = await this.noteModel.updateOne(
         {
-          $set: {
+          _id: event.aggregateId,
+          lastEventId: { $ne: event.eventId },
+          'shares.shareId': { $ne: event.payload.shareId }, // prevent duplicate push
+        },
+        {
+          $push: {
             shares: {
-              $filter: {
-                input: '$shares',
-                as: 's',
-                cond: { $ne: ['$$s.shareId', event.shareId] },
-              },
+              shareId: event.payload.shareId,
+              recipientId: event.payload.recipientId,
+              recipientEmail: event.payload.recipientEmail || event.payload.recipientId,
+              recipientDisplayName: event.payload.recipientDisplayName || null,
+              permission: event.payload.permission,
+              sharedAt: new Date(event.occurredAt),
             },
-            aggregateVersion: event.aggregateVersion,
+          },
+          $set: {
+            isShared: true,
             lastEventId: event.eventId,
             projectionUpdatedAt: new Date(),
           },
         },
+      );
+
+      if (result.matchedCount === 0) {
+        this.logger.debug(`Skipped NoteShared ${event.payload.shareId} (duplicate or note not found)`);
+      }
+    } catch (err) {
+      this.logger.error(`Failed to handle NoteShared for note ${event.aggregateId}`, err);
+      throw err;
+    }
+  }
+
+  @EventPattern('ShareUpdated')
+  async handleShareUpdated(@Payload() event: IntegrationEventEnvelope<{ shareId: string; permission: 'READ' | 'EDIT' }>): Promise<void> {
+    try {
+      const result = await this.noteModel.updateOne(
+        {
+          _id: event.aggregateId,
+          lastEventId: { $ne: event.eventId },
+          'shares.shareId': event.payload.shareId,
+        },
         {
           $set: {
-            isShared: { $gt: [{ $size: '$shares' }, 0] },
+            'shares.$.permission': event.payload.permission,
+            lastEventId: event.eventId,
+            projectionUpdatedAt: new Date(),
           },
         },
-      ],
-    );
+      );
+
+      if (result.matchedCount === 0) {
+        this.logger.debug(`Skipped ShareUpdated ${event.payload.shareId} (duplicate, or share not found)`);
+      }
+    } catch (err) {
+      this.logger.error(`Failed to handle ShareUpdated for note ${event.aggregateId}`, err);
+      throw err;
+    }
+  }
+
+  @EventPattern('ShareRevoked')
+  async handleShareRevoked(@Payload() event: IntegrationEventEnvelope<{ shareId: string }>): Promise<void> {
+    try {
+      // Atomic: remove the share AND recompute isShared in one pipeline update
+      await this.noteModel.updateOne(
+        {
+          _id: event.aggregateId,
+          lastEventId: { $ne: event.eventId },
+        },
+        [
+          {
+            $set: {
+              shares: {
+                $filter: {
+                  input: '$shares',
+                  as: 's',
+                  cond: { $ne: ['$$s.shareId', event.payload.shareId] },
+                },
+              },
+              lastEventId: event.eventId,
+              projectionUpdatedAt: new Date(),
+            },
+          },
+          {
+            $set: {
+              isShared: { $gt: [{ $size: '$shares' }, 0] },
+            },
+          },
+        ],
+      );
+    } catch (err) {
+      this.logger.error(`Failed to handle ShareRevoked for note ${event.aggregateId}`, err);
+      throw err;
+    }
   }
 }
+

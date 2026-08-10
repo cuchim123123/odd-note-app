@@ -1,56 +1,164 @@
 import type { DomainEvent } from '@shared/domain/ddd/domain-event';
 import type { IDomainEventMapper, OutboxMessageDraft } from '@shared/application/ports/domain-event-mapper.port';
+import type { IntegrationEventEnvelope } from '@shared/application/ports/integration-event';
 import { NoteSharedDomainEvent } from '@modules/notes/domain/events/note-shared.domain-event';
 import { NoteCreatedDomainEvent } from '@modules/notes/domain/events/note-created.domain-event';
 import { NoteDeletedDomainEvent } from '@modules/notes/domain/events/note-deleted.domain-event';
 
+import { NoteShareUpdatedDomainEvent } from '@modules/notes/domain/events/note-share-updated.domain-event';
+import { NoteShareRevokedDomainEvent } from '@modules/notes/domain/events/note-share-revoked.domain-event';
+import { NotePasswordSetDomainEvent } from '@modules/notes/domain/events/note-password-set.domain-event';
+import { NotePasswordRemovedDomainEvent } from '@modules/notes/domain/events/note-password-removed.domain-event';
+
 export type NoteIntegrationEventMapper = IDomainEventMapper;
 
+export interface IDomainEventTranslator<T extends DomainEvent = DomainEvent, P = unknown> {
+  supports(event: DomainEvent): boolean;
+  translate(event: T): IntegrationEventEnvelope<P>;
+}
+
+export class NoteSharedTranslator implements IDomainEventTranslator<NoteSharedDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NoteShared';
+  }
+  translate(event: NoteSharedDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: event.eventType,
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {
+        shareId: event.shareId,
+        ownerId: event.ownerId,
+        recipientId: event.recipientId,
+        permission: event.permission,
+      },
+    };
+  }
+}
+
+export class NoteShareUpdatedTranslator implements IDomainEventTranslator<NoteShareUpdatedDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NoteShareUpdated';
+  }
+  translate(event: NoteShareUpdatedDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: 'ShareUpdated', // Mapped to ShareUpdated for Kafka topics
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {
+        shareId: event.shareId,
+        permission: event.newPermission,
+      },
+    };
+  }
+}
+
+export class NoteShareRevokedTranslator implements IDomainEventTranslator<NoteShareRevokedDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NoteShareRevoked';
+  }
+  translate(event: NoteShareRevokedDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: 'ShareRevoked',
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {
+        shareId: event.shareId,
+      },
+    };
+  }
+}
+
+export class NotePasswordSetTranslator implements IDomainEventTranslator<NotePasswordSetDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NotePasswordSet';
+  }
+  translate(event: NotePasswordSetDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: event.eventType,
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {},
+    };
+  }
+}
+
+export class NotePasswordRemovedTranslator implements IDomainEventTranslator<NotePasswordRemovedDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NotePasswordRemoved';
+  }
+  translate(event: NotePasswordRemovedDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: event.eventType,
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {},
+    };
+  }
+}
+
+export class NoteCreatedTranslator implements IDomainEventTranslator<NoteCreatedDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NoteCreated';
+  }
+  translate(event: NoteCreatedDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: event.eventType,
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {
+        ownerId: event.ownerId,
+        title: event.title,
+      },
+    };
+  }
+}
+
+export class NoteDeletedTranslator implements IDomainEventTranslator<NoteDeletedDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NoteDeleted';
+  }
+  translate(event: NoteDeletedDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: event.eventType,
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {},
+    };
+  }
+}
+
 export class DefaultNoteIntegrationEventMapper implements NoteIntegrationEventMapper {
+  private readonly translators: IDomainEventTranslator[] = [
+    new NoteSharedTranslator(),
+    new NoteShareUpdatedTranslator(),
+    new NoteShareRevokedTranslator(),
+    new NotePasswordSetTranslator(),
+    new NotePasswordRemovedTranslator(),
+    new NoteCreatedTranslator(),
+    new NoteDeletedTranslator(),
+  ];
+
   map(domainEvents: DomainEvent[]): OutboxMessageDraft[] {
     const outboxMessages: OutboxMessageDraft[] = [];
 
     for (const event of domainEvents) {
-      if (event instanceof NoteSharedDomainEvent) {
+      const translator = this.translators.find((t) => t.supports(event));
+      if (translator) {
+        const envelope = translator.translate(event);
         outboxMessages.push({
           type: 'INTEGRATION_EVENT',
-          topic: 'NoteShared',
-          payload: {
-            eventId: event.eventId,
-            aggregateId: event.aggregateId,
-            occurredAt: event.occurredOn,
-            
-            shareId: event.shareId,
-            ownerId: event.ownerId,
-            recipientId: event.recipientId,
-            permission: event.permission,
-          },
-        });
-      } else if (event instanceof NoteCreatedDomainEvent) {
-        outboxMessages.push({
-          type: 'INTEGRATION_EVENT',
-          topic: 'NoteCreated',
-          payload: {
-            eventId: event.eventId,
-            aggregateId: event.aggregateId,
-            occurredAt: event.occurredOn,
-            
-            ownerId: event.ownerId,
-            title: event.title,
-          },
-        });
-      } else if (event instanceof NoteDeletedDomainEvent) {
-        outboxMessages.push({
-          type: 'INTEGRATION_EVENT',
-          topic: 'NoteDeleted',
-          payload: {
-            eventId: event.eventId,
-            aggregateId: event.aggregateId,
-            occurredAt: event.occurredOn,
-          },
+          topic: event.eventType, // Topic is named after the event type
+          payload: envelope as unknown as Record<string, unknown>,
         });
       }
-      // Add more domain event mappings (LabelRenamed, ProtectionSet, etc.)
     }
 
     return outboxMessages;
