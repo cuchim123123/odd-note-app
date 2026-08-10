@@ -100,7 +100,7 @@ describe('NoteSharedConsumer', () => {
     await controller.handleNoteSharedEvent({
       ...validPayload,
       payload: { ...validPayload.payload, permission: 'EDIT' }
-    } as unknown as IntegrationEventEnvelope<NoteSharedPayload>);
+    } as Parameters<NoteSharedConsumer['handleNoteSharedEvent']>[0]);
 
     const cmd = getCmd(commandBus);
     expect(cmd.message).toContain('EDIT');

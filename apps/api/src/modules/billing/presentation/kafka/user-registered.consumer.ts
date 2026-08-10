@@ -3,12 +3,7 @@ import { EventPattern, Payload } from '@nestjs/microservices';
 import { CommandBus } from '@nestjs/cqrs';
 import { AssignFreeEntitlementCommand } from '@modules/billing/application/commands/assign-free-entitlement/assign-free-entitlement.command';
 
-interface UserRegisteredPayload {
-  userId: string;
-  email: string;
-  occurredOn: string;
-  eventId?: string;
-}
+import type { IntegrationEventEnvelope } from '@shared/application/ports/integration-event';
 
 @Controller()
 export class UserRegisteredConsumer {
@@ -19,13 +14,13 @@ export class UserRegisteredConsumer {
   ) {}
 
   @EventPattern('UserRegistered')
-  async handleUserRegisteredEvent(@Payload() message: UserRegisteredPayload) {
-    this.logger.log(`Handling UserRegistered Kafka event for user: ${message.userId}`);
+  async handleUserRegisteredEvent(@Payload() message: IntegrationEventEnvelope<{ email: string }>) {
+    this.logger.log(`Handling UserRegistered Kafka event for user: ${message.aggregateId}`);
 
     await this.commandBus.execute(
       new AssignFreeEntitlementCommand(
-        message.userId,
-        message.eventId ?? `user-registered-${message.userId}`,
+        message.aggregateId, // aggregateId is userId for this event
+        message.eventId,
       ),
     );
   }

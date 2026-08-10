@@ -151,14 +151,16 @@ export class DefaultNoteIntegrationEventMapper implements NoteIntegrationEventMa
 
     for (const event of domainEvents) {
       const translator = this.translators.find((t) => t.supports(event));
-      if (translator) {
-        const envelope = translator.translate(event);
-        outboxMessages.push({
-          type: 'INTEGRATION_EVENT',
-          topic: event.eventType, // Topic is named after the event type
-          payload: envelope as unknown as Record<string, unknown>,
-        });
+      if (!translator) {
+        throw new Error(`Integration Event Mapper: No translator found for domain event type '${event.eventType}'. All published domain events must have an explicit translator or be explicitly ignored.`);
       }
+
+      const envelope = translator.translate(event);
+      outboxMessages.push({
+        type: 'INTEGRATION_EVENT',
+        topic: envelope.eventType, // Topic is named after the canonical integration event type
+        payload: envelope,
+      });
     }
 
     return outboxMessages;
