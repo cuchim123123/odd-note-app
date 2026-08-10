@@ -68,6 +68,17 @@ export class PrismaNoteProtectionAdapter implements INoteProtectionPort {
     }
   }
 
+  async getProtectedNoteIds(noteIds: string[]): Promise<Set<string>> {
+    if (noteIds.length === 0) return new Set();
+    
+    const protections = await this.prisma.noteProtection.findMany({
+      where: { noteId: { in: noteIds } },
+      select: { noteId: true },
+    });
+
+    return new Set(protections.map(p => p.noteId));
+  }
+
   /**
    * Used by verify-password command to issue a time-limited unlock token.
    * Not part of INoteProtectionPort (presentation concern), called directly from handler.

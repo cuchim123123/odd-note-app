@@ -25,17 +25,24 @@ export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> 
     const note = await this.noteQueryDao.findNoteById(noteId, userId);
     if (!note) throw new NoteNotFoundError(noteId);
 
-    const isProtected = note.isProtected;
-    let content = await this.documentSyncPort.readContent(noteId) ?? note.content ?? '';
+    // Authoritative check from Postgres via INoteProtectionPort
+    const protectedIds = await this.protectionPort.getProtectedNoteIds([noteId]);
+    const isProtected = protectedIds.has(noteId);
 
-    // Server-side content gate: blank content if protected and unlockToken is invalid
-    if (isProtected) {
+    let content = '';
+
+    if (!isProtected) {
+      content = await this.documentSyncPort.readContent(noteId) ?? note.content ?? '';
+    } else {
       const isUnlocked = await this.protectionPort.verifyUnlockToken(userId, noteId, unlockToken);
-      if (!isUnlocked) content = '';
+      if (isUnlocked) {
+        content = await this.documentSyncPort.readContent(noteId) ?? note.content ?? '';
+      }
     }
 
     return {
       ...note,
+      isProtected, // authoritative override
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
       sharedAt: note.sharedAt?.toISOString(),
