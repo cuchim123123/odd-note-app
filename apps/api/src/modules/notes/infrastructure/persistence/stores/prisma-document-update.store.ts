@@ -13,7 +13,7 @@ export class PrismaDocumentUpdateStore implements IDocumentUpdateStore {
         noteId: update.noteId,
         authorId: update.authorId,
         updateBlob: Buffer.from(update.updateBlob),
-        sizeBytes: update.sizeBytes,
+        sizeBytes: update.updateBlob.byteLength,
         createdAt: update.createdAt,
       },
     });

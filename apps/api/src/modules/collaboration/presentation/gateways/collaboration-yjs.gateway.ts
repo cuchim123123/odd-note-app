@@ -41,7 +41,6 @@ export class CollaborationYjsGateway {
       noteId,
       authorId,
       updateBlob: new Uint8Array(update),
-      sizeBytes: update.length,
       createdAt: new Date(),
     });
 

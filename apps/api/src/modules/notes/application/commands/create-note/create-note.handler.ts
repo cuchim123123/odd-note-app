@@ -40,7 +40,6 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
           noteId: note.id,
           authorId: command.userId,
           updateBlob,
-          sizeBytes: updateBlob.length,
           createdAt: note.createdAt,
         });
       }

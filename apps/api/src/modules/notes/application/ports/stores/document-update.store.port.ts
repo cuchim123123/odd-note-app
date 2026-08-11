@@ -3,7 +3,6 @@ export const DOCUMENT_UPDATE_STORE = Symbol('DOCUMENT_UPDATE_STORE');
 export interface AppendDocumentUpdateDto {
   noteId: string;
   updateBlob: Uint8Array;
-  sizeBytes: number;
   authorId: string;
   createdAt: Date;
 }

@@ -77,7 +77,6 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
         noteId,
         authorId: userId,
         updateBlob: revertingUpdateBlob,
-        sizeBytes: revertingUpdateBlob.byteLength,
         createdAt: new Date(),
       });
     } finally {

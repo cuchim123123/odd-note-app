@@ -1,7 +1,7 @@
 import { NoteId } from '@shared/domain/ddd/id-types';
 
 /**
- * NoteSnapshotMetadata — pointer to a pre-computed Y.Doc snapshot stored in S3.
+ * NoteSnapshotMetadata — pointer to a pre-computed CRDT snapshot stored in S3.
  * Purely a read optimization.
  */
 export class NoteSnapshotMetadata {
