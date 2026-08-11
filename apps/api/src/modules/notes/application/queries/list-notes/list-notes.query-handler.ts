@@ -37,7 +37,7 @@ export class ListNotesQueryHandler implements IQueryHandler<ListNotesQuery> {
         
         let content = '';
         if (!isProtected) {
-          content = await this.documentSyncPort.readContent(note.id) ?? note.content ?? '';
+          content = await this.documentSyncPort.readContent(note.id) ?? '';
         }
 
         return {

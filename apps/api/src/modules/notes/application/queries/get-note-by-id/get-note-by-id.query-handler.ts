@@ -32,11 +32,11 @@ export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> 
     let content = '';
 
     if (!isProtected) {
-      content = await this.documentSyncPort.readContent(noteId) ?? note.content ?? '';
+      content = await this.documentSyncPort.readContent(noteId) ?? await this.noteQueryDao.findNoteContentById(noteId) ?? '';
     } else {
       const isUnlocked = await this.protectionPort.verifyUnlockToken(userId, noteId, unlockToken);
       if (isUnlocked) {
-        content = await this.documentSyncPort.readContent(noteId) ?? note.content ?? '';
+        content = await this.documentSyncPort.readContent(noteId) ?? await this.noteQueryDao.findNoteContentById(noteId) ?? '';
       }
     }
 

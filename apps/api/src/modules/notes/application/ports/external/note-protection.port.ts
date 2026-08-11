@@ -6,7 +6,6 @@ export interface INoteProtectionPort {
   verifyPassword(userId: string, noteId: string, password: string): Promise<boolean>;
   removePassword(userId: string, noteId: string): Promise<void>;
   verifyUnlockToken(userId: string, noteId: string, unlockToken?: string): Promise<boolean>;
-  /** Returns a strongly consistent set of noteIds that are currently protected */
   getProtectedNoteIds(noteIds: string[]): Promise<Set<string>>;
   /** Issues a time-limited JWT unlock token after successful verify */
   issueUnlockToken(userId: string, noteId: string): Promise<string>;

@@ -33,7 +33,7 @@ export class ListSharedWithMeQueryHandler implements IQueryHandler<ListSharedWit
         
         let content = '';
         if (!isProtected) {
-          content = await this.documentSyncPort.readContent(share.id) ?? share.content ?? '';
+          content = await this.documentSyncPort.readContent(share.id) ?? '';
         }
 
         return {

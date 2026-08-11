@@ -3,7 +3,6 @@ export const NOTE_QUERY_DAO = Symbol('NOTE_QUERY_DAO');
 export interface NoteView {
   id: string;
   title: string;
-  content: string | null;
   isPinned: boolean;
   isProtected: boolean;
   isShared: boolean;
@@ -36,9 +35,9 @@ export interface NoteShareView {
 export interface INoteQueryDao {
   /** list-notes */
   findUserNotes(userId: string): Promise<NoteView[]>;
-  
   /** get-note-by-id */
   findNoteById(noteId: string, userId: string): Promise<NoteView | null>;
+  findNoteContentById(noteId: string): Promise<string | null>;
 
   /** list-shared-with-me */
   findSharedWithMe(userId: string): Promise<SharedNoteView[]>;

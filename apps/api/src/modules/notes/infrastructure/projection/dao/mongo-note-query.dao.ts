@@ -29,6 +29,11 @@ export class MongoNoteQueryDao implements INoteQueryDao {
     return docs.map((doc) => this.mapDocToNoteView(doc));
   }
 
+  async findNoteContentById(noteId: string): Promise<string | null> {
+    // Projections never store document content in this architecture.
+    return null;
+  }
+
   async findNoteById(noteId: string, userId: string): Promise<NoteView | null> {
     const doc = await this.noteModel
       .findOne({
@@ -90,9 +95,8 @@ export class MongoNoteQueryDao implements INoteQueryDao {
     share?: { permission: 'READ' | 'EDIT'; sharedAt: Date; recipientId: string | null } | undefined,
   ): NoteView {
     const result: NoteView = {
-      id: doc._id,
+      id: doc._id as string,
       title: doc.title,
-      content: null, // content is never stored in projection — resolved at query handler level
       isPinned: doc.isPinned,
       isProtected: doc.isProtected,
       isShared: doc.isShared,

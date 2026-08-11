@@ -26,6 +26,14 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       });
   }
 
+  async findNoteContentById(noteId: string): Promise<string | null> {
+    const note = await this.prisma.note.findUnique({
+      where: { id: noteId },
+      select: { content: true },
+    });
+    return note?.content ?? null;
+  }
+
   async findNoteById(noteId: string, userId: string): Promise<NoteView | null> {
     const note = await this.prisma.note.findFirst({
       where: {
@@ -115,7 +123,6 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
     note: {
       id: string;
       title: string;
-      content: string | null;
       isShared: boolean;
       createdAt: Date;
       updatedAt: Date;
@@ -133,7 +140,6 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
     const result: NoteView = {
       id: note.id,
       title: note.title,
-      content: note.content,
       isPinned: note.userPins?.[0]?.isPinned ?? false,
       isProtected: Boolean(note.protection),
       isShared: note.isShared || Boolean(note.shares && note.shares.length > 0),
