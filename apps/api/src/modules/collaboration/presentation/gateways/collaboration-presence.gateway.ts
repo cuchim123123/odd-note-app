@@ -33,15 +33,15 @@ export class CollaborationPresenceGateway {
   @SubscribeMessage('note:join')
   async handleJoinNote(
     @ConnectedSocket() client: Socket & { data: { userId: string; displayName: string } },
-    @MessageBody() data: { noteId: string; unlockToken?: string },
+    @MessageBody() data: { noteId: string },
   ): Promise<void> {
     try {
-      const { noteId, unlockToken } = data;
+      const { noteId } = data;
       const { userId, displayName } = client.data;
 
-      const hasAccess = await this.accessPort.canAccessNote(userId, noteId, unlockToken);
+      const hasAccess = await this.accessPort.canAccessNote(userId, noteId);
       if (!hasAccess) {
-        this.logger.warn(`User ${userId} attempted to join unauthorized/locked note ${noteId} — disconnecting`);
+        this.logger.warn(`User ${userId} attempted to join unauthorized note ${noteId} — disconnecting`);
         client.disconnect();
         return;
       }

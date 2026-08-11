@@ -6,8 +6,8 @@ import { NOTE_REPOSITORY, type INoteRepository } from '@modules/notes/applicatio
 import { DOCUMENT_UPDATE_STORE, type IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { NoteNotFoundError, NotePermissionDeniedError, NoteLockedForRestoreError } from '@modules/notes/domain/errors/note.errors';
 import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
-import { RedisService } from '@shared/infrastructure/redis/redis.service';
-import { IdempotencyService } from '@shared/infrastructure/idempotency/idempotency.service';
+import { DISTRIBUTED_LOCK_PORT, type IDistributedLockPort } from '@shared/application/ports/distributed-lock.port';
+import { IDEMPOTENCY_PORT, type IIdempotencyPort } from '@shared/application/ports/idempotency.port';
 
 export class RevisionNotFoundError extends Error {
   constructor(revisionId: string) {
@@ -28,8 +28,10 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
     @Inject(DOCUMENT_UPDATE_STORE)
     private readonly updateStore: IDocumentUpdateStore,
     private readonly replayCoordinator: ReplayCoordinator,
-    private readonly redisService: RedisService,
-    private readonly idempotencyService: IdempotencyService,
+    @Inject(DISTRIBUTED_LOCK_PORT)
+    private readonly lockPort: IDistributedLockPort,
+    @Inject(IDEMPOTENCY_PORT)
+    private readonly idempotencyPort: IIdempotencyPort,
     private readonly eventBus: EventBus,
   ) {}
 
@@ -37,7 +39,7 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
     const { userId, noteId, revisionId, idempotencyKey } = command;
 
     if (idempotencyKey) {
-      const isNewRequest = await this.idempotencyService.checkAndAcquire('restore-revision', idempotencyKey);
+      const isNewRequest = await this.idempotencyPort.checkAndAcquire('restore-revision', idempotencyKey);
       if (!isNewRequest) {
         this.logger.log(`Idempotency key ${idempotencyKey} already processed. Skipping restore.`);
         return { id: noteId };
@@ -55,8 +57,7 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
     if (!revision) throw new RevisionNotFoundError(revisionId);
 
     // 3. Coordinate Replay for Target & Current States
-    const noteLockKey = `note:restore_lock:${noteId}`;
-    const acquiredNoteLock = await this.redisService.getClient().set(noteLockKey, 'locked', 'EX', 30, 'NX');
+    const acquiredNoteLock = await this.lockPort.acquireLock(`restore_lock:${noteId}`, 30);
     if (!acquiredNoteLock) {
       throw new NoteLockedForRestoreError();
     }
@@ -65,7 +66,7 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
       const targetStateBlob = await this.replayCoordinator.rebuildDocument(noteId, revision.targetSeq);
       const currentStateBlob = await this.replayCoordinator.getCurrentDocument(noteId);
 
-      // 4. Compute structural diff (revert = minimal update to go from current → target)
+      // 4. Compute structural diff (revert = minimal update to go from current -> target)
       const revertingUpdateBlob = this.replayCoordinator.computeRevertingUpdate(
         currentStateBlob,
         targetStateBlob
@@ -80,7 +81,7 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
         createdAt: new Date(),
       });
     } finally {
-      await this.redisService.getClient().del(noteLockKey);
+      await this.lockPort.releaseLock(`restore_lock:${noteId}`);
     }
 
     return { id: noteId };

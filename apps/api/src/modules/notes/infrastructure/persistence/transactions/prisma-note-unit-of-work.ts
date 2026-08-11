@@ -7,8 +7,7 @@ import { PrismaOutboxAdapter } from '@modules/notes/infrastructure/outbox/prisma
 import { PrismaNoteProtectionAdapter } from '@modules/notes/infrastructure/persistence/security/prisma-note-protection.adapter';
 import { PrismaUserPreferencesRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-user-preferences.repository';
 import { PrismaVersionHistoryRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-version-history.repository';
-import { JwtConfigService } from '@config/jwt-config.service';
-import { JwtService } from '@nestjs/jwt';
+import { PrismaDocumentUpdateStore } from '@modules/notes/infrastructure/persistence/stores/prisma-document-update.store';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
 import { BasePrismaUnitOfWork } from '@shared/infrastructure/persistence/base-prisma-unit-of-work';
 import { NOTE_INTEGRATION_EVENT_MAPPER } from '@modules/notes/application/ports/messaging/integration-event-mapper.port';
@@ -19,8 +18,6 @@ import type { AggregateTracker } from '@shared/domain/ddd/aggregate-tracker';
 export class PrismaNoteUnitOfWork extends BasePrismaUnitOfWork<NoteTransactionContext> implements INoteUnitOfWork {
   constructor(
     prisma: PrismaService,
-    private readonly jwtConfigService: JwtConfigService,
-    private readonly jwtService: JwtService,
     @Inject(NOTE_INTEGRATION_EVENT_MAPPER) integrationEventMapper: NoteIntegrationEventMapper,
   ) {
     super(prisma, integrationEventMapper);
@@ -35,7 +32,8 @@ export class PrismaNoteUnitOfWork extends BasePrismaUnitOfWork<NoteTransactionCo
         versionHistory: new PrismaVersionHistoryRepository(tx),
       },
       outbox: new PrismaOutboxAdapter(tx), // Keep for legacy/manual events if needed
-      protectionPort: new PrismaNoteProtectionAdapter(tx, this.jwtService, this.jwtConfigService),
+      protectionPort: new PrismaNoteProtectionAdapter(tx),
+      documentUpdateStore: new PrismaDocumentUpdateStore(tx),
     };
   }
 }

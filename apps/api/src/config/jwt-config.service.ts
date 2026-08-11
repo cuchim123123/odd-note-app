@@ -29,16 +29,7 @@ export class JwtConfigService {
     return this.env.JWT_REFRESH_SECRET;
   }
 
-  getNoteUnlockTokenSecret(): string {
-    return this.env.JWT_NOTE_UNLOCK_SECRET;
-  }
 
-  getNoteUnlockTokenSignOptions(): JwtSignOptions {
-    return this.buildTokenSignOptions(
-      this.env.JWT_NOTE_UNLOCK_SECRET,
-      this.env.JWT_NOTE_UNLOCK_EXPIRES_IN,
-    );
-  }
 
   getRefreshTokenExpiryMs(): number {
     const expiresIn = this.env.JWT_REFRESH_EXPIRES_IN;

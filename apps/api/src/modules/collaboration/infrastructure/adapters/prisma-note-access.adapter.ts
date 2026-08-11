@@ -12,7 +12,7 @@ export class PrismaNoteAccessAdapter implements INoteAccessPort {
     private readonly protectionPort: INoteProtectionPort,
   ) {}
 
-  async canAccessNote(userId: string, noteId: string, unlockToken?: string): Promise<boolean> {
+  async canAccessNote(userId: string, noteId: string): Promise<boolean> {
     const note = await this.prisma.note.findFirst({
       where: {
         id: noteId,
@@ -21,20 +21,7 @@ export class PrismaNoteAccessAdapter implements INoteAccessPort {
       select: { userId: true },
     });
 
-    if (!note) return false;
-
-    // Check if protected
-    const protection = await this.prisma.noteProtection.findUnique({
-      where: { userId_noteId: { userId: note.userId, noteId } },
-      select: { id: true },
-    });
-
-    if (protection) {
-      const isUnlocked = await this.protectionPort.verifyUnlockToken(userId, noteId, unlockToken);
-      if (!isUnlocked) return false;
-    }
-
-    return true;
+    return !!note;
   }
 
   async getAccessPermissions(userId: string, noteId: string): Promise<{ isOwner: boolean; canEdit: boolean } | null> {

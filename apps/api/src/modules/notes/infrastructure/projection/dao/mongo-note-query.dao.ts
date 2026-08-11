@@ -29,7 +29,7 @@ export class MongoNoteQueryDao implements INoteQueryDao {
     return docs.map((doc) => this.mapDocToNoteView(doc));
   }
 
-  async findNoteContentById(noteId: string): Promise<string | null> {
+  async findNoteContentById(): Promise<string | null> {
     // Projections never store document content in this architecture.
     return null;
   }

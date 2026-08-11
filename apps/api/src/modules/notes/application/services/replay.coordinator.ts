@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import * as Y from 'yjs';
 import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
 import { DOCUMENT_UPDATE_STORE, type IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { SNAPSHOT_STORAGE_PORT, type ISnapshotStoragePort } from '@modules/notes/application/ports/external/snapshot-storage.port';
+import { DOCUMENT_ENGINE_PORT, type IDocumentEnginePort } from '@modules/notes/application/ports/external/document-engine.port';
 
 @Injectable()
 export class ReplayCoordinator {
@@ -15,23 +15,25 @@ export class ReplayCoordinator {
     private readonly updateStore: IDocumentUpdateStore,
     @Inject(SNAPSHOT_STORAGE_PORT)
     private readonly snapshotStoragePort: ISnapshotStoragePort,
+    @Inject(DOCUMENT_ENGINE_PORT)
+    private readonly documentEngine: IDocumentEnginePort,
   ) {}
 
   /**
-   * Rebuilds the Y.Doc state up to `targetSeq` (inclusive).
+   * Rebuilds the document state up to `targetSeq` (inclusive).
    * If targetSeq is undefined, rebuilds to the absolute latest stored update.
    *
    * Strategy:
-   *  1. Find the nearest snapshot whose snapshotSeq ≤ targetSeq
-   *  2. Download its Yjs state blob from S3
-   *  3. Fetch all NoteUpdate rows with seq > snapshotSeq (and ≤ targetSeq)
-   *  4. Apply each update blob to the Y.Doc in strict seq order
-   *  5. Return Y.encodeStateAsUpdate(doc) — the merged, up-to-date state
+   *  1. Find the nearest snapshot whose snapshotSeq <= targetSeq
+   *  2. Download its state blob from S3
+   *  3. Fetch all NoteUpdate rows with seq > snapshotSeq (and <= targetSeq)
+   *  4. Apply each update blob to the doc in strict seq order
+   *  5. Return the merged, up-to-date state
    *
-   * If no snapshot exists, starts from an empty Y.Doc and applies all updates.
+   * If no snapshot exists, starts from an empty doc and applies all updates.
    */
   async rebuildDocument(noteId: string, targetSeq?: bigint): Promise<Uint8Array> {
-    const doc = new Y.Doc();
+    let docState: Uint8Array | undefined;
 
     // Step 1 — find nearest snapshot
     const snapshotMeta = targetSeq
@@ -40,13 +42,12 @@ export class ReplayCoordinator {
 
     const fromSeq = snapshotMeta?.snapshotSeq ?? BigInt(0);
 
-    // Step 2 — load snapshot into Y.Doc
+    // Step 2 — load snapshot into docState
     if (snapshotMeta) {
       this.logger.debug(
         `[${noteId}] Loading snapshot at seq=${snapshotMeta.snapshotSeq} (key=${snapshotMeta.s3ObjectKey})`,
       );
-      const snapshotBlob = await this.snapshotStoragePort.downloadSnapshot(snapshotMeta.s3ObjectKey);
-      Y.applyUpdate(doc, snapshotBlob);
+      docState = await this.snapshotStoragePort.downloadSnapshot(snapshotMeta.s3ObjectKey);
     } else {
       this.logger.debug(`[${noteId}] No snapshot found — replaying from beginning`);
     }
@@ -60,11 +61,15 @@ export class ReplayCoordinator {
 
     // Step 4 — apply updates in strict seq order (already ordered by repository)
     for (const update of updates) {
-      Y.applyUpdate(doc, update.updateBlob);
+      docState = this.documentEngine.applyUpdate(docState, update.updateBlob);
     }
 
-    // Step 5 — encode final merged state
-    return Y.encodeStateAsUpdate(doc);
+    if (!docState) {
+      return this.documentEngine.createInitialContent('');
+    }
+
+    // Step 5 — return final merged state
+    return docState;
   }
 
   /**
@@ -77,22 +82,14 @@ export class ReplayCoordinator {
   }
 
   /**
-   * Computes the minimal Yjs update that, when applied to `currentState`,
+   * Computes the minimal update that, when applied to `currentState`,
    * transforms it exactly into `targetState`.
    *
    * Used by RestoreRevisionHandler to append a "revert" update to the op log
    * rather than overwriting history.
    */
   computeRevertingUpdate(currentState: Uint8Array, targetState: Uint8Array): Uint8Array {
-    // Decode both states as Y.Docs
-    const currentDoc = new Y.Doc();
-    Y.applyUpdate(currentDoc, currentState);
-
-    const targetDoc = new Y.Doc();
-    Y.applyUpdate(targetDoc, targetState);
-
-    // The diff update: what targetDoc has that currentDoc doesn't
-    const currentStateVector = Y.encodeStateVector(currentDoc);
-    return Y.encodeStateAsUpdate(targetDoc, currentStateVector);
+    return this.documentEngine.computeDiff(currentState, targetState);
   }
 }
+

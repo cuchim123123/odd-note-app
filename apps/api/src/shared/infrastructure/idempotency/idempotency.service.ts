@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import type { IIdempotencyPort } from '@shared/application/ports/idempotency.port';
 
 @Injectable()
-export class IdempotencyService {
+export class IdempotencyService implements IIdempotencyPort {
   constructor(private readonly redisService: RedisService) {}
 
   /**

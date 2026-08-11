@@ -5,6 +5,7 @@ export interface NoteView {
   title: string;
   isPinned: boolean;
   isProtected: boolean;
+  lockHash?: string | null;
   isShared: boolean;
   labels: string[];
   createdAt: Date;

@@ -18,6 +18,7 @@ export interface NoteResponseDto {
   content: string;
   isPinned: boolean;
   isProtected: boolean;
+  lockHash?: string | null;
   isShared: boolean;
   labels: string[];
   createdAt: string;

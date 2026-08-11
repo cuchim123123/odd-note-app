@@ -6,8 +6,6 @@ import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/appli
 import type { NoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
 import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/dao/note-query.dao.port';
 
-import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/external/note-protection.port';
-
 /**
  * Query handler: bypass domain and repository, query DB directly for read performance.
  * Per reference architecture: "In read model we can bypass domain and repository layers completely."
@@ -19,8 +17,6 @@ export class ListNotesQueryHandler implements IQueryHandler<ListNotesQuery> {
     private readonly noteQueryDao: INoteQueryDao,
     @Inject(DOCUMENT_SYNC_PORT)
     private readonly documentSyncPort: IDocumentSyncPort,
-    @Inject(NOTE_PROTECTION_PORT)
-    private readonly protectionPort: INoteProtectionPort,
   ) {}
 
   async execute(query: ListNotesQuery): Promise<NoteResponseDto[]> {
@@ -28,27 +24,20 @@ export class ListNotesQueryHandler implements IQueryHandler<ListNotesQuery> {
 
     const enriched = await this.noteQueryDao.findUserNotes(userId);
     const noteIds = enriched.map(n => n.id);
-    const protectedIds = await this.protectionPort.getProtectedNoteIds(noteIds);
 
-    // Resolve content from Yjs/Redis for each note
-    return Promise.all(
-      enriched.map(async (note) => {
-        const isProtected = protectedIds.has(note.id);
-        
-        let content = '';
-        if (!isProtected) {
-          content = await this.documentSyncPort.readContent(note.id) ?? '';
-        }
+    // Fetch content for all notes, including protected ones, for offline sync
+    const contentsMap = await this.documentSyncPort.readContents(noteIds);
 
-        return {
-          ...note,
-          isProtected, // Authoritative state
-          createdAt: note.createdAt.toISOString(),
-          updatedAt: note.updatedAt.toISOString(),
-          sharedAt: note.sharedAt?.toISOString(),
-          content,
-        };
-      }),
-    );
+    return enriched.map((note) => {
+      const content = contentsMap.get(note.id) ?? '';
+
+      return {
+        ...note,
+        createdAt: note.createdAt.toISOString(),
+        updatedAt: note.updatedAt.toISOString(),
+        sharedAt: note.sharedAt?.toISOString(),
+        content,
+      };
+    });
   }
 }

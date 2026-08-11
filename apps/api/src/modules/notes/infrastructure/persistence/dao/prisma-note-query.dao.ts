@@ -12,7 +12,7 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       where: { userId },
       include: {
         shares: { select: { id: true } },
-        protection: { select: { id: true } },
+        protection: { select: { id: true, passwordHash: true } },
         userLabels: { where: { userId }, select: { labels: true } },
         userPins: { where: { userId }, select: { isPinned: true } },
       },
@@ -45,7 +45,7 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
           where: { recipientId: userId },
           include: { owner: { select: { id: true, email: true, displayName: true } } },
         },
-        protection: { select: { id: true } },
+        protection: { select: { id: true, passwordHash: true } },
         userLabels: { where: { userId }, select: { labels: true } },
         userPins: { where: { userId }, select: { isPinned: true } },
       },
@@ -72,7 +72,7 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
         note: {
           include: {
             shares: { select: { id: true } },
-            protection: { select: { id: true } },
+            protection: { select: { id: true, passwordHash: true } },
             userLabels: { where: { userId }, select: { labels: true } },
             userPins: { where: { userId }, select: { isPinned: true } },
           },
@@ -126,7 +126,7 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       isShared: boolean;
       createdAt: Date;
       updatedAt: Date;
-      protection?: { id: string } | null;
+      protection?: { id: string; passwordHash: string } | null;
       shares?: { id: string }[];
       userPins?: { isPinned: boolean }[];
       userLabels?: { labels: string[] }[];
@@ -142,6 +142,7 @@ export class PrismaNoteQueryDao implements INoteQueryDao {
       title: note.title,
       isPinned: note.userPins?.[0]?.isPinned ?? false,
       isProtected: Boolean(note.protection),
+      lockHash: note.protection?.passwordHash ?? null,
       isShared: note.isShared || Boolean(note.shares && note.shares.length > 0),
       labels: note.userLabels?.[0]?.labels ?? [],
       createdAt: note.createdAt,

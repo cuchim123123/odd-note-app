@@ -10,6 +10,10 @@ export class RedisDocumentSyncAdapter implements IDocumentSyncPort {
     return this.notesCrdtService.readYDocContent(noteId);
   }
 
+  async readContents(noteIds: string[]): Promise<Map<string, string | null>> {
+    return this.notesCrdtService.readYDocContents(noteIds);
+  }
+
   async persistSnapshot(noteId: string, title: string, content: string | null, isPinned: boolean, updatedAt: Date): Promise<void> {
     await this.notesCrdtService.persistCollaborationSnapshot(noteId, title, content, isPinned, updatedAt);
   }

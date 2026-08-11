@@ -93,6 +93,61 @@ export class NotesCrdtService {
     }
   }
 
+  async readYDocStates(noteIds: string[]): Promise<Map<string, YDocState | null>> {
+    if (noteIds.length === 0) return new Map();
+    
+    try {
+      const keys = noteIds.map(id => this.yDocKey(id));
+      const values = await this.redis.getClient().mget(...keys);
+      
+      const result = new Map<string, YDocState | null>();
+      for (let i = 0; i < noteIds.length; i++) {
+        const id = noteIds[i]!;
+        const value = values[i];
+        if (value) {
+          try {
+            result.set(id, JSON.parse(value) as YDocState);
+          } catch {
+            result.set(id, null);
+          }
+        } else {
+          result.set(id, null);
+        }
+      }
+      return result;
+    } catch {
+      return new Map(noteIds.map(id => [id, null]));
+    }
+  }
+
+  async readYDocContents(noteIds: string[]): Promise<Map<string, string | null>> {
+    const states = await this.readYDocStates(noteIds);
+    const result = new Map<string, string | null>();
+
+    for (const [noteId, yDocState] of states.entries()) {
+      if (!yDocState) {
+        result.set(noteId, null);
+        continue;
+      }
+
+      try {
+        const yDoc = new Y.Doc();
+        if (yDocState.updates && yDocState.updates.length > 0) {
+          for (const update of yDocState.updates) {
+            Y.applyUpdate(yDoc, new Uint8Array(update));
+          }
+        }
+
+        const yXml = yDoc.getXmlFragment('prosemirror');
+        result.set(noteId, yXml.toString());
+      } catch {
+        result.set(noteId, null);
+      }
+    }
+
+    return result;
+  }
+
   async clearYDocState(noteId: string): Promise<void> {
     try {
       await this.redis.getClient().del(this.yDocKey(noteId));

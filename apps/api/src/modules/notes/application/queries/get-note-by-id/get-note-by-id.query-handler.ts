@@ -4,7 +4,6 @@ import { Inject } from '@nestjs/common';
 import { NoteNotFoundError } from '@modules/notes/domain/errors/note.errors';
 import { GetNoteByIdQuery } from '@modules/notes/application/queries/get-note-by-id/get-note-by-id.query';
 import { DOCUMENT_SYNC_PORT, type IDocumentSyncPort } from '@modules/notes/application/ports/external/document-sync.port';
-import { NOTE_PROTECTION_PORT, type INoteProtectionPort } from '@modules/notes/application/ports/external/note-protection.port';
 import type { NoteResponseDto } from '@modules/notes/presentation/http/dto/note.response.dto';
 import { NOTE_QUERY_DAO, type INoteQueryDao } from '@modules/notes/application/ports/dao/note-query.dao.port';
 
@@ -15,34 +14,18 @@ export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> 
     private readonly noteQueryDao: INoteQueryDao,
     @Inject(DOCUMENT_SYNC_PORT)
     private readonly documentSyncPort: IDocumentSyncPort,
-    @Inject(NOTE_PROTECTION_PORT)
-    private readonly protectionPort: INoteProtectionPort,
   ) {}
 
   async execute(query: GetNoteByIdQuery): Promise<NoteResponseDto> {
-    const { userId, noteId, unlockToken } = query;
+    const { userId, noteId } = query;
 
     const note = await this.noteQueryDao.findNoteById(noteId, userId);
     if (!note) throw new NoteNotFoundError(noteId);
 
-    // Authoritative check from Postgres via INoteProtectionPort
-    const protectedIds = await this.protectionPort.getProtectedNoteIds([noteId]);
-    const isProtected = protectedIds.has(noteId);
-
-    let content = '';
-
-    if (!isProtected) {
-      content = await this.documentSyncPort.readContent(noteId) ?? await this.noteQueryDao.findNoteContentById(noteId) ?? '';
-    } else {
-      const isUnlocked = await this.protectionPort.verifyUnlockToken(userId, noteId, unlockToken);
-      if (isUnlocked) {
-        content = await this.documentSyncPort.readContent(noteId) ?? await this.noteQueryDao.findNoteContentById(noteId) ?? '';
-      }
-    }
+    const content = await this.documentSyncPort.readContent(noteId) ?? await this.noteQueryDao.findNoteContentById(noteId) ?? '';
 
     return {
       ...note,
-      isProtected, // authoritative override
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
       sharedAt: note.sharedAt?.toISOString(),

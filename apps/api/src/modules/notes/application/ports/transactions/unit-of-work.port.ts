@@ -4,6 +4,7 @@ import type { INoteOutboxPort } from '@modules/notes/application/ports/messaging
 import type { INoteProtectionPort } from '@modules/notes/application/ports/external/note-protection.port';
 import type { IUserPreferencesRepository } from '@modules/notes/application/ports/repositories/user-preferences.repository.port';
 import type { IVersionHistoryRepository } from '@modules/notes/application/ports/repositories/version-history.repository.port';
+import type { IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
 
 export interface NoteTransactionContext {
   repos: {
@@ -14,6 +15,7 @@ export interface NoteTransactionContext {
   };
   outbox: INoteOutboxPort;
   protectionPort: INoteProtectionPort;
+  documentUpdateStore: IDocumentUpdateStore;
 }
 
 export interface INoteUnitOfWork {

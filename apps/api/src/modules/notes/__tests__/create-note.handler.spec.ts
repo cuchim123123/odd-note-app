@@ -22,23 +22,29 @@ function createMocks() {
     deleteLabel: vi.fn(),
   };
 
+  const documentUpdateStore = {
+    append: vi.fn(),
+  };
+
   const unitOfWork = {
     execute: vi.fn(async (work) => {
-      return work({ repos: { note: noteRepository, userPreferences: userPreferencesRepository } });
+      return work({ 
+        repos: { note: noteRepository, userPreferences: userPreferencesRepository },
+        documentUpdateStore
+      });
     }),
   };
 
-  const documentSyncPort = {
-    persistSnapshot: vi.fn(),
-    clearState: vi.fn(),
+  const documentEngine = {
+    createInitialContent: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
   };
 
   const handler = new CreateNoteHandler(
     unitOfWork as never,
-    documentSyncPort as never,
+    documentEngine as never,
   );
 
-  return { handler, noteRepository, documentSyncPort, userPreferencesRepository, unitOfWork };
+  return { handler, noteRepository, documentEngine, documentUpdateStore, userPreferencesRepository, unitOfWork };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -65,24 +71,26 @@ describe('CreateNoteHandler', () => {
     expect(result.id).toBe(savedNote.id);
   });
 
-  it('does NOT call documentSyncPort when no content is provided', async () => {
-    const { handler, documentSyncPort } = createMocks();
+  it('does NOT call documentEngine when no content is provided', async () => {
+    const { handler, documentEngine, documentUpdateStore } = createMocks();
 
     await handler.execute(new CreateNoteCommand('user-1', 'Title Only'));
 
-    expect(documentSyncPort.persistSnapshot).not.toHaveBeenCalled();
+    expect(documentEngine.createInitialContent).not.toHaveBeenCalled();
+    expect(documentUpdateStore.append).not.toHaveBeenCalled();
   });
 
-  it('persists initial content to documentSyncPort when provided', async () => {
-    const { handler, documentSyncPort } = createMocks();
+  it('persists initial content to documentUpdateStore when provided', async () => {
+    const { handler, documentEngine, documentUpdateStore } = createMocks();
 
     await handler.execute(new CreateNoteCommand('user-1', 'Rich Note', '<p>Hello</p>'));
 
-    expect(documentSyncPort.persistSnapshot).toHaveBeenCalledTimes(1);
-     
-    const [, title, content] = documentSyncPort.persistSnapshot.mock.calls[0]!;
-    expect(title).toBe('Rich Note');
-    expect(content).toBe('<p>Hello</p>');
+    expect(documentEngine.createInitialContent).toHaveBeenCalledTimes(1);
+    expect(documentEngine.createInitialContent).toHaveBeenCalledWith('<p>Hello</p>');
+
+    expect(documentUpdateStore.append).toHaveBeenCalledTimes(1);
+    const appendCall = documentUpdateStore.append.mock.calls[0]![0];
+    expect(appendCall.authorId).toBe('user-1');
   });
 
   it('creates label record when labels are provided', async () => {

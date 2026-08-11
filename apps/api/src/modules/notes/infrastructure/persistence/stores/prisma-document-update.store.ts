@@ -1,10 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { IDocumentUpdateStore, AppendDocumentUpdateDto, StoredDocumentUpdate } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
+import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
 
 @Injectable()
 export class PrismaDocumentUpdateStore implements IDocumentUpdateStore {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
   async append(update: AppendDocumentUpdateDto): Promise<StoredDocumentUpdate> {
     const row = await this.prisma.noteUpdate.create({

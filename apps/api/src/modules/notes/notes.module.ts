@@ -17,7 +17,6 @@ import { UpdateShareHandler } from '@modules/notes/application/commands/update-s
 import { RevokeShareHandler } from '@modules/notes/application/commands/revoke-share/revoke-share.handler';
 import { SetPasswordHandler } from '@modules/notes/application/commands/set-password/set-password.handler';
 import { RemovePasswordHandler } from '@modules/notes/application/commands/remove-password/remove-password.handler';
-import { VerifyPasswordHandler } from '@modules/notes/application/commands/verify-password/verify-password.handler';
 
 import { RenameLabelHandler } from '@modules/notes/application/commands/rename-label/rename-label.handler';
 import { DeleteLabelHandler } from '@modules/notes/application/commands/delete-label/delete-label.handler';
@@ -43,7 +42,6 @@ import { UpdateShareHttpController } from '@modules/notes/presentation/http/comm
 import { RevokeShareHttpController } from '@modules/notes/presentation/http/commands/revoke-share/revoke-share.http.controller';
 import { SetPasswordHttpController } from '@modules/notes/presentation/http/commands/set-password/set-password.http.controller';
 import { RemovePasswordHttpController } from '@modules/notes/presentation/http/commands/remove-password/remove-password.http.controller';
-import { VerifyPasswordHttpController } from '@modules/notes/presentation/http/commands/verify-password/verify-password.http.controller';
 
 import { RenameLabelHttpController } from '@modules/notes/presentation/http/commands/rename-label/rename-label.http.controller';
 import { DeleteLabelHttpController } from '@modules/notes/presentation/http/commands/delete-label/delete-label.http.controller';
@@ -90,6 +88,8 @@ import { PrismaSnapshotMetadataRepository } from '@modules/notes/infrastructure/
 import { SNAPSHOT_STORAGE_PORT } from '@modules/notes/application/ports/external/snapshot-storage.port';
 import { S3SnapshotStorageAdapter } from '@modules/notes/infrastructure/storage/s3-snapshot-storage.adapter';
 import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
+import { DOCUMENT_ENGINE_PORT } from '@modules/notes/application/ports/external/document-engine.port';
+import { YjsDocumentEngineAdapter } from '@modules/notes/infrastructure/crdt/yjs-document-engine.adapter';
 import { SnapshotThresholdMonitor } from '@modules/notes/application/workers/snapshot.worker';
 import { CreateSnapshotInternalCommandHandler } from '@modules/notes/application/workers/create-snapshot.internal-handler';
 import { INTERNAL_COMMAND_HANDLERS } from '@shared/infrastructure/outbox/internal-command-handler.port';
@@ -125,7 +125,6 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     RevokeShareHttpController,
     SetPasswordHttpController,
     RemovePasswordHttpController,
-    VerifyPasswordHttpController,
 
     RenameLabelHttpController,
     DeleteLabelHttpController,
@@ -159,7 +158,6 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     RevokeShareHandler,
     SetPasswordHandler,
     RemovePasswordHandler,
-    VerifyPasswordHandler,
 
     RenameLabelHandler,
     DeleteLabelHandler,
@@ -214,6 +212,7 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     { provide: DOCUMENT_UPDATE_STORE, useClass: PrismaDocumentUpdateStore },
     { provide: SNAPSHOT_METADATA_REPOSITORY, useClass: PrismaSnapshotMetadataRepository },
     { provide: SNAPSHOT_STORAGE_PORT, useClass: S3SnapshotStorageAdapter },
+    { provide: DOCUMENT_ENGINE_PORT, useClass: YjsDocumentEngineAdapter },
     { provide: NOTE_ACCESS_PORT, useClass: PrismaNoteAccessAdapter },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { provide: INTERNAL_COMMAND_HANDLERS, useClass: CreateSnapshotInternalCommandHandler, multi: true } as any,

@@ -65,13 +65,14 @@ export class PlanCatalogSeeder implements OnApplicationBootstrap {
       },
     ];
 
-    for (const plan of plans) {
-      await this.prisma.plan.upsert({
+    const upserts = plans.map(plan => 
+      this.prisma.plan.upsert({
         where: { id: plan.id },
         create: plan,
         update: { amountCents: plan.amountCents, isActive: plan.isActive },
-      });
-    }
+      })
+    );
+    await this.prisma.$transaction(upserts);
 
     this.logger.log(`Plan catalog seeded: ${plans.map((p) => p.id).join(', ')}`);
   }

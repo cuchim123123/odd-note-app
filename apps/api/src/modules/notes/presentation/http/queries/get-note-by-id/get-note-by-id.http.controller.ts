@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Headers, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { AccessTokenGuard } from '@shared/presentation/http/guards/access-token.guard';
 import { CurrentUser } from '@shared/presentation/http/decorators/current-user.decorator';
@@ -13,8 +13,7 @@ export class GetNoteByIdHttpController {
   async getById(
     @CurrentUser() userId: string,
     @Param('noteId') noteId: string,
-    @Headers('x-note-unlock-token') unlockToken?: string,
   ) {
-    return this.queryBus.execute(new GetNoteByIdQuery(userId, noteId, unlockToken));
+    return this.queryBus.execute(new GetNoteByIdQuery(userId, noteId));
   }
 }
