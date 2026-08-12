@@ -40,20 +40,14 @@ export interface NoteProtectionRemovedProjectionEvent extends ProjectionEventBas
 
 export interface NotePinnedProjectionEvent extends ProjectionEventBase {
   readonly type: 'NotePinned';
+  readonly userId: string;
   readonly isPinned: boolean;
 }
 
-export interface NoteLabelRenamedProjectionEvent extends ProjectionEventBase {
-  readonly type: 'NoteLabelRenamed';
+export interface NoteLabelsUpdatedProjectionEvent extends ProjectionEventBase {
+  readonly type: 'NoteLabelsUpdated';
   readonly userId: string;
-  readonly oldLabel: string;
-  readonly newLabel: string;
-}
-
-export interface NoteLabelDeletedProjectionEvent extends ProjectionEventBase {
-  readonly type: 'NoteLabelDeleted';
-  readonly userId: string;
-  readonly label: string;
+  readonly labels: string[];
 }
 
 // ── Share events ─────────────────────────────────────────────────────────────
@@ -96,8 +90,7 @@ export type NoteProjectionEvent =
   | NoteProtectionSetProjectionEvent
   | NoteProtectionRemovedProjectionEvent
   | NotePinnedProjectionEvent
-  | NoteLabelRenamedProjectionEvent
-  | NoteLabelDeletedProjectionEvent;
+  | NoteLabelsUpdatedProjectionEvent;
 
 export type ShareProjectionEvent =
   | NoteSharedProjectionEvent

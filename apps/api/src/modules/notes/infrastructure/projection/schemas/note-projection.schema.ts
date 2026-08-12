@@ -15,16 +15,24 @@ export class NoteProjection {
   declare title: string;
 
   @Prop({ type: Boolean, required: true, default: false })
-  declare isPinned: boolean;
-
-  @Prop({ type: Boolean, required: true, default: false })
   declare isProtected: boolean;
 
   @Prop({ type: Boolean, required: true, default: false })
   declare isShared: boolean;
 
   @Prop({ type: [String], default: [] })
-  declare labels: string[];
+  declare pinnedBy: string[];
+
+  @Prop({
+    type: [
+      {
+        userId: String,
+        labels: [String],
+      },
+    ],
+    default: [],
+  })
+  declare userLabels: Array<{ userId: string; labels: string[] }>;
 
   @Prop({ type: Date, required: true })
   declare createdAt: Date;
@@ -67,5 +75,5 @@ export class NoteProjection {
 export const NoteProjectionSchema = SchemaFactory.createForClass(NoteProjection);
 
 NoteProjectionSchema.index({ userId: 1, updatedAt: -1 });
-NoteProjectionSchema.index({ userId: 1, isPinned: -1, updatedAt: -1 });
-NoteProjectionSchema.index({ 'shares.recipientId': 1 });
+NoteProjectionSchema.index({ pinnedBy: 1, updatedAt: -1 });
+NoteProjectionSchema.index({ 'shares.recipientId': 1, updatedAt: -1 });

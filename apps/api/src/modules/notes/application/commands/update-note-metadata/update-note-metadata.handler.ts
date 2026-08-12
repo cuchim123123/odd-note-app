@@ -4,6 +4,7 @@ import { UpdateNoteMetadataCommand } from '@modules/notes/application/commands/u
 import { NOTE_UNIT_OF_WORK, type INoteUnitOfWork } from '@modules/notes/application/ports/transactions/unit-of-work.port';
 import { NoteTitle } from '@modules/notes/domain/value-objects/note-title.vo';
 import { NoteNotFoundError, NotePermissionDeniedError } from '@modules/notes/domain/errors/note.errors';
+import { uuidv7 } from 'uuidv7';
 
 @CommandHandler(UpdateNoteMetadataCommand)
 export class UpdateNoteMetadataHandler implements ICommandHandler<UpdateNoteMetadataCommand> {
@@ -32,12 +33,30 @@ export class UpdateNoteMetadataHandler implements ICommandHandler<UpdateNoteMeta
       if (isPinned !== undefined) {
         const result = await ctx.repos.userPreferences.upsertPin(userId, noteId, isPinned);
         personalIsPinnedResult = result.isPinned;
+        
+        await ctx.outbox.scheduleIntegrationEvent('NotePinned', {
+          eventId: uuidv7(),
+          aggregateId: note.id,
+          aggregateVersion: 0,
+          occurredAt: new Date().toISOString(),
+          eventType: 'NotePinned',
+          payload: { userId, isPinned: personalIsPinnedResult }
+        });
       } else {
         personalIsPinnedResult = await ctx.repos.userPreferences.getPin(userId, noteId);
       }
 
       if (labels !== undefined) {
         await ctx.repos.userPreferences.upsertLabel(userId, noteId, labels);
+        
+        await ctx.outbox.scheduleIntegrationEvent('NoteLabelsUpdated', {
+          eventId: uuidv7(),
+          aggregateId: note.id,
+          aggregateVersion: 0,
+          occurredAt: new Date().toISOString(),
+          eventType: 'NoteLabelsUpdated',
+          payload: { userId, labels }
+        });
       }
       
       return { note, personalIsPinned: personalIsPinnedResult };

@@ -4,6 +4,7 @@ import type { IntegrationEventEnvelope } from '@shared/application/ports/integra
 import { NoteSharedDomainEvent } from '@modules/notes/domain/events/note-shared.domain-event';
 import { NoteCreatedDomainEvent } from '@modules/notes/domain/events/note-created.domain-event';
 import { NoteDeletedDomainEvent } from '@modules/notes/domain/events/note-deleted.domain-event';
+import { NoteTitleUpdatedDomainEvent } from '@modules/notes/domain/events/note-title-updated.domain-event';
 
 import { NoteShareUpdatedDomainEvent } from '@modules/notes/domain/events/note-share-updated.domain-event';
 import { NoteShareRevokedDomainEvent } from '@modules/notes/domain/events/note-share-revoked.domain-event';
@@ -80,7 +81,7 @@ export class NotePasswordSetTranslator implements IDomainEventTranslator<NotePas
     return {
       eventId: event.eventId,
       aggregateId: event.aggregateId,
-      eventType: event.eventType,
+      eventType: 'NoteProtectionSet',
       occurredAt: event.occurredOn.toISOString(),
       payload: {},
     };
@@ -95,7 +96,7 @@ export class NotePasswordRemovedTranslator implements IDomainEventTranslator<Not
     return {
       eventId: event.eventId,
       aggregateId: event.aggregateId,
-      eventType: event.eventType,
+      eventType: 'NoteProtectionRemoved',
       occurredAt: event.occurredOn.toISOString(),
       payload: {},
     };
@@ -135,6 +136,23 @@ export class NoteDeletedTranslator implements IDomainEventTranslator<NoteDeleted
   }
 }
 
+export class NoteTitleUpdatedTranslator implements IDomainEventTranslator<NoteTitleUpdatedDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NoteTitleUpdated';
+  }
+  translate(event: NoteTitleUpdatedDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: event.eventType,
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {
+        title: event.title,
+      },
+    };
+  }
+}
+
 export class DefaultNoteIntegrationEventMapper implements NoteIntegrationEventMapper {
   private readonly translators: IDomainEventTranslator[] = [
     new NoteSharedTranslator(),
@@ -144,6 +162,7 @@ export class DefaultNoteIntegrationEventMapper implements NoteIntegrationEventMa
     new NotePasswordRemovedTranslator(),
     new NoteCreatedTranslator(),
     new NoteDeletedTranslator(),
+    new NoteTitleUpdatedTranslator(),
   ];
 
   map(domainEvents: DomainEvent[]): OutboxMessageDraft[] {

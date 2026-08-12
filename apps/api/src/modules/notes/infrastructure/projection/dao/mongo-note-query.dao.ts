@@ -25,13 +25,10 @@ export class MongoNoteQueryDao implements INoteQueryDao {
       .lean()
       .exec();
 
-    return docs.map((doc) => this.mapDocToNoteView(doc));
+    return docs.map((doc) => this.mapDocToNoteView(doc, userId));
   }
 
-  async findNoteContentById(): Promise<string | null> {
-    // Projections never store document content in this architecture.
-    return null;
-  }
+
 
   async findNoteById(noteId: string, userId: string): Promise<NoteView | null> {
     const doc = await this.noteModel
@@ -45,7 +42,7 @@ export class MongoNoteQueryDao implements INoteQueryDao {
     if (!doc) return null;
 
     const share = doc.shares.find((s) => s.recipientId === userId);
-    return this.mapDocToNoteView(doc, share);
+    return this.mapDocToNoteView(doc, userId, share);
   }
 
   async findSharedWithMe(userId: string): Promise<SharedNoteView[]> {
@@ -59,7 +56,7 @@ export class MongoNoteQueryDao implements INoteQueryDao {
       .map((doc) => {
         const share = doc.shares.find((s) => s.recipientId === userId);
         if (!share) return null;
-        return this.mapDocToNoteView(doc, share) as SharedNoteView;
+        return this.mapDocToNoteView(doc, userId, share) as SharedNoteView;
       })
       .filter((v): v is SharedNoteView => v !== null);
   }
@@ -91,15 +88,18 @@ export class MongoNoteQueryDao implements INoteQueryDao {
 
   private mapDocToNoteView(
     doc: NoteProjectionDocument,
+    userId: string,
     share?: { permission: 'READ' | 'EDIT'; sharedAt: Date; recipientId: string | null } | undefined,
   ): NoteView {
+    const userLabels = doc.userLabels?.find(l => l.userId === userId)?.labels || [];
+    
     const result: NoteView = {
       id: doc._id as string,
       title: doc.title,
-      isPinned: doc.isPinned,
+      isPinned: doc.pinnedBy?.includes(userId) ?? false,
       isProtected: doc.isProtected,
       isShared: doc.isShared,
-      labels: doc.labels,
+      labels: userLabels,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       accessMode: share ? 'shared' : 'owner',

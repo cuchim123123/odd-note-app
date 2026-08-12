@@ -38,7 +38,7 @@ export interface INoteQueryDao {
   findUserNotes(userId: string): Promise<NoteView[]>;
   /** get-note-by-id */
   findNoteById(noteId: string, userId: string): Promise<NoteView | null>;
-  findNoteContentById(noteId: string): Promise<string | null>;
+
 
   /** list-shared-with-me */
   findSharedWithMe(userId: string): Promise<SharedNoteView[]>;

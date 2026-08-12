@@ -22,7 +22,7 @@ export class GetNoteByIdQueryHandler implements IQueryHandler<GetNoteByIdQuery> 
     const note = await this.noteQueryDao.findNoteById(noteId, userId);
     if (!note) throw new NoteNotFoundError(noteId);
 
-    const content = await this.documentSyncPort.readContent(noteId) ?? await this.noteQueryDao.findNoteContentById(noteId) ?? '';
+    const content = await this.documentSyncPort.readContent(noteId) ?? '';
 
     return {
       ...note,

@@ -24,10 +24,10 @@ export class NoteProjectionConsumer {
             _id: event.aggregateId,
             userId: event.payload.ownerId,
             title: event.payload.title,
-            isPinned: false,
             isProtected: false,
             isShared: false,
-            labels: [],
+            pinnedBy: [],
+            userLabels: [],
             shares: [],
             createdAt: new Date(event.occurredAt),
           },
@@ -77,47 +77,52 @@ export class NoteProjectionConsumer {
   }
 
   @EventPattern('NotePinned')
-  async handleNotePinned(@Payload() event: IntegrationEventEnvelope<{ isPinned: boolean }>): Promise<void> {
-    await this.applyGuardedUpdate(event, { isPinned: event.payload.isPinned, updatedAt: new Date(event.occurredAt) });
-  }
-
-  @EventPattern('NoteLabelRenamed')
-  async handleNoteLabelRenamed(@Payload() event: IntegrationEventEnvelope<{ userId: string; oldLabel: string; newLabel: string }>): Promise<void> {
+  async handleNotePinned(@Payload() event: IntegrationEventEnvelope<{ userId: string; isPinned: boolean }>): Promise<void> {
     try {
+      const updateOp = event.payload.isPinned
+        ? { $addToSet: { pinnedBy: event.payload.userId } }
+        : { $pull: { pinnedBy: event.payload.userId } };
+
       await this.noteModel.updateOne(
-        { _id: event.aggregateId, userId: event.payload.userId },
+        { _id: event.aggregateId, lastEventId: { $ne: event.eventId } },
         {
+          ...updateOp,
           $set: {
-            'labels.$[el]': event.payload.newLabel,
             lastEventId: event.eventId,
             projectionUpdatedAt: new Date(),
             updatedAt: new Date(event.occurredAt),
           },
         },
-        { arrayFilters: [{ el: event.payload.oldLabel }] },
       );
     } catch (err) {
-      this.logger.error(`Failed to handle NoteLabelRenamed for note ${event.aggregateId}`, err);
+      this.logger.error(`Failed to handle NotePinned for note ${event.aggregateId}`, err);
       throw err;
     }
   }
 
-  @EventPattern('NoteLabelDeleted')
-  async handleNoteLabelDeleted(@Payload() event: IntegrationEventEnvelope<{ userId: string; label: string }>): Promise<void> {
+  @EventPattern('NoteLabelsUpdated')
+  async handleNoteLabelsUpdated(@Payload() event: IntegrationEventEnvelope<{ userId: string; labels: string[] }>): Promise<void> {
     try {
+      // First, ensure the user object exists in userLabels
       await this.noteModel.updateOne(
-        { _id: event.aggregateId, userId: event.payload.userId },
+        { _id: event.aggregateId, 'userLabels.userId': { $ne: event.payload.userId } },
+        { $push: { userLabels: { userId: event.payload.userId, labels: [] } } }
+      );
+
+      // Then update the labels
+      await this.noteModel.updateOne(
+        { _id: event.aggregateId, 'userLabels.userId': event.payload.userId },
         {
-          $pull: { labels: event.payload.label },
           $set: {
+            'userLabels.$.labels': event.payload.labels,
             lastEventId: event.eventId,
             projectionUpdatedAt: new Date(),
             updatedAt: new Date(event.occurredAt),
           },
-        },
+        }
       );
     } catch (err) {
-      this.logger.error(`Failed to handle NoteLabelDeleted for note ${event.aggregateId}`, err);
+      this.logger.error(`Failed to handle NoteLabelsUpdated for note ${event.aggregateId}`, err);
       throw err;
     }
   }

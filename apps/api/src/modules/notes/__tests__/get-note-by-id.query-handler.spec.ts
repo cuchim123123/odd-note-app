@@ -11,7 +11,7 @@ describe('GetNoteByIdQueryHandler', () => {
   beforeEach(() => {
     noteQueryDao = {
       findNoteById: vi.fn(),
-      findNoteContentById: vi.fn(),
+
     };
     documentSyncPort = {
       readContent: vi.fn(),

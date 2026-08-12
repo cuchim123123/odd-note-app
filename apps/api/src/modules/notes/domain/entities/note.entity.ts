@@ -4,6 +4,7 @@ import { NotePermissionDeniedError, NoteAlreadySharedError } from '@modules/note
 import { SharePermission } from '@modules/notes/domain/value-objects/share-permission.vo';
 import { NoteCreatedDomainEvent } from '@modules/notes/domain/events/note-created.domain-event';
 import { NoteDeletedDomainEvent } from '@modules/notes/domain/events/note-deleted.domain-event';
+import { NoteTitleUpdatedDomainEvent } from '@modules/notes/domain/events/note-title-updated.domain-event';
 import { NoteSharedDomainEvent } from '@modules/notes/domain/events/note-shared.domain-event';
 import { NoteShareUpdatedDomainEvent } from '@modules/notes/domain/events/note-share-updated.domain-event';
 import { NoteShareRevokedDomainEvent } from '@modules/notes/domain/events/note-share-revoked.domain-event';
@@ -82,6 +83,7 @@ export class NoteEntity extends AggregateRoot {
     this.verifyEditPermission(requestedBy);
     this.props.title = newTitle;
     this.updateModifiedTime();
+    this.addDomainEvent(new NoteTitleUpdatedDomainEvent(this.id, newTitle.value));
   }
 
   public shareWith(
