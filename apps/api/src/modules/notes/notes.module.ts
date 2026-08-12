@@ -78,9 +78,7 @@ import { VERSION_HISTORY_REPOSITORY } from '@modules/notes/application/ports/rep
 import { PrismaVersionHistoryRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-version-history.repository';
 import { NOTE_MAIL_SENDER } from '@modules/notes/application/ports/messaging/note-mail-sender.port';
 import { NOTE_QUERY_DAO } from '@modules/notes/application/ports/dao/note-query.dao.port';
-import { PrismaNoteQueryDao } from '@modules/notes/infrastructure/persistence/dao/prisma-note-query.dao';
 import { NOTE_REVISION_QUERY_DAO } from '@modules/notes/application/ports/dao/note-revision-query.dao.port';
-import { PrismaNoteRevisionQueryDao } from '@modules/notes/infrastructure/persistence/dao/prisma-note-revision-query.dao';
 import { DOCUMENT_UPDATE_STORE } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { PrismaDocumentUpdateStore } from '@modules/notes/infrastructure/persistence/stores/prisma-document-update.store';
 import { SNAPSHOT_METADATA_REPOSITORY } from '@modules/notes/application/ports/repositories/snapshot-metadata.repository.port';
@@ -101,8 +99,6 @@ import { MongoNoteRevisionQueryDao } from '@modules/notes/infrastructure/project
 import { NoteProjection, NoteProjectionSchema } from '@modules/notes/infrastructure/projection/schemas/note-projection.schema';
 import { NoteRevisionProjection, NoteRevisionProjectionSchema } from '@modules/notes/infrastructure/projection/schemas/note-revision-projection.schema';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigService } from '@nestjs/config';
-import type { EnvConfig } from '@config/env.validation';
 import { NoteProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-projection.consumer';
 import { NoteShareProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-share-projection.consumer';
 import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-revision-projection.consumer';
@@ -187,28 +183,8 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },
     { provide: VERSION_HISTORY_REPOSITORY, useClass: PrismaVersionHistoryRepository },
     { provide: NOTE_MAIL_SENDER, useClass: NoteMailerAdapter },
-    PrismaNoteQueryDao,
-    MongoNoteQueryDao,
-    PrismaNoteRevisionQueryDao,
-    MongoNoteRevisionQueryDao,
-    {
-      provide: NOTE_QUERY_DAO,
-      useFactory: (
-        cfg: ConfigService<EnvConfig, true>,
-        prisma: PrismaNoteQueryDao,
-        mongo: MongoNoteQueryDao,
-      ) => (cfg.get('PROJECTION_STORE', { infer: true }) === 'mongo' ? mongo : prisma),
-      inject: [ConfigService, PrismaNoteQueryDao, MongoNoteQueryDao],
-    },
-    {
-      provide: NOTE_REVISION_QUERY_DAO,
-      useFactory: (
-        cfg: ConfigService<EnvConfig, true>,
-        prisma: PrismaNoteRevisionQueryDao,
-        mongo: MongoNoteRevisionQueryDao,
-      ) => (cfg.get('PROJECTION_STORE', { infer: true }) === 'mongo' ? mongo : prisma),
-      inject: [ConfigService, PrismaNoteRevisionQueryDao, MongoNoteRevisionQueryDao],
-    },
+    { provide: NOTE_QUERY_DAO, useClass: MongoNoteQueryDao },
+    { provide: NOTE_REVISION_QUERY_DAO, useClass: MongoNoteRevisionQueryDao },
     { provide: DOCUMENT_UPDATE_STORE, useClass: PrismaDocumentUpdateStore },
     { provide: SNAPSHOT_METADATA_REPOSITORY, useClass: PrismaSnapshotMetadataRepository },
     { provide: SNAPSHOT_STORAGE_PORT, useClass: S3SnapshotStorageAdapter },

@@ -36,10 +36,8 @@ const envSchema = z.object({
   CACHE_TTL_DRAFT_SECONDS: z.coerce.number().int().positive().default(604800), // 7 days
   CACHE_TTL_COLLAB_SNAPSHOT_SECONDS: z.coerce.number().int().positive().default(86400), // 24 hours
   // ── MongoDB (read projections) ────────────────────────────────────────────
-  MONGO_URI: z.string().url().optional(),
+  MONGO_URI: z.string().url(),
   MONGO_DB_NAME: z.string().min(1).default('odd_note_projections'),
-  /** 'postgres' | 'mongo' — feature flag for DAO swap. Defaults to postgres. */
-  PROJECTION_STORE: z.enum(['postgres', 'mongo']).default('postgres'),
   // ── Stripe ──────────────────────────────────────────────────────────────
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

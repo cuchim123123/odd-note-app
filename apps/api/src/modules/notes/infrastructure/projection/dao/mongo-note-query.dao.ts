@@ -7,7 +7,6 @@ import { NoteProjection, type NoteProjectionDocument } from '@modules/notes/infr
 /**
  * MongoDB-backed implementation of INoteQueryDao.
  * Reads from denormalized note_projections collection.
- * Activated when PROJECTION_STORE=mongo via factory binding in NotesModule.
  *
  * NOTE: checkAccess and isProtected are NOT here — they live on INoteAccessPort
  * backed by PostgreSQL permanently (security boundary, must be consistent).
