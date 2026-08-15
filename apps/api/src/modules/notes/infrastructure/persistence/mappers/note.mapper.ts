@@ -28,14 +28,13 @@ export interface PrismaNoteFull {
 export class NoteMapper {
   static toDomain(record: PrismaNoteFull): NoteEntity {
     const shares: NoteShare[] = record.shares
-      .filter((s) => s.recipientId !== null)
+      .filter((s): s is typeof s & { recipientId: string } => s.recipientId !== null)
       .map((s) => ({
         id: ShareId.from(s.id),
-        recipientId: UserId.from(s.recipientId as string),
+        recipientId: UserId.from(s.recipientId),
         recipientEmail: s.recipientEmail,
         permission: SharePermission.create(s.permission),
       }));
-
 
     const props = {
       ownerId: record.userId,
@@ -56,6 +55,12 @@ export class NoteMapper {
     title: string;
     isShared: boolean;
     updatedAt: Date;
+    shares: Array<{
+      id: string;
+      recipientId: string;
+      recipientEmail: string;
+      permission: string;
+    }>;
   } {
     return {
       id: note.id,
@@ -63,6 +68,12 @@ export class NoteMapper {
       title: note.title,
       isShared: note.isShared,
       updatedAt: note.updatedAt,
+      shares: note.shares.map((s) => ({
+        id: s.id,
+        recipientId: s.recipientId,
+        recipientEmail: s.recipientEmail,
+        permission: s.permission.value,
+      })),
     };
   }
 }

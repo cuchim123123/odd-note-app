@@ -68,14 +68,12 @@ import { NOTE_OUTBOX_PORT } from '@modules/notes/application/ports/messaging/not
 import { NOTE_INTEGRATION_EVENT_MAPPER } from '@modules/notes/application/ports/messaging/integration-event-mapper.port';
 import { DefaultNoteIntegrationEventMapper } from '@modules/notes/application/mappers/integration-event.mapper';
 import { PrismaOutboxAdapter } from '@modules/notes/infrastructure/outbox/prisma-outbox.adapter';
-import { NOTE_SHARE_REPOSITORY } from '@modules/notes/application/ports/repositories/note-share.repository.port';
-import { PrismaNoteShareRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note-share.repository';
-import { USER_PREFERENCES_REPOSITORY } from '@modules/notes/application/ports/repositories/user-preferences.repository.port';
-import { PrismaUserPreferencesRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-user-preferences.repository';
+import { USER_NOTE_PREFERENCE_STORE } from '@modules/notes/application/ports/stores/user-note-preference.store.port';
+import { PrismaUserNotePreferenceStore } from '@modules/notes/infrastructure/persistence/stores/prisma-user-note-preference.store';
+import { NOTE_REVISION_STORE } from '@modules/notes/application/ports/stores/note-revision.store.port';
+import { PrismaNoteRevisionStore } from '@modules/notes/infrastructure/persistence/stores/prisma-note-revision.store';
 import { USER_READ_PORT } from '@modules/notes/application/ports/dao/user-read.port';
 import { PrismaUserReadAdapter } from '@modules/notes/infrastructure/persistence/dao/prisma-user-read.adapter';
-import { VERSION_HISTORY_REPOSITORY } from '@modules/notes/application/ports/repositories/version-history.repository.port';
-import { PrismaVersionHistoryRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-version-history.repository';
 import { NOTE_MAIL_SENDER } from '@modules/notes/application/ports/messaging/note-mail-sender.port';
 import { NOTE_QUERY_DAO } from '@modules/notes/application/ports/dao/note-query.dao.port';
 import { NOTE_REVISION_QUERY_DAO } from '@modules/notes/application/ports/dao/note-revision-query.dao.port';
@@ -102,6 +100,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { NoteProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-projection.consumer';
 import { NoteShareProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-share-projection.consumer';
 import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-revision-projection.consumer';
+import { NotePreferenceProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-preference-projection.consumer';
 
 @Module({
   imports: [
@@ -139,6 +138,7 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     NoteProjectionConsumer,
     NoteShareProjectionConsumer,
     NoteRevisionProjectionConsumer,
+    NotePreferenceProjectionConsumer,
   ],
   providers: [
     // ── Infrastructure Services ───────────────────────────────────────────
@@ -178,10 +178,9 @@ import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/pr
     { provide: NOTE_PROTECTION_PORT, useClass: PrismaNoteProtectionAdapter },
     { provide: NOTE_OUTBOX_PORT, useClass: PrismaOutboxAdapter },
     { provide: NOTE_INTEGRATION_EVENT_MAPPER, useClass: DefaultNoteIntegrationEventMapper },
-    { provide: NOTE_SHARE_REPOSITORY, useClass: PrismaNoteShareRepository },
-    { provide: USER_PREFERENCES_REPOSITORY, useClass: PrismaUserPreferencesRepository },
+    { provide: USER_NOTE_PREFERENCE_STORE, useClass: PrismaUserNotePreferenceStore },
+    { provide: NOTE_REVISION_STORE, useClass: PrismaNoteRevisionStore },
     { provide: USER_READ_PORT, useClass: PrismaUserReadAdapter },
-    { provide: VERSION_HISTORY_REPOSITORY, useClass: PrismaVersionHistoryRepository },
     { provide: NOTE_MAIL_SENDER, useClass: NoteMailerAdapter },
     { provide: NOTE_QUERY_DAO, useClass: MongoNoteQueryDao },
     { provide: NOTE_REVISION_QUERY_DAO, useClass: MongoNoteRevisionQueryDao },

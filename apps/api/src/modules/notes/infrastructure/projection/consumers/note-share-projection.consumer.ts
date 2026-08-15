@@ -38,6 +38,8 @@ export class NoteShareProjectionConsumer {
               recipientDisplayName: event.payload.recipientDisplayName || null,
               permission: event.payload.permission,
               sharedAt: new Date(event.occurredAt),
+              isPinned: false,
+              labels: [],
             },
           },
           $set: {

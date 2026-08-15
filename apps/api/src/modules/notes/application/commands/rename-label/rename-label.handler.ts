@@ -20,8 +20,8 @@ export class RenameLabelHandler implements ICommandHandler<RenameLabelCommand> {
 
     if (oldName === newName) return { updatedCount: 0 };
 
-    return this.unitOfWork.execute(async ({ repos }) => {
-      const updatedCount = await repos.userPreferences.renameLabel(userId, oldName, newName);
+    return this.unitOfWork.execute(async (ctx) => {
+      const updatedCount = await ctx.stores.userNotePreference.renameLabel(userId, oldName, newName);
       return { updatedCount };
     });
   }

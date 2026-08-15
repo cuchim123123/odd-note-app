@@ -1,5 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
-import type { IUserPreferencesRepository } from '@modules/notes/application/ports/repositories/user-preferences.repository.port';
+import type { IUserNotePreferenceStore } from '@modules/notes/application/ports/stores/user-note-preference.store.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
 
@@ -7,8 +6,10 @@ import type { PrismaTransactionClient } from '@modules/notes/infrastructure/pers
  * Infrastructure adapter: manages per-user note preferences (pins and labels).
  * These are user-scoped personalisation data — they live outside the Note aggregate boundary.
  */
+import { Injectable, Inject } from '@nestjs/common';
+
 @Injectable()
-export class PrismaUserPreferencesRepository implements IUserPreferencesRepository {
+export class PrismaUserNotePreferenceStore implements IUserNotePreferenceStore {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
   async upsertPin(userId: string, noteId: string, isPinned: boolean): Promise<{ isPinned: boolean }> {

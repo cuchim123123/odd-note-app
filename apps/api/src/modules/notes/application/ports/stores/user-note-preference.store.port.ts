@@ -1,6 +1,6 @@
-export const USER_PREFERENCES_REPOSITORY = Symbol('UserPreferencesRepository');
+export const USER_NOTE_PREFERENCE_STORE = Symbol('UserNotePreferenceStore');
 
-export interface IUserPreferencesRepository {
+export interface IUserNotePreferenceStore {
   /** Upsert pin status for a user/note pair */
   upsertPin(userId: string, noteId: string, isPinned: boolean): Promise<{ isPinned: boolean }>;
   /** Get pin status, returns false if no record exists */

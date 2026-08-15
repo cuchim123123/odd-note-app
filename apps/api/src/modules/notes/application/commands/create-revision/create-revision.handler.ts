@@ -17,12 +17,12 @@ export class CreateRevisionHandler implements ICommandHandler<CreateRevisionComm
 
     this.logger.log(`Creating revision for note ${noteId} at targetSeq ${targetSeq}`);
 
-    return this.unitOfWork.execute(async ({ repos }) => {
-      const versionHistory = await repos.versionHistory.findByNoteId(noteId);
-      
+    return this.unitOfWork.execute(async (ctx) => {
+      const versionHistory = await ctx.stores.noteRevision.findByNoteId(noteId);
+
       const revision = versionHistory.addRevision(targetSeq, userId, label ?? null);
 
-      await repos.versionHistory.save(versionHistory);
+      await ctx.stores.noteRevision.save(versionHistory);
 
       return { id: revision.id };
     });

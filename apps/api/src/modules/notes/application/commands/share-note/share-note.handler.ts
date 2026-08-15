@@ -32,19 +32,13 @@ export class ShareNoteHandler implements ICommandHandler<ShareNoteCommand> {
 
 
       const permissionVO = SharePermission.create(permission);
-      note.shareWith(recipient.id, permissionVO, userId);
+      note.shareWith(recipient.id, recipient.email, permissionVO, userId);
 
       await ctx.repos.note.update(note);
 
-      const share = await ctx.repos.noteShare.create({
-        noteId,
-        ownerId: userId,
-        recipientId: recipient.id,
-        recipientEmail: recipient.email,
-        permission,
-      });
-
-      return share.id;
+      // Find the created share id to return
+      const createdShare = note.shares.find(s => s.recipientId === recipient.id);
+      return createdShare!.id;
     });
 
     return { id: shareId };

@@ -1,7 +1,7 @@
 import { CommandHandler, type ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
 import { RestoreRevisionCommand } from '@modules/notes/application/commands/restore-revision/restore-revision.command';
-import { VERSION_HISTORY_REPOSITORY, type IVersionHistoryRepository } from '@modules/notes/application/ports/repositories/version-history.repository.port';
+import { NOTE_REVISION_STORE, type INoteRevisionStore } from '@modules/notes/application/ports/stores/note-revision.store.port';
 import { NOTE_REPOSITORY, type INoteRepository } from '@modules/notes/application/ports/repositories/note.repository.port';
 import { DOCUMENT_UPDATE_STORE, type IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
 import { NoteNotFoundError, NotePermissionDeniedError, NoteLockedForRestoreError } from '@modules/notes/domain/errors/note.errors';
@@ -21,8 +21,8 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
   private readonly logger = new Logger(RestoreRevisionHandler.name);
 
   constructor(
-    @Inject(VERSION_HISTORY_REPOSITORY)
-    private readonly versionHistoryRepository: IVersionHistoryRepository,
+    @Inject(NOTE_REVISION_STORE)
+    private readonly noteRevisionStore: INoteRevisionStore,
     @Inject(NOTE_REPOSITORY)
     private readonly noteRepository: INoteRepository,
     @Inject(DOCUMENT_UPDATE_STORE)
@@ -51,8 +51,8 @@ export class RestoreRevisionHandler implements ICommandHandler<RestoreRevisionCo
     if (!note) throw new NoteNotFoundError(noteId);
     if (!note.isOwner(userId)) throw new NotePermissionDeniedError('Only the note owner can restore a revision');
 
-    // 2. Load the target revision to get the pointer (targetSeq)
-    const versionHistory = await this.versionHistoryRepository.findByNoteId(noteId);
+    // 2. Load the requested revision metadata
+    const versionHistory = await this.noteRevisionStore.findByNoteId(noteId);
     const revision = versionHistory.getRevision(revisionId);
     if (!revision) throw new RevisionNotFoundError(revisionId);
 

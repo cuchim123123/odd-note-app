@@ -1,21 +1,21 @@
 import type { INoteRepository } from '@modules/notes/application/ports/repositories/note.repository.port';
-import type { INoteShareRepository } from '@modules/notes/application/ports/repositories/note-share.repository.port';
 import type { INoteOutboxPort } from '@modules/notes/application/ports/messaging/note-outbox.port';
 import type { INoteProtectionPort } from '@modules/notes/application/ports/external/note-protection.port';
-import type { IUserPreferencesRepository } from '@modules/notes/application/ports/repositories/user-preferences.repository.port';
-import type { IVersionHistoryRepository } from '@modules/notes/application/ports/repositories/version-history.repository.port';
+import type { IUserNotePreferenceStore } from '@modules/notes/application/ports/stores/user-note-preference.store.port';
+import type { INoteRevisionStore } from '@modules/notes/application/ports/stores/note-revision.store.port';
 import type { IDocumentUpdateStore } from '@modules/notes/application/ports/stores/document-update.store.port';
 
 export interface NoteTransactionContext {
   repos: {
     note: INoteRepository;
-    noteShare: INoteShareRepository;
-    userPreferences: IUserPreferencesRepository;
-    versionHistory: IVersionHistoryRepository;
+  };
+  stores: {
+    userNotePreference: IUserNotePreferenceStore;
+    noteRevision: INoteRevisionStore;
+    documentUpdate: IDocumentUpdateStore;
   };
   outbox: INoteOutboxPort;
   protectionPort: INoteProtectionPort;
-  documentUpdateStore: IDocumentUpdateStore;
 }
 
 export interface INoteUnitOfWork {

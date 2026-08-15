@@ -2,11 +2,10 @@ import { Injectable, Inject } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import type { INoteUnitOfWork, NoteTransactionContext } from '@modules/notes/application/ports/transactions/unit-of-work.port';
 import { PrismaNoteRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note.repository';
-import { PrismaNoteShareRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-note-share.repository';
+import { PrismaUserNotePreferenceStore } from '@modules/notes/infrastructure/persistence/stores/prisma-user-note-preference.store';
+import { PrismaNoteRevisionStore } from '@modules/notes/infrastructure/persistence/stores/prisma-note-revision.store';
 import { PrismaOutboxAdapter } from '@modules/notes/infrastructure/outbox/prisma-outbox.adapter';
 import { PrismaNoteProtectionAdapter } from '@modules/notes/infrastructure/persistence/security/prisma-note-protection.adapter';
-import { PrismaUserPreferencesRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-user-preferences.repository';
-import { PrismaVersionHistoryRepository } from '@modules/notes/infrastructure/persistence/repositories/prisma-version-history.repository';
 import { PrismaDocumentUpdateStore } from '@modules/notes/infrastructure/persistence/stores/prisma-document-update.store';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
 import { BasePrismaUnitOfWork } from '@shared/infrastructure/persistence/base-prisma-unit-of-work';
@@ -26,14 +25,15 @@ export class PrismaNoteUnitOfWork extends BasePrismaUnitOfWork<NoteTransactionCo
   protected createTransactionContext(tx: PrismaTransactionClient, tracker: AggregateTracker): NoteTransactionContext {
     return {
       repos: {
-        note: new PrismaNoteRepository(tx, tracker), // Tracker injected! Fixes the critical bug
-        noteShare: new PrismaNoteShareRepository(tx),
-        userPreferences: new PrismaUserPreferencesRepository(tx),
-        versionHistory: new PrismaVersionHistoryRepository(tx),
+        note: new PrismaNoteRepository(tx, tracker),
+      },
+      stores: {
+        userNotePreference: new PrismaUserNotePreferenceStore(tx),
+        noteRevision: new PrismaNoteRevisionStore(tx),
+        documentUpdate: new PrismaDocumentUpdateStore(tx),
       },
       outbox: new PrismaOutboxAdapter(tx), // Keep for legacy/manual events if needed
       protectionPort: new PrismaNoteProtectionAdapter(tx),
-      documentUpdateStore: new PrismaDocumentUpdateStore(tx),
     };
   }
 }

@@ -27,8 +27,7 @@ export class UpdateShareHandler implements ICommandHandler<UpdateShareCommand> {
       note.updateShare(shareId, newPermissionVO, userId);
 
       await ctx.repos.note.update(note);
-      const updatedShare = await ctx.repos.noteShare.updatePermission(shareId, permission);
-      return { id: updatedShare.id };
+      return { id: shareId };
     });
   }
 }

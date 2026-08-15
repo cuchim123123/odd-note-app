@@ -26,8 +26,8 @@ export class NoteProjectionConsumer {
             title: event.payload.title,
             isProtected: false,
             isShared: false,
-            pinnedBy: [],
-            userLabels: [],
+            isPinned: false,
+            labels: [],
             shares: [],
             createdAt: new Date(event.occurredAt),
           },
@@ -76,56 +76,6 @@ export class NoteProjectionConsumer {
     await this.applyGuardedUpdate(event, { isProtected: false, updatedAt: new Date(event.occurredAt) });
   }
 
-  @EventPattern('NotePinned')
-  async handleNotePinned(@Payload() event: IntegrationEventEnvelope<{ userId: string; isPinned: boolean }>): Promise<void> {
-    try {
-      const updateOp = event.payload.isPinned
-        ? { $addToSet: { pinnedBy: event.payload.userId } }
-        : { $pull: { pinnedBy: event.payload.userId } };
-
-      await this.noteModel.updateOne(
-        { _id: event.aggregateId, lastEventId: { $ne: event.eventId } },
-        {
-          ...updateOp,
-          $set: {
-            lastEventId: event.eventId,
-            projectionUpdatedAt: new Date(),
-            updatedAt: new Date(event.occurredAt),
-          },
-        },
-      );
-    } catch (err) {
-      this.logger.error(`Failed to handle NotePinned for note ${event.aggregateId}`, err);
-      throw err;
-    }
-  }
-
-  @EventPattern('NoteLabelsUpdated')
-  async handleNoteLabelsUpdated(@Payload() event: IntegrationEventEnvelope<{ userId: string; labels: string[] }>): Promise<void> {
-    try {
-      // First, ensure the user object exists in userLabels
-      await this.noteModel.updateOne(
-        { _id: event.aggregateId, 'userLabels.userId': { $ne: event.payload.userId } },
-        { $push: { userLabels: { userId: event.payload.userId, labels: [] } } }
-      );
-
-      // Then update the labels
-      await this.noteModel.updateOne(
-        { _id: event.aggregateId, 'userLabels.userId': event.payload.userId },
-        {
-          $set: {
-            'userLabels.$.labels': event.payload.labels,
-            lastEventId: event.eventId,
-            projectionUpdatedAt: new Date(),
-            updatedAt: new Date(event.occurredAt),
-          },
-        }
-      );
-    } catch (err) {
-      this.logger.error(`Failed to handle NoteLabelsUpdated for note ${event.aggregateId}`, err);
-      throw err;
-    }
-  }
 
   // ── Shared guard ──────────────────────────────────────────────────────────
 

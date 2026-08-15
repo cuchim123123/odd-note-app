@@ -31,7 +31,7 @@ export class UpdateNoteMetadataHandler implements ICommandHandler<UpdateNoteMeta
 
       let personalIsPinnedResult = false;
       if (isPinned !== undefined) {
-        const result = await ctx.repos.userPreferences.upsertPin(userId, noteId, isPinned);
+        const result = await ctx.stores.userNotePreference.upsertPin(userId, noteId, isPinned);
         personalIsPinnedResult = result.isPinned;
         
         await ctx.outbox.scheduleIntegrationEvent('NotePinned', {
@@ -43,11 +43,11 @@ export class UpdateNoteMetadataHandler implements ICommandHandler<UpdateNoteMeta
           payload: { userId, isPinned: personalIsPinnedResult }
         });
       } else {
-        personalIsPinnedResult = await ctx.repos.userPreferences.getPin(userId, noteId);
+        personalIsPinnedResult = await ctx.stores.userNotePreference.getPin(userId, noteId);
       }
 
       if (labels !== undefined) {
-        await ctx.repos.userPreferences.upsertLabel(userId, noteId, labels);
+        await ctx.stores.userNotePreference.upsertLabel(userId, noteId, labels);
         
         await ctx.outbox.scheduleIntegrationEvent('NoteLabelsUpdated', {
           eventId: uuidv7(),

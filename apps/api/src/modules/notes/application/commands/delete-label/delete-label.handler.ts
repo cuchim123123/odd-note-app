@@ -17,8 +17,8 @@ export class DeleteLabelHandler implements ICommandHandler<DeleteLabelCommand> {
 
     if (!label) throw new BadRequestException('Label name cannot be empty');
 
-    return this.unitOfWork.execute(async ({ repos }) => {
-      const updatedCount = await repos.userPreferences.deleteLabel(userId, label);
+    return this.unitOfWork.execute(async (ctx) => {
+      const updatedCount = await ctx.stores.userNotePreference.deleteLabel(userId, label);
       return { updatedCount };
     });
   }

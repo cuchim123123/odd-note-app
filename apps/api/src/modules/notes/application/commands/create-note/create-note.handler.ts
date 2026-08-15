@@ -29,14 +29,14 @@ export class CreateNoteHandler implements ICommandHandler<CreateNoteCommand> {
 
       // Labels are user-scoped personal data — persisted via preferences port
       if (command.labels && command.labels.length > 0) {
-        await ctx.repos.userPreferences.createLabel(command.userId, note.id, command.labels);
+        await ctx.stores.userNotePreference.createLabel(command.userId, note.id, command.labels);
       }
 
       // Save initial content to durable event log atomically
       if (command.content) {
         const updateBlob = this.documentEngine.createInitialContent(command.content);
         
-        await ctx.documentUpdateStore.append({
+        await ctx.stores.documentUpdate.append({
           noteId: note.id,
           authorId: command.userId,
           updateBlob,

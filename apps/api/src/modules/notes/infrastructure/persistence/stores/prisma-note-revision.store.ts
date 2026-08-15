@@ -1,12 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import type { IVersionHistoryRepository } from '@modules/notes/application/ports/repositories/version-history.repository.port';
+import { Injectable, Inject } from '@nestjs/common';
+import type { INoteRevisionStore } from '@modules/notes/application/ports/stores/note-revision.store.port';
 import { VersionHistory } from '@modules/notes/domain/entities/version-history.entity';
 import { NoteRevisionEntity } from '@modules/notes/domain/entities/note-revision.entity';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 
 @Injectable()
-export class PrismaVersionHistoryRepository implements IVersionHistoryRepository {
-  constructor(private readonly prisma: PrismaTransactionClient) {}
+export class PrismaNoteRevisionStore implements INoteRevisionStore {
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient) {}
 
   async findByNoteId(noteId: string): Promise<VersionHistory> {
     const rows = await this.prisma.noteRevision.findMany({

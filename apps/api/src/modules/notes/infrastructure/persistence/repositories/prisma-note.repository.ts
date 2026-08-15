@@ -1,6 +1,7 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import type { INoteRepository } from '@modules/notes/application/ports/repositories/note.repository.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
+import { SharePermission as PrismaSharePermission } from '@prisma/client';
 import type { PrismaTransactionClient } from '@modules/notes/infrastructure/persistence/types/prisma-client.type';
 import { NoteEntity } from '@modules/notes/domain/entities/note.entity';
 import { NoteMapper } from '@modules/notes/infrastructure/persistence/mappers/note.mapper';
@@ -35,12 +36,30 @@ export class PrismaNoteRepository implements INoteRepository {
     }
     const data = NoteMapper.toPersistence(note);
 
+    const currentShareIds = data.shares.map((s) => s.id);
+
     await this.prisma.note.update({
       where: { id: data.id },
       data: {
         title: data.title,
         isShared: data.isShared,
         updatedAt: data.updatedAt,
+        shares: {
+          deleteMany: {
+            id: { notIn: currentShareIds },
+          },
+          upsert: data.shares.map((s) => ({
+            where: { id: s.id },
+            update: { permission: s.permission as PrismaSharePermission },
+            create: {
+              id: s.id,
+              ownerId: data.userId,
+              recipientId: s.recipientId,
+              recipientEmail: s.recipientEmail,
+              permission: s.permission as PrismaSharePermission,
+            },
+          })),
+        },
       },
     });
   }

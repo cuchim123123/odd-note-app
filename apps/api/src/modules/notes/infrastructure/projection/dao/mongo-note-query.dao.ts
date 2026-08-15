@@ -22,13 +22,10 @@ export class MongoNoteQueryDao implements INoteQueryDao {
     const docs = await this.noteModel
       .find({ userId })
       .sort({ isPinned: -1, updatedAt: -1 })
-      .lean()
-      .exec();
+      .lean();
 
     return docs.map((doc) => this.mapDocToNoteView(doc, userId));
   }
-
-
 
   async findNoteById(noteId: string, userId: string): Promise<NoteView | null> {
     const doc = await this.noteModel
@@ -36,25 +33,40 @@ export class MongoNoteQueryDao implements INoteQueryDao {
         _id: noteId,
         $or: [{ userId }, { 'shares.recipientId': userId }],
       })
-      .lean()
-      .exec();
+      .lean();
 
     if (!doc) return null;
 
-    const share = doc.shares.find((s) => s.recipientId === userId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const share = doc.shares?.find((s: any) => s.recipientId === userId);
     return this.mapDocToNoteView(doc, userId, share);
   }
 
   async findSharedWithMe(userId: string): Promise<SharedNoteView[]> {
-    const docs = await this.noteModel
-      .find({ 'shares.recipientId': userId })
-      .sort({ isPinned: -1, updatedAt: -1 })
-      .lean()
-      .exec();
+    const docs = await this.noteModel.aggregate([
+      { $match: { 'shares.recipientId': userId } },
+      {
+        $addFields: {
+          myShare: {
+            $arrayElemAt: [
+              { $filter: { input: '$shares', as: 's', cond: { $eq: ['$$s.recipientId', userId] } } },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          isPinned: { $ifNull: ['$myShare.isPinned', false] },
+        },
+      },
+      { $sort: { isPinned: -1, updatedAt: -1 } },
+    ]);
 
     return docs
       .map((doc) => {
-        const share = doc.shares.find((s) => s.recipientId === userId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const share = doc.shares?.find((s: any) => s.recipientId === userId);
         if (!share) return null;
         return this.mapDocToNoteView(doc, userId, share) as SharedNoteView;
       })
@@ -84,22 +96,38 @@ export class MongoNoteQueryDao implements INoteQueryDao {
     });
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-
   private mapDocToNoteView(
-    doc: NoteProjectionDocument,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    doc: any,
     userId: string,
     share?: { permission: 'READ' | 'EDIT'; sharedAt: Date; recipientId: string | null } | undefined,
   ): NoteView {
-    const userLabels = doc.userLabels?.find(l => l.userId === userId)?.labels || [];
-    
+    let isPinned = false;
+    let labels: string[] = [];
+
+    if (share && doc.myShare) {
+      // If it came from the aggregation pipeline (findSharedWithMe)
+      isPinned = doc.myShare.isPinned ?? false;
+      labels = doc.myShare.labels ?? [];
+    } else if (share) {
+      // If it came from findNoteById
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const shareData = doc.shares?.find((s: any) => s.recipientId === userId);
+      isPinned = shareData?.isPinned ?? false;
+      labels = shareData?.labels ?? [];
+    } else {
+      // Owner
+      isPinned = doc.isPinned ?? false;
+      labels = doc.labels ?? [];
+    }
+
     const result: NoteView = {
       id: doc._id as string,
       title: doc.title,
-      isPinned: doc.pinnedBy?.includes(userId) ?? false,
+      isPinned,
       isProtected: doc.isProtected,
       isShared: doc.isShared,
-      labels: userLabels,
+      labels,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       accessMode: share ? 'shared' : 'owner',
