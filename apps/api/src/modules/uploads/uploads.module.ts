@@ -1,7 +1,7 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
-import { UploadFileHttpController } from '@modules/uploads/presentation/http/commands/upload-file/upload-file.http.controller';
-import { UploadFileHandler } from '@modules/uploads/application/commands/upload-file/upload-file.handler';
+import { GenerateUploadUrlHttpController } from '@modules/uploads/presentation/http/commands/generate-upload-url/generate-upload-url.http.controller';
+import { GenerateUploadUrlHandler } from '@modules/uploads/application/commands/generate-upload-url/generate-upload-url.handler';
 import { JwtConfigModule } from '@config/jwt-config.module';
 import { ConfigModule } from '@config/config.module';
 import { STORAGE_PORT } from '@modules/uploads/application/ports/storage.port';
@@ -9,9 +9,9 @@ import { S3StorageAdapter } from '@modules/uploads/infrastructure/storage/s3-sto
 
 @Module({
   imports: [CqrsModule, JwtConfigModule, ConfigModule],
-  controllers: [UploadFileHttpController],
+  controllers: [GenerateUploadUrlHttpController],
   providers: [
-    UploadFileHandler,
+    GenerateUploadUrlHandler,
     { provide: STORAGE_PORT, useClass: S3StorageAdapter },
   ],
   exports: [],

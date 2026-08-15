@@ -114,4 +114,23 @@ export class S3StorageAdapter implements IStoragePort {
 
     return { url, key, signedUrl };
   }
+
+  async generatePresignedUploadUrl(filename: string, contentType: string, size?: number) {
+    const key = `${Date.now()}-${uuidv7()}-${filename.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+      ...(size ? { ContentLength: size } : {})
+    });
+
+    // generate a presigned PUT URL valid for 1 hour
+    const rawUploadUrl = await getSignedUrl(this.client, command, { expiresIn: 3600 });
+    const uploadUrl = rawUploadUrl.replace(this.endpoint, this.publicEndpoint);
+
+    const url = `${this.publicEndpoint}/${this.bucket}/${encodeURIComponent(key)}`;
+
+    return { uploadUrl, url, key };
+  }
 }
