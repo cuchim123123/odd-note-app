@@ -37,14 +37,15 @@ export class CollaborationYjsGateway {
   ) {}
 
   private async persistUpdate(noteId: string, authorId: string, update: number[]): Promise<void> {
+    const updateBlob = new Uint8Array(update);
     const stored = await this.updateStore.append({
       noteId,
       authorId,
-      updateBlob: new Uint8Array(update),
+      updateBlob,
       createdAt: new Date(),
     });
 
-    await this.yjsPort.applyUpdate(noteId, new Uint8Array(update));
+    await this.yjsPort.applyUpdate(noteId, updateBlob);
     await this.eventBus.publish(new NoteUpdateAppendedEvent(noteId, stored.seq, stored.sizeBytes));
   }
 
