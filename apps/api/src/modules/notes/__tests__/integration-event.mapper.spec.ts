@@ -21,8 +21,10 @@ describe('DefaultNoteIntegrationEventMapper', () => {
       UserId.from('recipient-1'),
       'READ',
       'share-1',
+      'My Secret Note',
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const outboxMessages = mapper.map([event as any]);
 
     expect(outboxMessages).toHaveLength(1);
@@ -37,6 +39,7 @@ describe('DefaultNoteIntegrationEventMapper', () => {
         ownerId: 'owner-1',
         recipientId: 'recipient-1',
         permission: 'READ',
+        title: 'My Secret Note',
       },
     });
   });
@@ -44,6 +47,7 @@ describe('DefaultNoteIntegrationEventMapper', () => {
   it('throws error for unmapped domain events', () => {
     const event = new UnmappedDomainEvent();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(() => mapper.map([event as any])).toThrowError(
       "Integration Event Mapper: No translator found for domain event type 'UnmappedEvent'."
     );

@@ -16,6 +16,7 @@ import { uuidv7 } from 'uuidv7';
 export interface NoteShare {
   id: ShareId;
   recipientId: UserId;
+  recipientEmail: string;
   permission: SharePermission;
 }
 
@@ -88,6 +89,7 @@ export class NoteEntity extends AggregateRoot {
 
   public shareWith(
     recipientId: string,
+    recipientEmail: string,
     permission: SharePermission,
     requestedBy: string,
   ): void {
@@ -103,6 +105,7 @@ export class NoteEntity extends AggregateRoot {
     this.props.shares.push({
       id: shareId,
       recipientId: typedRecipientId,
+      recipientEmail,
       permission,
     });
     this.props.isShared = true;
@@ -114,6 +117,7 @@ export class NoteEntity extends AggregateRoot {
       recipientId,
       permission.value,
       shareId,
+      this.title,
     ));
   }
 
@@ -147,6 +151,8 @@ export class NoteEntity extends AggregateRoot {
       throw new Error(`Share ${shareId} not found`);
     }
 
+    // Capture before splice — recipientId is needed for the domain event
+    const revokedShare = this.props.shares[shareIndex]!;
     this.props.shares.splice(shareIndex, 1);
 
     if (this.props.shares.length === 0) {
@@ -159,6 +165,7 @@ export class NoteEntity extends AggregateRoot {
       this.id,
       this.ownerId,
       shareId,
+      revokedShare.recipientId.toString(),
     ));
   }
 

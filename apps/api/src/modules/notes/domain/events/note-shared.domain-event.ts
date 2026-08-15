@@ -13,6 +13,7 @@ export class NoteSharedDomainEvent implements DomainEvent {
     public readonly recipientId: string,
     public readonly permission: string,
     public readonly shareId: string,
+    public readonly title: string,
   ) {
     this.eventId = uuidv7();
     this.aggregateId = noteId;

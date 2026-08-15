@@ -13,7 +13,7 @@ function createMocks() {
     delete: vi.fn(),
   };
   
-  const userPreferencesRepository = {
+  const userNotePreferenceStore = {
     upsertPin: vi.fn(),
     getPin: vi.fn(),
     upsertLabel: vi.fn(),
@@ -29,8 +29,11 @@ function createMocks() {
   const unitOfWork = {
     execute: vi.fn(async (work) => {
       return work({ 
-        repos: { note: noteRepository, userPreferences: userPreferencesRepository },
-        documentUpdateStore
+        repos: { note: noteRepository },
+        stores: { 
+          userNotePreference: userNotePreferenceStore,
+          documentUpdate: documentUpdateStore 
+        }
       });
     }),
   };
@@ -44,7 +47,7 @@ function createMocks() {
     documentEngine as never,
   );
 
-  return { handler, noteRepository, documentEngine, documentUpdateStore, userPreferencesRepository, unitOfWork };
+  return { handler, noteRepository, documentEngine, documentUpdateStore, userNotePreferenceStore, unitOfWork };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -94,23 +97,23 @@ describe('CreateNoteHandler', () => {
   });
 
   it('creates label record when labels are provided', async () => {
-    const { handler, userPreferencesRepository } = createMocks();
+    const { handler, userNotePreferenceStore } = createMocks();
 
     await handler.execute(new CreateNoteCommand('user-1', 'Labeled', undefined, ['work', 'urgent']));
 
-    expect(userPreferencesRepository.createLabel).toHaveBeenCalledTimes(1);
+    expect(userNotePreferenceStore.createLabel).toHaveBeenCalledTimes(1);
      
-    const [userId, , labels] = userPreferencesRepository.createLabel.mock.calls[0]!;
+    const [userId, , labels] = userNotePreferenceStore.createLabel.mock.calls[0]!;
     expect(userId).toBe('user-1');
     expect(labels).toEqual(['work', 'urgent']);
   });
 
   it('does NOT create label record when no labels are provided', async () => {
-    const { handler, userPreferencesRepository } = createMocks();
+    const { handler, userNotePreferenceStore } = createMocks();
 
     await handler.execute(new CreateNoteCommand('user-1', 'No Labels'));
 
-    expect(userPreferencesRepository.createLabel).not.toHaveBeenCalled();
+    expect(userNotePreferenceStore.createLabel).not.toHaveBeenCalled();
   });
 
 

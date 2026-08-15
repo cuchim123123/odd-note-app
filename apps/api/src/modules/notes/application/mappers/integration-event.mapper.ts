@@ -33,6 +33,7 @@ export class NoteSharedTranslator implements IDomainEventTranslator<NoteSharedDo
         ownerId: event.ownerId,
         recipientId: event.recipientId,
         permission: event.permission,
+        title: event.title,
       },
     };
   }
@@ -46,11 +47,12 @@ export class NoteShareUpdatedTranslator implements IDomainEventTranslator<NoteSh
     return {
       eventId: event.eventId,
       aggregateId: event.aggregateId,
-      eventType: 'ShareUpdated', // Mapped to ShareUpdated for Kafka topics
+      eventType: 'ShareUpdated',
       occurredAt: event.occurredOn.toISOString(),
       payload: {
         shareId: event.shareId,
         permission: event.newPermission,
+        recipientId: event.recipientId,
       },
     };
   }
@@ -68,6 +70,7 @@ export class NoteShareRevokedTranslator implements IDomainEventTranslator<NoteSh
       occurredAt: event.occurredOn.toISOString(),
       payload: {
         shareId: event.shareId,
+        recipientId: event.recipientId,
       },
     };
   }

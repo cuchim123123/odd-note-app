@@ -9,14 +9,9 @@ function createMocks() {
     execute: vi.fn().mockResolvedValue(undefined),
   };
 
-  const prisma = {
-    note: { findUnique: vi.fn().mockResolvedValue({ title: 'My Secret Project' }) },
-    user: { findUnique: vi.fn().mockResolvedValue({ email: 'recipient@example.com' }) },
-  };
+  const controller = new NoteSharedConsumer(commandBus as never);
 
-  const controller = new NoteSharedConsumer(commandBus as never, prisma as never);
-
-  return { controller, commandBus, prisma };
+  return { controller, commandBus };
 }
 
 const validPayload = {
@@ -29,6 +24,7 @@ const validPayload = {
     ownerId: 'owner-1',
     recipientId: 'recipient-1',
     permission: 'READ',
+    title: 'My Secret Project',
   }
 };
 
