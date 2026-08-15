@@ -38,6 +38,9 @@ const envSchema = z.object({
   // ── MongoDB (read projections) ────────────────────────────────────────────
   MONGO_URI: z.string().url(),
   MONGO_DB_NAME: z.string().min(1).default('odd_note_projections'),
+  // ── OpenSearch (search index) ─────────────────────────────────────────────
+  OPENSEARCH_URL: z.string().url().default('http://localhost:9200'),
+  OPENSEARCH_INDEX_PREFIX: z.string().min(1).default('odd'),
   // ── Stripe ──────────────────────────────────────────────────────────────
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
