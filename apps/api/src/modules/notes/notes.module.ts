@@ -32,6 +32,7 @@ import { ListSharesQueryHandler } from '@modules/notes/application/queries/list-
 import { GetProtectionStatusQueryHandler } from '@modules/notes/application/queries/get-protection-status/get-protection-status.query-handler';
 
 import { GetNoteHistoryQueryHandler } from '@modules/notes/application/queries/get-note-history/get-note-history.query-handler';
+import { SearchNotesQueryHandler } from '@modules/notes/application/queries/search-notes/search-notes.query-handler';
 
 // ─── Presentation (HTTP Controllers) ────────────────────────────────────────
 import { CreateNoteHttpController } from '@modules/notes/presentation/http/commands/create-note/create-note.http.controller';
@@ -53,6 +54,7 @@ import { ListSharesHttpController } from '@modules/notes/presentation/http/queri
 import { GetProtectionStatusHttpController } from '@modules/notes/presentation/http/queries/get-protection-status/get-protection-status.http.controller';
 
 import { GetNoteHistoryHttpController } from '@modules/notes/presentation/http/queries/get-note-history/get-note-history.http.controller';
+import { SearchNotesHttpController } from '@modules/notes/presentation/http/queries/search-notes/search-notes.http.controller';
 
 // ─── Ports & Adapters ────────────────────────────────────────────────────────
 import { NOTE_UNIT_OF_WORK } from '@modules/notes/application/ports/transactions/unit-of-work.port';
@@ -101,10 +103,19 @@ import { NoteProjectionConsumer } from '@modules/notes/infrastructure/projection
 import { NoteShareProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-share-projection.consumer';
 import { NoteRevisionProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-revision-projection.consumer';
 import { NotePreferenceProjectionConsumer } from '@modules/notes/infrastructure/projection/consumers/note-preference-projection.consumer';
+import { SearchModule } from '@shared/infrastructure/search/search.module';
+import { NOTE_SEARCH_INDEX_PORT } from '@modules/notes/application/ports/external/note-search-index.port';
+import { NOTE_SEARCH_DAO } from '@modules/notes/application/ports/dao/note-search.dao.port';
+import { OpenSearchNoteIndexAdapter } from '@modules/notes/infrastructure/search/opensearch-note-index.adapter';
+import { OpenSearchNoteSearchDao } from '@modules/notes/infrastructure/search/opensearch-note-search.dao';
+import { NoteSearchIndexConsumer } from '@modules/notes/infrastructure/search/note-search-index.consumer';
+import { NoteIndexRebuildService } from '@modules/notes/infrastructure/search/note-index-rebuild.service';
+import { NoteBodyIndexInternalHandler } from '@modules/notes/infrastructure/search/note-body-index.internal-handler';
 
 @Module({
   imports: [
     CqrsModule, PrismaModule, JwtConfigModule, AuthConfigModule, ConfigModule, RedisModule, IdempotencyModule,
+    SearchModule,
     MongooseModule.forFeature([
       { name: NoteProjection.name, schema: NoteProjectionSchema },
       { name: NoteRevisionProjection.name, schema: NoteRevisionProjectionSchema },
@@ -127,6 +138,7 @@ import { NotePreferenceProjectionConsumer } from '@modules/notes/infrastructure/
     // ── Presentation: Queries ─────────────────────────────────────────────
     // IMPORTANT: Registration order dictates route evaluation.
     // Specific routes MUST precede wildcard routes (:noteId)
+    SearchNotesHttpController,
     ListNotesHttpController,
     ListSharedWithMeHttpController,
     GetNoteByIdHttpController,
@@ -139,6 +151,8 @@ import { NotePreferenceProjectionConsumer } from '@modules/notes/infrastructure/
     NoteShareProjectionConsumer,
     NoteRevisionProjectionConsumer,
     NotePreferenceProjectionConsumer,
+    // ── Search Index Consumer (Kafka) ─────────────────────────────────────
+    NoteSearchIndexConsumer,
   ],
   providers: [
     // ── Infrastructure Services ───────────────────────────────────────────
@@ -163,6 +177,7 @@ import { NotePreferenceProjectionConsumer } from '@modules/notes/infrastructure/
     SnapshotThresholdMonitor,
     CreateSnapshotInternalCommandHandler,
     // ── Application: Query Handlers ───────────────────────────────────────
+    SearchNotesQueryHandler,
     ListNotesQueryHandler,
     ListSharedWithMeQueryHandler,
     GetNoteByIdQueryHandler,
@@ -189,8 +204,13 @@ import { NotePreferenceProjectionConsumer } from '@modules/notes/infrastructure/
     { provide: SNAPSHOT_STORAGE_PORT, useClass: S3SnapshotStorageAdapter },
     { provide: DOCUMENT_ENGINE_PORT, useClass: YjsDocumentEngineAdapter },
     { provide: NOTE_ACCESS_PORT, useClass: PrismaNoteAccessAdapter },
+    { provide: NOTE_SEARCH_INDEX_PORT, useClass: OpenSearchNoteIndexAdapter },
+    { provide: NOTE_SEARCH_DAO, useClass: OpenSearchNoteSearchDao },
+    NoteIndexRebuildService,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { provide: INTERNAL_COMMAND_HANDLERS, useClass: CreateSnapshotInternalCommandHandler, multi: true } as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { provide: INTERNAL_COMMAND_HANDLERS, useClass: NoteBodyIndexInternalHandler, multi: true } as any,
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it
