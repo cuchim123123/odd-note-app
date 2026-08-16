@@ -85,6 +85,18 @@ export interface INoteSearchIndexPort {
   deleteShareeDocument(noteId: string, recipientId: string): Promise<void>;
 
   /**
+   * Updates isPinned for a specific user's document.
+   * Used on NotePinned — direct by-ID because userId is in the event payload.
+   */
+  updatePinStatus(noteId: string, userId: string, isPinned: boolean): Promise<void>;
+
+  /**
+   * Updates labels for a specific user's document.
+   * Used on NoteLabelsUpdated — direct by-ID because userId is in the event payload.
+   */
+  updateLabels(noteId: string, userId: string, labels: string[]): Promise<void>;
+
+  /**
    * Replaces the bodyText field on all documents for a note.
    * Called after the CRDT snapshot pipeline materialises plaintext content.
    */
