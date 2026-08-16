@@ -33,4 +33,13 @@ export class YjsDocumentEngineAdapter implements IDocumentEnginePort {
     const currentStateVector = Y.encodeStateVector(currentDoc);
     return Y.encodeStateAsUpdate(targetDoc, currentStateVector);
   }
+
+  extractText(state: Uint8Array): string {
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, state);
+    const xml = doc.getXmlFragment('prosemirror');
+    const xmlString = xml.toString();
+    // Strip XML tags for plain text indexing
+    return xmlString.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+  }
 }

@@ -4,6 +4,8 @@ import { SNAPSHOT_METADATA_REPOSITORY, type ISnapshotMetadataRepository } from '
 import { SNAPSHOT_STORAGE_PORT, type ISnapshotStoragePort } from '@modules/notes/application/ports/external/snapshot-storage.port';
 import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
 import { NoteSnapshotMetadata } from '@modules/notes/domain/entities/note-snapshot-metadata.entity';
+import { DOCUMENT_ENGINE_PORT, type IDocumentEnginePort } from '@modules/notes/application/ports/external/document-engine.port';
+import { NOTE_OUTBOX_PORT, type INoteOutboxPort } from '@modules/notes/application/ports/messaging/note-outbox.port';
 import { uuidv7 } from 'uuidv7';
 
 interface CreateSnapshotPayload {
@@ -20,6 +22,10 @@ export class CreateSnapshotInternalCommandHandler implements IInternalCommandHan
     private readonly snapshotMetadataRepository: ISnapshotMetadataRepository,
     @Inject(SNAPSHOT_STORAGE_PORT)
     private readonly snapshotStoragePort: ISnapshotStoragePort,
+    @Inject(DOCUMENT_ENGINE_PORT)
+    private readonly documentEngine: IDocumentEnginePort,
+    @Inject(NOTE_OUTBOX_PORT)
+    private readonly outboxPort: INoteOutboxPort,
     private readonly replayCoordinator: ReplayCoordinator,
   ) {}
 
@@ -52,6 +58,14 @@ export class CreateSnapshotInternalCommandHandler implements IInternalCommandHan
       });
 
       await this.snapshotMetadataRepository.save(metadata);
+
+      // 4. Extract plain text and trigger search indexing
+      const plainText = this.documentEngine.extractText(snapshotBlob);
+      
+      await this.outboxPort.scheduleInternalCommand('IndexNoteBody', {
+        noteId,
+        plainText,
+      });
       
       this.logger.log(`Successfully created and stored snapshot for note ${noteId} at seq ${targetSeq}`);
     } catch (error) {

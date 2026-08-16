@@ -15,4 +15,9 @@ export interface IDocumentEnginePort {
    * Computes a diff update to transform the current state into the target state.
    */
   computeDiff(currentState: Uint8Array, targetState: Uint8Array): Uint8Array;
+
+  /**
+   * Extracts plain text from the document state for search indexing.
+   */
+  extractText(state: Uint8Array): string;
 }
