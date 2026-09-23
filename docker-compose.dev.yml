@@ -1,7 +1,7 @@
 services:
   redis-state:
     image: redis:7-alpine
-    command: sh -c 'redis-server --appendonly yes --requirepass "$${REDIS_STATE_PASSWORD:-statepass}"'
+    command: redis-server --appendonly yes
     ports:
       - '6379:6379'
     volumes:
@@ -9,7 +9,7 @@ services:
 
   redis-cache:
     image: redis:7-alpine
-    command: sh -c 'redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass "$${REDIS_CACHE_PASSWORD:-cachepass}"'
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
     ports:
       - '6380:6379'
 
@@ -81,8 +81,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgres://oddnote:oddnotepass@db:5432/oddnote}
       MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/oddnote}
       APP_URL: ${APP_URL:-http://localhost:5174}
-      REDIS_STATE_URL: ${REDIS_STATE_URL:-redis://:statepass@redis-state:6379}
-      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://:cachepass@redis-cache:6379}
+      REDIS_STATE_URL: ${REDIS_STATE_URL:-redis://redis-state:6379}
+      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis-cache:6379}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-this-is-a-long-dev-access-secret-at-least-32-chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-this-is-a-long-dev-refresh-secret-at-least-32-chars}
       JWT_NOTE_UNLOCK_SECRET: ${JWT_NOTE_UNLOCK_SECRET:-this-is-a-long-dev-note-unlock-secret}
