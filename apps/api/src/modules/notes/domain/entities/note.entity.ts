@@ -10,6 +10,7 @@ import { NoteShareUpdatedDomainEvent } from '@modules/notes/domain/events/note-s
 import { NoteShareRevokedDomainEvent } from '@modules/notes/domain/events/note-share-revoked.domain-event';
 import { NotePasswordSetDomainEvent } from '@modules/notes/domain/events/note-password-set.domain-event';
 import { NotePasswordRemovedDomainEvent } from '@modules/notes/domain/events/note-password-removed.domain-event';
+import { NoteAITagsUpdatedDomainEvent } from '@modules/notes/domain/events/note-ai-tags-updated.domain-event';
 import { NoteId, UserId, ShareId } from '@shared/domain/ddd/id-types';
 import { uuidv7 } from 'uuidv7';
 
@@ -26,6 +27,9 @@ export interface NoteProps {
   isShared: boolean;
   shares: NoteShare[];
   isProtected: boolean;
+  aiTags: string[];
+  rejectedAiTags: string[];
+  aiTagsSnapshotSeq: bigint;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +54,9 @@ export class NoteEntity extends AggregateRoot {
   get isProtected(): boolean { return this.props.isProtected; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
+  get aiTags(): ReadonlyArray<string> { return this.props.aiTags; }
+  get rejectedAiTags(): ReadonlyArray<string> { return this.props.rejectedAiTags; }
+  get aiTagsSnapshotSeq(): bigint { return this.props.aiTagsSnapshotSeq; }
 
   // ─── Factory methods ───────────────────────────────────────────────────────
 
@@ -63,6 +70,9 @@ export class NoteEntity extends AggregateRoot {
       isShared: false,
       shares: [],
       isProtected: false,
+      aiTags: [],
+      rejectedAiTags: [],
+      aiTagsSnapshotSeq: 0n,
       createdAt: new Date(),
       updatedAt: new Date(),
     }, noteId);
@@ -183,6 +193,40 @@ export class NoteEntity extends AggregateRoot {
 
     this.props.isProtected = false;
     this.addDomainEvent(new NotePasswordRemovedDomainEvent(this.id, this.ownerId));
+  }
+
+  public updateAITags(newTags: string[], snapshotSeq: bigint): void {
+    // Optimistic concurrency check: drop stale updates
+    if (snapshotSeq <= this.props.aiTagsSnapshotSeq) {
+      return;
+    }
+
+    // Filter out user-rejected tags
+    const filteredTags = newTags.filter(tag => !this.props.rejectedAiTags.includes(tag));
+
+    this.props.aiTags = filteredTags;
+    this.props.aiTagsSnapshotSeq = snapshotSeq;
+    this.updateModifiedTime();
+    
+    this.addDomainEvent(new NoteAITagsUpdatedDomainEvent(
+      this.id,
+      this.ownerId,
+      filteredTags,
+      snapshotSeq.toString()
+    ));
+  }
+
+  public rejectAITag(tagToReject: string, requestedBy: string): void {
+    this.verifyEditPermission(requestedBy);
+    
+    if (!this.props.rejectedAiTags.includes(tagToReject)) {
+      this.props.rejectedAiTags.push(tagToReject);
+    }
+    
+    // Immediately remove it from current AI tags
+    this.props.aiTags = this.props.aiTags.filter(tag => tag !== tagToReject);
+    
+    this.updateModifiedTime();
   }
 
   public delete(requestedBy: string): void {

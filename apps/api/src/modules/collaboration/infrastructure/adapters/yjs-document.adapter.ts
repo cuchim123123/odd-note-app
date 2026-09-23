@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import * as Y from 'yjs';
 import type { IYjsDocumentPort } from '@modules/collaboration/application/ports/yjs-document.port';
-import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import { RedisStateService } from '@shared/infrastructure/redis/redis-state.service';
 import type { EnvConfig } from '@config/env.validation';
 import { ReplayCoordinator } from '@modules/notes/application/services/replay.coordinator';
 
@@ -18,13 +18,13 @@ export class YjsDocumentAdapter implements IYjsDocumentPort {
   private readonly cleanupTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
-    private readonly redisService: RedisService,
+    private readonly RedisStateService: RedisStateService,
     @Inject('ENV_CONFIG') private readonly env: EnvConfig,
     private readonly replayCoordinator: ReplayCoordinator,
   ) {}
 
   private get client() {
-    return this.redisService.getClient();
+    return this.RedisStateService.getClient();
   }
 
   private yDocKey(noteId: string): string {

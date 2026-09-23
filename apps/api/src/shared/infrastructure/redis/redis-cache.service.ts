@@ -1,4 +1,4 @@
-﻿import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type {
   OnApplicationShutdown,
   OnModuleDestroy,
@@ -8,7 +8,7 @@ import type { RedisOptions } from 'ioredis';
 import type { EnvConfig } from '@config/config.module';
 
 @Injectable()
-export class RedisService
+export class RedisCacheService
   implements OnModuleDestroy, OnApplicationShutdown
 {
   private readonly redisClient: Redis;
@@ -26,7 +26,7 @@ export class RedisService
       enableReadyCheck: true,
     };
 
-    return new Redis(this.env.REDIS_URL, options);
+    return new Redis(this.env.REDIS_CACHE_URL, options);
   }
 
   getClient(): Redis {

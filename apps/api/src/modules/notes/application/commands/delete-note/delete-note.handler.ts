@@ -24,9 +24,7 @@ export class DeleteNoteHandler implements ICommandHandler<DeleteNoteCommand> {
       // Aggregate enforces: only owner can delete (throws NotePermissionDeniedError)
       note.delete(userId);
 
-      await ctx.repos.note.delete(noteId);
-      
-      // TODO Phase 4: NoteDeletedDomainEvent → Outbox → Kafka → Collaboration Gateway cleanup
+      await ctx.repos.note.delete(note);
     });
 
     await this.documentSyncPort.clearState(noteId);

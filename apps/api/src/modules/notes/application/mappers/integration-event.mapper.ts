@@ -5,6 +5,7 @@ import { NoteSharedDomainEvent } from '@modules/notes/domain/events/note-shared.
 import { NoteCreatedDomainEvent } from '@modules/notes/domain/events/note-created.domain-event';
 import { NoteDeletedDomainEvent } from '@modules/notes/domain/events/note-deleted.domain-event';
 import { NoteTitleUpdatedDomainEvent } from '@modules/notes/domain/events/note-title-updated.domain-event';
+import { NoteAITagsUpdatedDomainEvent } from '@modules/notes/domain/events/note-ai-tags-updated.domain-event';
 
 import { NoteShareUpdatedDomainEvent } from '@modules/notes/domain/events/note-share-updated.domain-event';
 import { NoteShareRevokedDomainEvent } from '@modules/notes/domain/events/note-share-revoked.domain-event';
@@ -156,6 +157,25 @@ export class NoteTitleUpdatedTranslator implements IDomainEventTranslator<NoteTi
   }
 }
 
+export class NoteAITagsUpdatedTranslator implements IDomainEventTranslator<NoteAITagsUpdatedDomainEvent> {
+  supports(event: DomainEvent): boolean {
+    return event.eventType === 'NoteAITagsUpdated';
+  }
+  translate(event: NoteAITagsUpdatedDomainEvent): IntegrationEventEnvelope {
+    return {
+      eventId: event.eventId,
+      aggregateId: event.aggregateId,
+      eventType: event.eventType,
+      occurredAt: event.occurredOn.toISOString(),
+      payload: {
+        ownerId: event.ownerId,
+        aiTags: event.aiTags,
+        snapshotSeq: event.snapshotSeq,
+      },
+    };
+  }
+}
+
 export class DefaultNoteIntegrationEventMapper implements NoteIntegrationEventMapper {
   private readonly translators: IDomainEventTranslator[] = [
     new NoteSharedTranslator(),
@@ -166,6 +186,7 @@ export class DefaultNoteIntegrationEventMapper implements NoteIntegrationEventMa
     new NoteCreatedTranslator(),
     new NoteDeletedTranslator(),
     new NoteTitleUpdatedTranslator(),
+    new NoteAITagsUpdatedTranslator(),
   ];
 
   map(domainEvents: DomainEvent[]): OutboxMessageDraft[] {

@@ -17,7 +17,7 @@ export class PrismaNotificationUnitOfWork extends BasePrismaUnitOfWork<Notificat
   protected createTransactionContext(tx: PrismaTransactionClient, tracker: AggregateTracker): NotificationTransactionContext {
     return {
       repos: {
-        notification: new PrismaNotificationRepository(tx, tracker),
+        notification: this.wrapRepository(new PrismaNotificationRepository(tx, tracker), tracker),
       },
     };
   }

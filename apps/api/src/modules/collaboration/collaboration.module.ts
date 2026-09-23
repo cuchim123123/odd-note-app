@@ -19,6 +19,7 @@ import { CollaborationConnectionGateway } from '@modules/collaboration/presentat
 import { CollaborationPresenceGateway } from '@modules/collaboration/presentation/gateways/collaboration-presence.gateway';
 import { CollaborationYjsGateway } from '@modules/collaboration/presentation/gateways/collaboration-yjs.gateway';
 import { CollaborationNoteGateway } from '@modules/collaboration/presentation/gateways/collaboration-note.gateway';
+import { NoteDeletedConsumer } from '@modules/collaboration/presentation/kafka/note-deleted.consumer';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { CollaborationNoteGateway } from '@modules/collaboration/presentation/ga
       }),
     }),
   ],
+  controllers: [NoteDeletedConsumer],
   providers: [
     { provide: YJS_DOCUMENT_PORT, useClass: YjsDocumentAdapter },
     { provide: COLLABORATION_STATE_PORT, useClass: RedisCollaborationStateAdapter },

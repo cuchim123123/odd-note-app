@@ -12,9 +12,6 @@ export class PrismaNoteRepository implements INoteRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaTransactionClient, @Optional() @Inject('AGGREGATE_TRACKER') private readonly tracker?: AggregateTracker) {}
 
   async create(note: NoteEntity): Promise<void> {
-    if (this.tracker) {
-      this.tracker.track(note);
-    }
     const data = NoteMapper.toPersistence(note);
 
     await this.prisma.note.create({
@@ -24,6 +21,9 @@ export class PrismaNoteRepository implements INoteRepository {
         title: data.title,
         content: null, // Content managed by Yjs / IDocumentSyncPort
         isShared: data.isShared,
+        aiTags: data.aiTags,
+        rejectedAiTags: data.rejectedAiTags,
+        aiTagsSeq: data.aiTagsSeq,
         createdAt: note.createdAt,
         updatedAt: data.updatedAt,
       },
@@ -31,9 +31,6 @@ export class PrismaNoteRepository implements INoteRepository {
   }
 
   async update(note: NoteEntity): Promise<void> {
-    if (this.tracker) {
-      this.tracker.track(note);
-    }
     const data = NoteMapper.toPersistence(note);
 
     const currentShareIds = data.shares.map((s) => s.id);
@@ -43,6 +40,9 @@ export class PrismaNoteRepository implements INoteRepository {
       data: {
         title: data.title,
         isShared: data.isShared,
+        aiTags: data.aiTags,
+        rejectedAiTags: data.rejectedAiTags,
+        aiTagsSeq: data.aiTagsSeq,
         updatedAt: data.updatedAt,
         shares: {
           deleteMany: {
@@ -87,7 +87,8 @@ export class PrismaNoteRepository implements INoteRepository {
     return NoteMapper.toDomain(record);
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(note: NoteEntity): Promise<void> {
+    const id = note.id;
     await this.prisma.noteProtection.deleteMany({ where: { noteId: id } });
     await this.prisma.userNoteLabel.deleteMany({ where: { noteId: id } });
     await this.prisma.userNotePin.deleteMany({ where: { noteId: id } });

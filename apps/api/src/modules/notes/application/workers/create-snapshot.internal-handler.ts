@@ -62,10 +62,25 @@ export class CreateSnapshotInternalCommandHandler implements IInternalCommandHan
       // 4. Extract plain text and trigger search indexing
       const plainText = this.documentEngine.extractText(snapshotBlob);
       
-      await this.outboxPort.scheduleInternalCommand('IndexNoteBody', {
-        noteId,
-        plainText,
-      });
+      // We dispatch 3 separate commands so they can fail and retry independently
+      // (e.g. if OpenAI rate limits us, we don't need to rebuild the document again)
+      await Promise.all([
+        this.outboxPort.scheduleInternalCommand('UpdateNoteSearchBody', {
+          noteId,
+          plainText,
+          targetSeq: targetSeqStr,
+        }),
+        this.outboxPort.scheduleInternalCommand('GenerateNoteEmbedding', {
+          noteId,
+          plainText,
+          targetSeq: targetSeqStr,
+        }),
+        this.outboxPort.scheduleInternalCommand('GenerateNoteAITags', {
+          noteId,
+          plainText,
+          targetSeq: targetSeqStr,
+        }),
+      ]);
       
       this.logger.log(`Successfully created and stored snapshot for note ${noteId} at seq ${targetSeq}`);
     } catch (error) {

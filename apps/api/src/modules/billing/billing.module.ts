@@ -44,7 +44,6 @@ import { GetEntitlementHttpController } from '@modules/billing/presentation/http
 // ─── Presentation: Kafka Consumers ───────────────────────────────────────────
 import { UserRegisteredConsumer } from '@modules/billing/presentation/kafka/user-registered.consumer';
 
-// TODO Phase 4: EntitlementQueryDao cross-module wiring
 
 @Module({
   imports: [CqrsModule, PrismaModule, RedisModule, ConfigModule],

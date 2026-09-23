@@ -60,4 +60,28 @@ export abstract class BasePrismaUnitOfWork<TContext> {
       return result;
     });
   }
+
+  /**
+   * Wraps a repository in a proxy that automatically tracks any AggregateRoot
+   * passed as an argument to its methods.
+   */
+  protected wrapRepository<T extends object>(repo: T, tracker: AggregateTracker): T {
+    return new Proxy(repo, {
+      get(target, propKey, receiver) {
+        const origMethod = target[propKey as keyof T];
+        if (typeof origMethod === 'function') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return function (this: any, ...args: any[]) {
+            for (const arg of args) {
+              if (arg && typeof arg === 'object' && Array.isArray((arg as unknown as { domainEvents: unknown }).domainEvents)) {
+                tracker.track(arg as AggregateRoot);
+              }
+            }
+            return (origMethod as unknown as (...args: unknown[]) => unknown).apply(this, args);
+          };
+        }
+        return Reflect.get(target, propKey, receiver);
+      },
+    });
+  }
 }

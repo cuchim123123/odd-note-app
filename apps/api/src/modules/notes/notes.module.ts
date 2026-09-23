@@ -7,6 +7,7 @@ import { RedisModule } from '@shared/infrastructure/redis/redis.module';
 import { MailerService } from '@shared/infrastructure/messaging/mailer/mailer.service';
 import { NotesCrdtService } from '@modules/notes/infrastructure/crdt/notes-crdt.service';
 import { NoteMailerAdapter } from '@modules/notes/infrastructure/messaging/note-mailer.adapter';
+import { BillingModule } from '@modules/billing/billing.module';
 
 // ─── Application Command Handlers ───────────────────────────────────────────
 import { CreateNoteHandler } from '@modules/notes/application/commands/create-note/create-note.handler';
@@ -22,7 +23,8 @@ import { RenameLabelHandler } from '@modules/notes/application/commands/rename-l
 import { DeleteLabelHandler } from '@modules/notes/application/commands/delete-label/delete-label.handler';
 import { RestoreRevisionHandler } from '@modules/notes/application/commands/restore-revision/restore-revision.handler';
 
-import { CreateRevisionHandler } from '@modules/notes/application/commands/create-revision/create-revision.handler';
+
+import { UpdateNoteAITagsHandler } from '@modules/notes/application/commands/update-note-ai-tags/update-note-ai-tags.handler';
 
 // ─── Application Query Handlers ──────────────────────────────────────────────
 import { ListNotesQueryHandler } from '@modules/notes/application/queries/list-notes/list-notes.query-handler';
@@ -111,6 +113,12 @@ import { OpenSearchNoteSearchDao } from '@modules/notes/infrastructure/search/op
 import { NoteSearchIndexConsumer } from '@modules/notes/infrastructure/search/note-search-index.consumer';
 import { NoteIndexRebuildService } from '@modules/notes/infrastructure/search/note-index-rebuild.service';
 import { NoteBodyIndexInternalHandler } from '@modules/notes/infrastructure/search/note-body-index.internal-handler';
+import { GenerateNoteEmbeddingInternalHandler } from '@modules/notes/application/workers/generate-note-embedding.internal-handler';
+import { GenerateNoteAITagsInternalHandler } from '@modules/notes/application/workers/generate-note-ai-tags.internal-handler';
+import { EMBEDDING_PROVIDER_PORT } from '@modules/notes/application/ports/external/embedding-provider.port';
+import { OpenAIEmbeddingAdapter } from '@modules/notes/infrastructure/ai/openai-embedding.adapter';
+import { AI_TAGGING_PROVIDER_PORT } from '@modules/notes/application/ports/external/ai-tagging-provider.port';
+import { OpenAITaggingAdapter } from '@modules/notes/infrastructure/ai/openai-tagging.adapter';
 
 @Module({
   imports: [
@@ -120,6 +128,7 @@ import { NoteBodyIndexInternalHandler } from '@modules/notes/infrastructure/sear
       { name: NoteProjection.name, schema: NoteProjectionSchema },
       { name: NoteRevisionProjection.name, schema: NoteRevisionProjectionSchema },
     ]),
+    BillingModule,
   ],
   controllers: [
     // ── Presentation: Commands ────────────────────────────────────────────
@@ -172,7 +181,8 @@ import { NoteBodyIndexInternalHandler } from '@modules/notes/infrastructure/sear
     RenameLabelHandler,
     DeleteLabelHandler,
     RestoreRevisionHandler,
-    CreateRevisionHandler,
+
+    UpdateNoteAITagsHandler,
     ReplayCoordinator,
     SnapshotThresholdMonitor,
     CreateSnapshotInternalCommandHandler,
@@ -211,6 +221,12 @@ import { NoteBodyIndexInternalHandler } from '@modules/notes/infrastructure/sear
     { provide: INTERNAL_COMMAND_HANDLERS, useClass: CreateSnapshotInternalCommandHandler, multi: true } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { provide: INTERNAL_COMMAND_HANDLERS, useClass: NoteBodyIndexInternalHandler, multi: true } as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { provide: INTERNAL_COMMAND_HANDLERS, useClass: GenerateNoteEmbeddingInternalHandler, multi: true } as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { provide: INTERNAL_COMMAND_HANDLERS, useClass: GenerateNoteAITagsInternalHandler, multi: true } as any,
+    { provide: EMBEDDING_PROVIDER_PORT, useClass: OpenAIEmbeddingAdapter },
+    { provide: AI_TAGGING_PROVIDER_PORT, useClass: OpenAITaggingAdapter },
   ],
   exports: [
     // NOTE_PROTECTION_PORT exported so CollaborationModule's PrismaNoteAccessAdapter can inject it

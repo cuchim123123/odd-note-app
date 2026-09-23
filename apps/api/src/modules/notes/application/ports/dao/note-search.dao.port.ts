@@ -10,8 +10,12 @@ export interface NoteSearchParams {
   readonly userId: string;
   /** Free-text query matched against title and bodyText. */
   readonly query?: string;
-  /** Exact-match label filters (AND semantics — all labels must match). */
+  /** Dense vector representation of the query for semantic search. */
+  readonly queryVector?: number[];
+  /** Exact-match label filters (user-defined labels). */
   readonly labels?: string[];
+  /** Exact-match tag filters (AI-generated tags). */
+  readonly tags?: string[];
   /** Restrict results to owned, shared, or all notes. Defaults to 'all'. */
   readonly accessMode?: 'owner' | 'shared' | 'all';
   /** Zero-based offset for pagination. Defaults to 0. */
@@ -37,6 +41,7 @@ export interface NoteSearchHit {
    */
   readonly bodyExcerpt?: string;
   readonly labels: string[];
+  readonly aiTags?: string[];
   readonly isPinned: boolean;
   readonly isProtected: boolean;
   readonly isShared: boolean;
@@ -53,6 +58,8 @@ export interface NoteSearchResult {
   readonly total: number;
   /** Engine-reported query execution time in milliseconds. */
   readonly took: number;
+  /** Indicates whether the search engine was unavailable and results may be degraded. */
+  readonly isDegraded?: boolean;
 }
 
 /**

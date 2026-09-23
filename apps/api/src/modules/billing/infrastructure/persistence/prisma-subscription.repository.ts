@@ -15,7 +15,6 @@ export class PrismaSubscriptionRepository implements ISubscriptionRepository {
   ) {}
 
   async save(sub: Subscription): Promise<void> {
-    if (this.tracker) this.tracker.track(sub);
     await this.prisma.subscription.upsert({
       where: { id: sub.id },
       create: {

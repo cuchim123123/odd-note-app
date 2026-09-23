@@ -27,9 +27,6 @@ export class PrismaNotificationRepository implements INotificationRepository {
   }
 
   async save(notification: NotificationEntity): Promise<void> {
-    if (this.tracker) {
-      this.tracker.track(notification);
-    }
     // Idempotent insert, wont return anything on duplicate.
     const result = await this.prisma.notification.createMany({
       data: [{

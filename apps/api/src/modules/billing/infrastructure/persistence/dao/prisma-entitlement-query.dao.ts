@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { IEntitlementQueryDao, EntitlementResult } from '@modules/billing/application/ports/dao/entitlement-query.dao.port';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
-import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import { RedisCacheService } from '@shared/infrastructure/redis/redis-cache.service';
 
 const CACHE_TTL_SECONDS = 300; // 5 minutes
 const CACHE_KEY = (id: string) => `entitlement:v1:${id}`;
@@ -12,7 +12,7 @@ export class PrismaEntitlementQueryDao implements IEntitlementQueryDao {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
+    private readonly redis: RedisCacheService,
   ) {}
 
   async findByBillingEntityId(billingEntityId: string): Promise<EntitlementResult | null> {

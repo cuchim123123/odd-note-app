@@ -6,5 +6,5 @@ export interface INoteRepository {
   create(note: NoteEntity): Promise<void>;
   update(note: NoteEntity): Promise<void>;
   findById(id: string): Promise<NoteEntity | null>;
-  delete(id: string): Promise<void>;
+  delete(note: NoteEntity): Promise<void>;
 }

@@ -13,6 +13,9 @@ export interface PrismaNoteFull {
   userId: string;
   title: string;
   isShared: boolean;
+  aiTags: string[];
+  rejectedAiTags: string[];
+  aiTagsSeq: bigint;
   createdAt: Date;
   updatedAt: Date;
   shares: Array<{
@@ -42,6 +45,9 @@ export class NoteMapper {
       isShared: record.isShared,
       shares,
       isProtected: !!record.protection,
+      aiTags: record.aiTags,
+      rejectedAiTags: record.rejectedAiTags,
+      aiTagsSnapshotSeq: record.aiTagsSeq,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -54,6 +60,9 @@ export class NoteMapper {
     userId: string;
     title: string;
     isShared: boolean;
+    aiTags: string[];
+    rejectedAiTags: string[];
+    aiTagsSeq: bigint;
     updatedAt: Date;
     shares: Array<{
       id: string;
@@ -67,6 +76,9 @@ export class NoteMapper {
       userId: note.ownerId,
       title: note.title,
       isShared: note.isShared,
+      aiTags: [...note.aiTags],
+      rejectedAiTags: [...note.rejectedAiTags],
+      aiTagsSeq: note.aiTagsSnapshotSeq,
       updatedAt: note.updatedAt,
       shares: note.shares.map((s) => ({
         id: s.id,

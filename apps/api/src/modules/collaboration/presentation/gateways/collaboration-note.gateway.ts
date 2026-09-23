@@ -13,7 +13,7 @@ import { COLLABORATION_STATE_PORT } from '@modules/collaboration/application/por
 import type { ICollaborationStatePort } from '@modules/collaboration/application/ports/collaboration-state.port';
 import { NOTE_ACCESS_PORT } from '@modules/collaboration/application/ports/note-access.port';
 import type { INoteAccessPort } from '@modules/collaboration/application/ports/note-access.port';
-import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import { RedisStateService } from '@shared/infrastructure/redis/redis-state.service';
 import type { EnvConfig } from '@config/env.validation';
 import { DeleteNoteCommand } from '@modules/notes/application/commands/delete-note/delete-note.command';
 
@@ -31,7 +31,7 @@ export class CollaborationNoteGateway {
     private readonly statePort: ICollaborationStatePort,
     @Inject(NOTE_ACCESS_PORT)
     private readonly accessPort: INoteAccessPort,
-    private readonly redis: RedisService,
+    private readonly redis: RedisStateService,
     @Inject('ENV_CONFIG') private readonly env: EnvConfig,
     private readonly commandBus: CommandBus,
   ) {}

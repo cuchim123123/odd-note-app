@@ -1,9 +1,13 @@
 services:
-  redis:
+  redis-state:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass statepass
     volumes:
-      - redis-data:/data
+      - redis-state-data:/data
+
+  redis-cache:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass cachepass
 
   db:
     image: postgres:15
@@ -36,7 +40,8 @@ services:
       DATABASE_URL: postgres://oddnote:oddnotepass@db:5432/oddnote
       MONGODB_URI: mongodb://mongodb:27017/oddnote
       APP_URL: ${APP_URL:-http://localhost}
-      REDIS_URL: redis://redis:6379
+      REDIS_STATE_URL: redis://:statepass@redis-state:6379
+      REDIS_CACHE_URL: redis://:cachepass@redis-cache:6379
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-this-is-a-long-dev-access-secret-at-least-32-chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-this-is-a-long-dev-refresh-secret-at-least-32-chars}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
@@ -58,7 +63,8 @@ services:
       ALLOW_TEST_ENDPOINTS: '1'
     restart: always
     depends_on:
-      - redis
+      - redis-state
+      - redis-cache
       - db
       - mongodb
       - minio
@@ -75,7 +81,7 @@ services:
       - api
 
 volumes:
-  redis-data:
+  redis-state-data:
   db-data:
   mongodb-data:
   minio-data:

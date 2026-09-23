@@ -36,6 +36,7 @@ export class OpenSearchService implements OnModuleInit, OnModuleDestroy {
       const { body } = await this.client.ping();
       if (body) {
         this.logger.log(`Connected to OpenSearch at ${this.env.OPENSEARCH_URL}`);
+        await this.initializeIndex();
       }
     } catch (error) {
       // Non-fatal: search degraded but the application still starts.
@@ -43,6 +44,46 @@ export class OpenSearchService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn(
         `OpenSearch ping failed — search will be unavailable until connectivity is restored. ${String(error)}`,
       );
+    }
+  }
+
+  private async initializeIndex(): Promise<void> {
+    const indexName = this.indexName('notes');
+    try {
+      const { body: exists } = await this.client.indices.exists({ index: indexName });
+      if (!exists) {
+        this.logger.log(`Creating OpenSearch index: ${indexName}`);
+        await this.client.indices.create({
+          index: indexName,
+          body: {
+            settings: {
+              'index.knn': true,
+            },
+            mappings: {
+              properties: {
+                embedding: {
+                  type: 'knn_vector',
+                  dimension: 1536, // OpenAI text-embedding-3-small dimension
+                  method: {
+                    name: 'hnsw',
+                    space_type: 'cosinesimil',
+                    engine: 'nmslib',
+                  },
+                },
+                aiTags: {
+                  type: 'keyword',
+                },
+                snapshotSeq: {
+                  type: 'long',
+                },
+              },
+            },
+          },
+        });
+        this.logger.log(`Successfully created index: ${indexName} with k-NN settings.`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to initialize OpenSearch index: ${indexName}`, error);
     }
   }
 

@@ -3,9 +3,10 @@ import { type IInternalCommandHandler } from '@shared/infrastructure/outbox/inte
 import { NOTE_SEARCH_INDEX_PORT } from '@modules/notes/application/ports/external/note-search-index.port';
 import type { INoteSearchIndexPort } from '@modules/notes/application/ports/external/note-search-index.port';
 
-interface IndexNoteBodyPayload {
+interface UpdateNoteSearchBodyPayload {
   noteId: string;
   plainText: string;
+  targetSeq: string;
 }
 
 @Injectable()
@@ -18,18 +19,18 @@ export class NoteBodyIndexInternalHandler implements IInternalCommandHandler {
   ) {}
 
   canHandle(topic: string): boolean {
-    return topic === 'IndexNoteBody';
+    return topic === 'UpdateNoteSearchBody';
   }
 
   async handle(topic: string, payload: Record<string, unknown>): Promise<void> {
-    if (topic !== 'IndexNoteBody') return;
+    if (topic !== 'UpdateNoteSearchBody') return;
 
-    const { noteId, plainText } = payload as unknown as IndexNoteBodyPayload;
+    const { noteId, plainText, targetSeq } = payload as unknown as UpdateNoteSearchBodyPayload;
 
-    this.logger.log(`Processing IndexNoteBody job for note ${noteId}`);
+    this.logger.log(`Processing UpdateNoteSearchBody job for note ${noteId} at seq ${targetSeq}`);
 
     try {
-      await this.searchIndex.updateBodyText(noteId, plainText);
+      await this.searchIndex.updateBodyText(noteId, plainText, BigInt(targetSeq));
       this.logger.log(`Successfully updated search body for note ${noteId}`);
     } catch (error) {
       this.logger.error(`Failed to update search body for note ${noteId}. Throwing to outbox retry...`, error);

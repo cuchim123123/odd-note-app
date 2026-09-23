@@ -24,7 +24,6 @@ function createMocks(overrides: { noteToReturn?: NoteEntity | null } = {}) {
   };
 
   const noteShareRepository = {
-    create: vi.fn().mockResolvedValue({ id: 'share-abc' }),
     updatePermission: vi.fn(),
     delete: vi.fn(),
   };
@@ -60,14 +59,15 @@ describe('ShareNoteHandler', () => {
   });
 
   it('successfully shares a note and returns the share id', async () => {
-    const { handler, noteShareRepository } = createMocks();
+    const { handler, noteRepository } = createMocks();
 
     const result = await handler.execute(
       new ShareNoteCommand('owner-1', 'note-1', 'recipient@example.com', 'READ'),
     );
 
-    expect(noteShareRepository.create).toHaveBeenCalledTimes(1);
-    expect(result.id).toBe('share-abc');
+    expect(noteRepository.update).toHaveBeenCalledTimes(1);
+    const savedNote = noteRepository.update.mock.calls[0]![0] as NoteEntity;
+    expect(result.id).toBe(savedNote.shares[0]!.id);
   });
 
   it('throws NoteNotFoundError when note does not exist', async () => {

@@ -28,8 +28,8 @@ export class PrismaBillingUnitOfWork
   protected createTransactionContext(tx: any, tracker: AggregateTracker): BillingTransactionContext {
     return {
       repos: {
-        payment: new PrismaPaymentRepository(tx, tracker),
-        subscription: new PrismaSubscriptionRepository(tx, tracker),
+        payment: this.wrapRepository(new PrismaPaymentRepository(tx, tracker), tracker),
+        subscription: this.wrapRepository(new PrismaSubscriptionRepository(tx, tracker), tracker),
         planCatalog: new PrismaPlanCatalogRepository(tx),
         entitlement: new PrismaEntitlementRepository(tx),
         processedWebhookEvent: new PrismaProcessedWebhookEventRepository(tx),

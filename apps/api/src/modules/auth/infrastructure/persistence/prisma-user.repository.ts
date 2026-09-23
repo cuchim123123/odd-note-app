@@ -25,9 +25,6 @@ export class PrismaUserRepository implements UserRepository {
   }
 
   async save(user: User): Promise<void> {
-    if (this.tracker) {
-      this.tracker.track(user);
-    }
     try {
       await this.prisma.user.upsert({
         where: { id: user.id },

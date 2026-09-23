@@ -19,7 +19,6 @@ export class PrismaPaymentRepository implements IPaymentRepository {
   ) {}
 
   async save(payment: Payment): Promise<void> {
-    if (this.tracker) this.tracker.track(payment);
     await this.prisma.payment.upsert({
       where: { id: payment.id },
       create: {

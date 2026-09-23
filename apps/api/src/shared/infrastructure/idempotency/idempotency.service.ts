@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import { RedisStateService } from '@shared/infrastructure/redis/redis-state.service';
 import type { IIdempotencyPort } from '@shared/application/ports/idempotency.port';
 
 @Injectable()
 export class IdempotencyService implements IIdempotencyPort {
-  constructor(private readonly redisService: RedisService) {}
+  constructor(private readonly RedisStateService: RedisStateService) {}
 
   /**
    * Attempts to acquire an idempotency lock for the given key.
@@ -21,7 +21,7 @@ export class IdempotencyService implements IIdempotencyPort {
     }
 
     const lockKey = `idempotency:${namespace}:${idempotencyKey}`;
-    const acquired = await this.redisService.getClient().set(lockKey, 'locked', 'EX', ttlSeconds, 'NX');
+    const acquired = await this.RedisStateService.getClient().set(lockKey, 'locked', 'EX', ttlSeconds, 'NX');
     
     return acquired !== null;
   }

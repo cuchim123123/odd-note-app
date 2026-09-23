@@ -24,7 +24,7 @@ export class PrismaUnitOfWork extends BasePrismaUnitOfWork<TransactionContext> i
   protected createTransactionContext(tx: PrismaTransactionClient, tracker: AggregateTracker): TransactionContext {
     return {
       repos: {
-        user: new PrismaUserRepository(tx, tracker),
+        user: this.wrapRepository(new PrismaUserRepository(tx, tracker), tracker),
         token: new PrismaTokenRepository(tx),
       },
       outbox: new PrismaOutboxRepository(tx),

@@ -109,6 +109,40 @@ export class NoteSearchIndexConsumer {
     }
   }
 
+  // ─── AI Pipeline updates ──────────────────────────────────────────────────
+
+  @EventPattern('NoteEmbeddingGenerated')
+  async handleNoteEmbeddingGenerated(
+    @Payload() event: IntegrationEventEnvelope<{ embedding: number[]; snapshotSeq: string }>,
+  ): Promise<void> {
+    try {
+      await this.searchIndex.updateEmbedding(
+        event.aggregateId,
+        event.payload.embedding,
+        BigInt(event.payload.snapshotSeq)
+      );
+    } catch (err) {
+      this.logger.error(`Failed to update embedding for note ${event.aggregateId}`, err);
+      throw err;
+    }
+  }
+
+  @EventPattern('NoteAITagsUpdated')
+  async handleNoteAITagsUpdated(
+    @Payload() event: IntegrationEventEnvelope<{ aiTags: string[]; snapshotSeq: string }>,
+  ): Promise<void> {
+    try {
+      await this.searchIndex.updateAITags(
+        event.aggregateId,
+        event.payload.aiTags,
+        BigInt(event.payload.snapshotSeq)
+      );
+    } catch (err) {
+      this.logger.error(`Failed to update AI tags for note ${event.aggregateId}`, err);
+      throw err;
+    }
+  }
+
   // ─── User preferences ─────────────────────────────────────────────────────
   // These update only the owner's document (isPinned/labels are per-user;
   // sharee preferences are stored in the MongoDB projection's shares[] array
@@ -162,13 +196,22 @@ export class NoteSearchIndexConsumer {
     }>,
   ): Promise<void> {
     try {
+      // Fetch the owner document to copy over semantic/search state
+      const ownerDoc = await this.searchIndex.getOwnerDocument(event.aggregateId);
+
       // Create a per-user search document for the sharee.
       // The ownerId's document already exists; this adds the sharee's document.
+      // If the owner document had bodyText or embeddings from a snapshot,
+      // copy them over so the sharee immediately has full search capabilities.
       await this.searchIndex.upsert({
         noteId: event.aggregateId,
         userId: event.payload.recipientId,
         accessMode: 'shared',
         title: event.payload.title,
+        ...(ownerDoc?.bodyText !== undefined && { bodyText: ownerDoc.bodyText }),
+        ...(ownerDoc?.embedding !== undefined && { embedding: ownerDoc.embedding }),
+        ...(ownerDoc?.aiTags !== undefined && { aiTags: ownerDoc.aiTags }),
+        ...(ownerDoc?.snapshotSeq !== undefined && { snapshotSeq: ownerDoc.snapshotSeq }),
         labels: [],
         isPinned: false,
         isProtected: false,

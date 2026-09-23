@@ -7,7 +7,8 @@ export default defineConfig({
     env: {
       APP_URL: 'http://localhost',
       DATABASE_URL: 'postgres://dummy',
-      REDIS_URL: 'redis://dummy',
+      REDIS_STATE_URL: 'redis://dummy',
+      REDIS_CACHE_URL: 'redis://dummy',
       JWT_ACCESS_SECRET: 'dummy123456789012345678901234567890',
       JWT_REFRESH_SECRET: 'dummy123456789012345678901234567890',
       SMTP_HOST: 'dummy',
@@ -17,7 +18,9 @@ export default defineConfig({
       S3_PORT: '9000',
       S3_ACCESS_KEY: 'dummy',
       S3_SECRET_KEY: 'dummy',
-      S3_BUCKET: 'dummy'
+      S3_BUCKET: 'dummy',
+      MONGO_URI: 'mongodb://dummy:27017',
+      OPENSEARCH_URL: 'http://localhost:9200',
     }
   },
   resolve: {

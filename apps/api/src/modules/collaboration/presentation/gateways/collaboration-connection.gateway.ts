@@ -7,7 +7,7 @@ import { Logger, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { JwtConfigService } from '@config';
-import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import { RedisStateService } from '@shared/infrastructure/redis/redis-state.service';
 import { Server, Socket } from 'socket.io';
 import type Redis from 'ioredis';
 import { COLLABORATION_NAMESPACE, REDIS_EVENT_TYPES } from '@modules/collaboration/collaboration.constants';
@@ -31,7 +31,7 @@ export class CollaborationConnectionGateway implements OnGatewayConnection, OnGa
   constructor(
     private readonly jwtService: JwtService,
     private readonly jwtConfig: JwtConfigService,
-    private readonly redis: RedisService,
+    private readonly redis: RedisStateService,
     @Inject(COLLABORATION_STATE_PORT)
     private readonly statePort: ICollaborationStatePort,
     @Inject(YJS_DOCUMENT_PORT)

@@ -22,6 +22,9 @@ export interface NoteSearchDocument {
    * Absent until a snapshot is materialised by the snapshot pipeline.
    */
   readonly bodyText?: string;
+  readonly embedding?: number[];
+  readonly aiTags?: string[];
+  readonly snapshotSeq?: bigint;
   readonly labels: string[];
   readonly isPinned: boolean;
   readonly isProtected: boolean;
@@ -42,6 +45,12 @@ export interface NoteSearchDocument {
  * OpenSearch, Elasticsearch, or any other search technology.
  */
 export interface INoteSearchIndexPort {
+  /**
+   * Fetches the owner's document from the search index.
+   * Used to copy existing embeddings and body text when sharing a note.
+   */
+  getOwnerDocument(noteId: string): Promise<NoteSearchDocument | null>;
+
   /**
    * Creates or fully replaces a document in the search index.
    * Used on NoteCreated and NoteShared (new sharee document).
@@ -100,7 +109,17 @@ export interface INoteSearchIndexPort {
    * Replaces the bodyText field on all documents for a note.
    * Called after the CRDT snapshot pipeline materialises plaintext content.
    */
-  updateBodyText(noteId: string, bodyText: string): Promise<void>;
+  updateBodyText(noteId: string, bodyText: string, targetSeq: bigint): Promise<void>;
+
+  /**
+   * Replaces the embedding field on all documents for a note.
+   */
+  updateEmbedding(noteId: string, embedding: number[], targetSeq: bigint): Promise<void>;
+
+  /**
+   * Replaces the aiTags field on all documents for a note.
+   */
+  updateAITags(noteId: string, aiTags: string[], targetSeq: bigint): Promise<void>;
 
   /**
    * Bulk-upserts multiple documents.

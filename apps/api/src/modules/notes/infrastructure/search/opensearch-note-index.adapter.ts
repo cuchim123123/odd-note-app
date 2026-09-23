@@ -35,6 +35,9 @@ export class OpenSearchNoteIndexAdapter implements INoteSearchIndexPort {
       accessMode: doc.accessMode,
       title: doc.title,
       ...(doc.bodyText !== undefined && { bodyText: doc.bodyText }),
+      ...(doc.embedding !== undefined && { embedding: doc.embedding }),
+      ...(doc.aiTags !== undefined && { aiTags: doc.aiTags }),
+      ...(doc.snapshotSeq !== undefined && { snapshotSeq: Number(doc.snapshotSeq) }),
       labels: doc.labels,
       isPinned: doc.isPinned,
       isProtected: doc.isProtected,
@@ -47,13 +50,60 @@ export class OpenSearchNoteIndexAdapter implements INoteSearchIndexPort {
 
   // ─── INoteSearchIndexPort ─────────────────────────────────────────────────
 
+  async getOwnerDocument(noteId: string): Promise<NoteSearchDocument | null> {
+    try {
+      const { body } = await this.search.getClient().search({
+        index: this.index,
+        body: {
+          query: {
+            bool: {
+              filter: [
+                { term: { noteId } },
+                { term: { accessMode: 'owner' } }
+              ]
+            }
+          }
+        },
+        size: 1,
+      });
+
+      const hit = body.hits.hits[0];
+      if (!hit) return null;
+
+      const source = hit._source as Record<string, unknown>;
+      return {
+        noteId: source['noteId'] as string,
+        userId: source['userId'] as string,
+        accessMode: source['accessMode'] as 'owner' | 'shared',
+        title: source['title'] as string,
+        ...(source['bodyText'] !== undefined && { bodyText: source['bodyText'] as string }),
+        ...(source['embedding'] !== undefined && { embedding: source['embedding'] as number[] }),
+        ...(source['aiTags'] !== undefined && { aiTags: source['aiTags'] as string[] }),
+        ...(source['snapshotSeq'] != null && { snapshotSeq: BigInt(source['snapshotSeq'] as string | number) }),
+        labels: (source['labels'] as string[]) ?? [],
+        isPinned: (source['isPinned'] as boolean) ?? false,
+        isProtected: (source['isProtected'] as boolean) ?? false,
+        isShared: (source['isShared'] as boolean) ?? false,
+        ...(source['sharedPermission'] !== undefined && { sharedPermission: source['sharedPermission'] as 'READ' | 'EDIT' }),
+        updatedAt: new Date(source['updatedAt'] as string),
+        createdAt: new Date(source['createdAt'] as string),
+      };
+    } catch (error) {
+      this.logger.error(`Failed to fetch owner document for note ${noteId}`, error);
+      return null;
+    }
+  }
+
   async upsert(doc: NoteSearchDocument): Promise<void> {
     const id = this.docId(doc.userId, doc.noteId);
     try {
-      await this.search.getClient().index({
+      await this.search.getClient().update({
         index: this.index,
         id,
-        body: this.toIndexBody(doc),
+        body: {
+          doc: this.toIndexBody(doc),
+          doc_as_upsert: true,
+        },
         refresh: 'wait_for',
       });
     } catch (error) {
@@ -186,21 +236,80 @@ export class OpenSearchNoteIndexAdapter implements INoteSearchIndexPort {
     }
   }
 
-  async updateBodyText(noteId: string, bodyText: string): Promise<void> {
+  async updateBodyText(noteId: string, bodyText: string, targetSeq: bigint): Promise<void> {
     try {
       await this.search.getClient().updateByQuery({
         index: this.index,
         body: {
           query: { wildcard: { _id: { value: `*:${noteId}` } } },
           script: {
-            source: 'ctx._source.bodyText = params.bodyText;',
-            params: { bodyText },
+            source: `
+              if (ctx._source.snapshotSeq != null && params.targetSeq <= ctx._source.snapshotSeq) {
+                ctx.op = 'none';
+              } else {
+                ctx._source.bodyText = params.bodyText;
+                ctx._source.snapshotSeq = params.targetSeq;
+              }
+            `,
+            params: { bodyText, targetSeq: Number(targetSeq) },
           },
         },
         wait_for_completion: false,
       });
     } catch (error) {
       this.logger.error(`Failed to updateByQuery bodyText for note ${noteId}`, error);
+      throw error;
+    }
+  }
+
+  async updateEmbedding(noteId: string, embedding: number[], targetSeq: bigint): Promise<void> {
+    try {
+      await this.search.getClient().updateByQuery({
+        index: this.index,
+        body: {
+          query: { wildcard: { _id: { value: `*:${noteId}` } } },
+          script: {
+            source: `
+              if (ctx._source.snapshotSeq != null && params.targetSeq <= ctx._source.snapshotSeq) {
+                ctx.op = 'none';
+              } else {
+                ctx._source.embedding = params.embedding;
+                ctx._source.snapshotSeq = params.targetSeq;
+              }
+            `,
+            params: { embedding, targetSeq: Number(targetSeq) },
+          },
+        },
+        wait_for_completion: false,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to updateByQuery embedding for note ${noteId}`, error);
+      throw error;
+    }
+  }
+
+  async updateAITags(noteId: string, aiTags: string[], targetSeq: bigint): Promise<void> {
+    try {
+      await this.search.getClient().updateByQuery({
+        index: this.index,
+        body: {
+          query: { wildcard: { _id: { value: `*:${noteId}` } } },
+          script: {
+            source: `
+              if (ctx._source.snapshotSeq != null && params.targetSeq <= ctx._source.snapshotSeq) {
+                ctx.op = 'none';
+              } else {
+                ctx._source.aiTags = params.aiTags;
+                ctx._source.snapshotSeq = params.targetSeq;
+              }
+            `,
+            params: { aiTags, targetSeq: Number(targetSeq) },
+          },
+        },
+        wait_for_completion: false,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to updateByQuery aiTags for note ${noteId}`, error);
       throw error;
     }
   }

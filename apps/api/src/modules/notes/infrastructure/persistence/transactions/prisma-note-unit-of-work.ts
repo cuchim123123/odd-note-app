@@ -25,7 +25,7 @@ export class PrismaNoteUnitOfWork extends BasePrismaUnitOfWork<NoteTransactionCo
   protected createTransactionContext(tx: PrismaTransactionClient, tracker: AggregateTracker): NoteTransactionContext {
     return {
       repos: {
-        note: new PrismaNoteRepository(tx, tracker),
+        note: this.wrapRepository(new PrismaNoteRepository(tx, tracker), tracker),
       },
       stores: {
         userNotePreference: new PrismaUserNotePreferenceStore(tx),

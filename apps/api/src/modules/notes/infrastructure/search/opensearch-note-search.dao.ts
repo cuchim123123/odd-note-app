@@ -15,6 +15,8 @@ interface RawNoteDoc {
   accessMode: 'owner' | 'shared';
   title: string;
   bodyText?: string;
+  embedding?: number[];
+  aiTags?: string[];
   labels: string[];
   isPinned: boolean;
   isProtected: boolean;
@@ -44,7 +46,7 @@ export class OpenSearchNoteSearchDao implements INoteSearchDao {
   }
 
   async search(params: NoteSearchParams): Promise<NoteSearchResult> {
-    const { userId, query, labels, accessMode = 'all', from = 0, size = 20 } = params;
+    const { userId, query, queryVector, labels, tags, accessMode = 'all', from = 0, size = 20 } = params;
     const clampedSize = Math.min(size, 100);
 
     // ── Mandatory scoping filter — always applied, never optional ────────────
@@ -55,35 +57,16 @@ export class OpenSearchNoteSearchDao implements INoteSearchDao {
     }
 
     if (labels && labels.length > 0) {
-      // AND semantics: all labels must appear on the document
       filters.push(...labels.map((label) => ({ term: { labels: label } })));
     }
+    
+    if (tags && tags.length > 0) {
+      filters.push(...tags.map((tag) => ({ term: { aiTags: tag } })));
+    }
 
-    const shouldClauses: unknown[] = query
-      ? [
-          {
-            multi_match: {
-              query,
-              fields: ['title^3', 'bodyText'],
-              type: 'best_fields',
-              fuzziness: 'AUTO',
-            },
-          },
-        ]
-      : [];
-
-    const body: Record<string, unknown> = {
+    const searchBody: Record<string, unknown> = {
       from,
       size: clampedSize,
-      query: {
-        bool: {
-          filter: filters,
-          ...(shouldClauses.length > 0 && {
-            should: shouldClauses,
-            minimum_should_match: 1,
-          }),
-        },
-      },
       sort: query
         ? [{ _score: 'desc' }, { updatedAt: 'desc' }]
         : [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
@@ -94,8 +77,60 @@ export class OpenSearchNoteSearchDao implements INoteSearchDao {
       },
     };
 
+    if (queryVector && query) {
+      // Hybrid search: knn + boolean match
+      searchBody.query = {
+        hybrid: {
+          queries: [
+            {
+              multi_match: {
+                query,
+                fields: ['title^3', 'bodyText'],
+                type: 'best_fields',
+                fuzziness: 'AUTO',
+              },
+            },
+            {
+              knn: {
+                embedding: {
+                  vector: queryVector,
+                  k: clampedSize,
+                },
+              },
+            },
+          ],
+        },
+      };
+      // We must apply the security filters inside a post_filter when using hybrid
+      searchBody.post_filter = { bool: { filter: filters } };
+    } else {
+      // Standard boolean query
+      const shouldClauses: unknown[] = query
+        ? [
+            {
+              multi_match: {
+                query,
+                fields: ['title^3', 'bodyText'],
+                type: 'best_fields',
+                fuzziness: 'AUTO',
+              },
+            },
+          ]
+        : [];
+
+      searchBody.query = {
+        bool: {
+          filter: filters,
+          ...(shouldClauses.length > 0 && {
+            should: shouldClauses,
+            minimum_should_match: 1,
+          }),
+        },
+      };
+    }
+
     try {
-      const { body: result } = await this.openSearch.getClient().search({ index: this.index, body });
+      const { body: result } = await this.openSearch.getClient().search({ index: this.index, body: searchBody });
 
       const hits = (result.hits.hits as unknown) as Array<{
         _source: RawNoteDoc;
@@ -112,8 +147,8 @@ export class OpenSearchNoteSearchDao implements INoteSearchDao {
       };
     } catch (error) {
       this.logger.error('search query failed', error);
-      // Return empty result rather than crashing the query handler
-      return { hits: [], total: 0, took: 0 };
+      // Return empty result with degraded flag rather than crashing the query handler
+      return { hits: [], total: 0, took: 0, isDegraded: true };
     }
   }
 
@@ -168,6 +203,7 @@ export class OpenSearchNoteSearchDao implements INoteSearchDao {
       noteId: src.noteId,
       title: src.title,
       labels: src.labels,
+      ...(src.aiTags !== undefined && { aiTags: src.aiTags }),
       isPinned: src.isPinned,
       isProtected: src.isProtected,
       isShared: src.isShared,

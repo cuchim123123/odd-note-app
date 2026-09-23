@@ -1,16 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { ICollaborationStatePort, CollaboratorInfo, TypingInfo } from '@modules/collaboration/application/ports/collaboration-state.port';
-import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import { RedisStateService } from '@shared/infrastructure/redis/redis-state.service';
 import { COLLABORATION_TYPING_STALE_AFTER_MS } from '@modules/collaboration/collaboration.constants';
 
 @Injectable()
 export class RedisCollaborationStateAdapter implements ICollaborationStatePort {
   private readonly logger = new Logger(RedisCollaborationStateAdapter.name);
 
-  constructor(private readonly redisService: RedisService) {}
+  constructor(private readonly RedisStateService: RedisStateService) {}
 
   private get client() {
-    return this.redisService.getClient();
+    return this.RedisStateService.getClient();
   }
 
   // Socket -> Room tracking

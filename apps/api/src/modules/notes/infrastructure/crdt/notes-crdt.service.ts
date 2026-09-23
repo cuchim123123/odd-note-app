@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import * as Y from 'yjs';
-import { RedisService } from '@shared/infrastructure/redis/redis.service';
+import { RedisStateService } from '@shared/infrastructure/redis/redis-state.service';
+import { RedisCacheService } from '@shared/infrastructure/redis/redis-cache.service';
 import type { EnvConfig } from '@config/env.validation';
 
 export type CollaborationSnapshot = {
@@ -19,7 +20,8 @@ export type YDocState = {
 @Injectable()
 export class NotesCrdtService {
   constructor(
-    private readonly redis: RedisService,
+    private readonly redisState: RedisStateService,
+    private readonly redisCache: RedisCacheService,
     @Inject('ENV_CONFIG') private readonly env: EnvConfig,
   ) {}
 
@@ -28,7 +30,7 @@ export class NotesCrdtService {
   }
 
   async readCollaborationSnapshot(noteId: string): Promise<CollaborationSnapshot | null> {
-    const value = await this.redis.getClient().get(this.collaborationSnapshotKey(noteId));
+    const value = await this.redisCache.getClient().get(this.collaborationSnapshotKey(noteId));
     if (!value) {
       return null;
     }
@@ -48,11 +50,11 @@ export class NotesCrdtService {
       updatedAt: updatedAt.toISOString(),
     };
 
-    await this.redis.getClient().set(this.collaborationSnapshotKey(noteId), JSON.stringify(snapshot), 'EX', this.env.CACHE_TTL_COLLAB_SNAPSHOT_SECONDS);
+    await this.redisCache.getClient().set(this.collaborationSnapshotKey(noteId), JSON.stringify(snapshot), 'EX', this.env.CACHE_TTL_COLLAB_SNAPSHOT_SECONDS);
   }
 
   async clearCollaborationSnapshot(noteId: string): Promise<void> {
-    await this.redis.getClient().del(this.collaborationSnapshotKey(noteId));
+    await this.redisCache.getClient().del(this.collaborationSnapshotKey(noteId));
   }
 
   yDocKey(noteId: string): string {
@@ -61,7 +63,7 @@ export class NotesCrdtService {
 
   async readYDocState(noteId: string): Promise<YDocState | null> {
     try {
-      const value = await this.redis.getClient().get(this.yDocKey(noteId));
+      const value = await this.redisState.getClient().get(this.yDocKey(noteId));
       if (!value) {
         return null;
       }
@@ -98,7 +100,7 @@ export class NotesCrdtService {
     
     try {
       const keys = noteIds.map(id => this.yDocKey(id));
-      const values = await this.redis.getClient().mget(...keys);
+      const values = await this.redisState.getClient().mget(...keys);
       
       const result = new Map<string, YDocState | null>();
       for (let i = 0; i < noteIds.length; i++) {
@@ -150,7 +152,7 @@ export class NotesCrdtService {
 
   async clearYDocState(noteId: string): Promise<void> {
     try {
-      await this.redis.getClient().del(this.yDocKey(noteId));
+      await this.redisState.getClient().del(this.yDocKey(noteId));
     } catch {
       // Silently fail
     }
