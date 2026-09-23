@@ -1,7 +1,7 @@
 services:
   redis-state:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --requirepass statepass
+    command: sh -c 'redis-server --appendonly yes --requirepass "$${REDIS_STATE_PASSWORD:-statepass}"'
     ports:
       - '6379:6379'
     volumes:
@@ -9,7 +9,7 @@ services:
 
   redis-cache:
     image: redis:7-alpine
-    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass cachepass
+    command: sh -c 'redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass "$${REDIS_CACHE_PASSWORD:-cachepass}"'
     ports:
       - '6380:6379'
 
